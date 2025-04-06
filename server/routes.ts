@@ -1,7 +1,22 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { db } from "./db";
+import { restaurants, chefs, participations, seasons } from "../shared/schema";
 import fetch from "node-fetch";
+
+// Function to clear database tables
+const clearDatabase = async () => {
+  try {
+    await db.delete(restaurants);
+    await db.delete(chefs);
+    await db.delete(participations);
+    await db.delete(seasons);
+    console.log("Database tables cleared successfully");
+  } catch (error) {
+    console.error("Error clearing database:", error);
+  }
+};
 
 // Sample restaurant data - in a real app, this would come from a database
 const restaurantData = {
@@ -160,8 +175,9 @@ const initializeStorage = async () => {
   
   // Skip initialization if we already have data
   if (countries.length > 0) {
-    console.log('Database already contains data. Skipping initialization.');
-    return;
+    // Force re-initialization for testing purposes - remove this in production
+    await clearDatabase();
+    console.log('Cleared existing data for re-initialization...');
   }
   
   console.log('Initializing database with sample data...');

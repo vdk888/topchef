@@ -42,11 +42,22 @@ const Header = ({
                   <SelectValue placeholder="Select country" />
                 </SelectTrigger>
                 <SelectContent className="z-[100]">
-                  {countries.map(country => (
-                    <SelectItem key={country} value={country}>
-                      {country}
+                  {/* Priority for France */}
+                  {countries.includes("France") && (
+                    <SelectItem key="France" value="France">
+                      France
                     </SelectItem>
-                  ))}
+                  )}
+                  {/* Then display other countries alphabetically */}
+                  {countries
+                    .filter(country => country !== "France")
+                    .sort()
+                    .map(country => (
+                      <SelectItem key={country} value={country}>
+                        {country}
+                      </SelectItem>
+                    ))
+                  }
                 </SelectContent>
               </Select>
             </div>

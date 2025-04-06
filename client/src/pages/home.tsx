@@ -6,7 +6,7 @@ import Header from "@/components/header";
 import { Restaurant } from "@shared/schema";
 
 const Home = () => {
-  const [selectedCountry, setSelectedCountry] = useState<string>("USA");
+  const [selectedCountry, setSelectedCountry] = useState<string>("France");
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string>("May 15, 2024");
   const { toast } = useToast();

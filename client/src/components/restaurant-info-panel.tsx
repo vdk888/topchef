@@ -28,29 +28,42 @@ const RestaurantInfoPanel = ({
   };
   
   const fetchChefInfo = async () => {
+    // Toggle the panel if information is already loaded
     if (chefInfo) {
-      setShowChefInfo(true);
+      setShowChefInfo(!showChefInfo);
       return;
     }
 
     setIsLoading(true);
+    setShowChefInfo(true);
+    
     try {
+      // Make sure we have the correct information
+      const chefName = restaurant.chefName || "";
+      const restaurantName = restaurant.restaurantName || "";
+      
       const params = new URLSearchParams({
-        chefName: restaurant.chefName,
-        restaurantName: restaurant.restaurantName
+        chefName,
+        restaurantName
       });
       
+      console.log(`Fetching chef info for: ${chefName} at ${restaurantName}`);
       const response = await fetch(`/api/chef-info?${params.toString()}`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch chef information: ${response.status}`);
+      }
+      
       const data = await response.json();
       
-      if (response.ok) {
+      if (data.information) {
         setChefInfo(data.information);
-        setShowChefInfo(true);
       } else {
-        console.error("Failed to fetch chef information:", data.error);
+        setChefInfo("Chef information currently unavailable. Please try again later.");
       }
     } catch (error) {
       console.error("Error fetching chef information:", error);
+      setChefInfo("Unable to fetch chef information at this time. Please try again later.");
     } finally {
       setIsLoading(false);
     }
