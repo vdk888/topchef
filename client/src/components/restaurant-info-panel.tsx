@@ -6,8 +6,30 @@ import { Restaurant } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { Skeleton } from "@/components/ui/skeleton";
 
+// Define the ExtendedRestaurant interface for frontend use
+interface ExtendedRestaurant extends Restaurant {
+  chefName?: string;
+  season?: number;
+}
+
+// Extended restaurant type to include chef information
+type RestaurantWithDetails = Restaurant & {
+  chef?: {
+    id: number;
+    name: string;
+    bio?: string | null;
+    status: string;
+  } | null;
+  season?: {
+    id: number;
+    number: number;
+    title: string;
+    country: string;
+  } | null;
+};
+
 interface RestaurantInfoPanelProps {
-  restaurant: Restaurant;
+  restaurant: ExtendedRestaurant;
   selectedCountry: string;
   onClose: () => void;
 }
@@ -133,7 +155,7 @@ const RestaurantInfoPanel = ({
               
               <div>
                 <h3 className="text-sm font-semibold text-gray-500">TOP CHEF SEASON</h3>
-                <p className="text-base">Season {restaurant.season}</p>
+                <p className="text-base">Season {restaurant.season || restaurant.seasonId || "Unknown"}</p>
               </div>
               
               <div>

@@ -42,7 +42,9 @@ export const participations = pgTable("participations", {
   seasonId: integer("season_id").notNull(),
   placement: integer("placement"), // final position
   isWinner: boolean("is_winner").default(false),
+  eliminated: boolean("eliminated").default(true),
   eliminatedEpisode: integer("eliminated_episode"),
+  winCount: integer("win_count").default(0),
   notes: text("notes"),
 });
 

@@ -182,6 +182,89 @@ const initializeStorage = async () => {
   
   console.log('Initializing database with sample data...');
   
+  // Create seasons for each country
+  console.log('Creating seasons...');
+  const seasonsMap = new Map();
+  
+  // Create seasons for US
+  for (let i = 1; i <= 20; i++) {
+    const season = await storage.createSeason({
+      number: i,
+      year: 2005 + i,
+      title: `Top Chef Season ${i}`,
+      country: "USA",
+      numberOfEpisodes: 12 + Math.floor(Math.random() * 4), // Random number of episodes between 12-15
+      winner: null
+    });
+    seasonsMap.set(`USA-${i}`, season.id);
+  }
+  
+  // Create seasons for France
+  for (let i = 1; i <= 14; i++) {
+    const season = await storage.createSeason({
+      number: i,
+      year: 2010 + i,
+      title: `Top Chef France Season ${i}`,
+      country: "France",
+      numberOfEpisodes: 10 + Math.floor(Math.random() * 5), // Random number of episodes between 10-14
+      winner: null
+    });
+    seasonsMap.set(`France-${i}`, season.id);
+  }
+  
+  // Create seasons for Canada
+  for (let i = 1; i <= 8; i++) {
+    const season = await storage.createSeason({
+      number: i,
+      year: 2011 + i,
+      title: `Top Chef Canada Season ${i}`,
+      country: "Canada",
+      numberOfEpisodes: 9 + Math.floor(Math.random() * 5), // Random number of episodes between 9-13
+      winner: null
+    });
+    seasonsMap.set(`Canada-${i}`, season.id);
+  }
+  
+  // Create seasons for UK
+  for (let i = 1; i <= 12; i++) {
+    const season = await storage.createSeason({
+      number: i,
+      year: 2008 + i,
+      title: `MasterChef UK Season ${i}`,
+      country: "UK",
+      numberOfEpisodes: 10 + Math.floor(Math.random() * 6), // Random number of episodes between 10-15
+      winner: null
+    });
+    seasonsMap.set(`UK-${i}`, season.id);
+  }
+  
+  // Create seasons for Australia
+  for (let i = 1; i <= 8; i++) {
+    const season = await storage.createSeason({
+      number: i,
+      year: 2009 + i,
+      title: `MasterChef Australia Season ${i}`,
+      country: "Australia",
+      numberOfEpisodes: 12 + Math.floor(Math.random() * 8), // Random number of episodes between 12-19
+      winner: null
+    });
+    seasonsMap.set(`Australia-${i}`, season.id);
+  }
+  
+  // Create seasons for Spain
+  for (let i = 1; i <= 7; i++) {
+    const season = await storage.createSeason({
+      number: i,
+      year: 2013 + i,
+      title: `Top Chef Spain Season ${i}`,
+      country: "Spain",
+      numberOfEpisodes: 10 + Math.floor(Math.random() * 4), // Random number of episodes between 10-13
+      winner: null
+    });
+    seasonsMap.set(`Spain-${i}`, season.id);
+  }
+  
+  console.log('Creating restaurants and chefs...');
   // Flatten the restaurant data into a single array
   const allRestaurants = Object.values(restaurantData).flat();
   
@@ -199,6 +282,14 @@ const initializeStorage = async () => {
       });
     }
     
+    // Map the season number to the season ID using the country and season
+    const seasonKey = `${restaurant.country}-${restaurant.season}`;
+    const seasonId = seasonsMap.get(seasonKey);
+    
+    if (!seasonId) {
+      console.warn(`No season found for key: ${seasonKey}`);
+    }
+    
     // Create the restaurant linked to the chef
     await storage.createRestaurant({
       chefId: chef.id,
@@ -206,7 +297,7 @@ const initializeStorage = async () => {
       description: `Restaurant by ${restaurant.chefName}`,
       lat: restaurant.lat.toString(),
       lng: restaurant.lng.toString(),
-      seasonId: restaurant.season,
+      seasonId: seasonId || null,
       city: restaurant.city,
       country: restaurant.country,
       isCurrent: true,
@@ -214,6 +305,21 @@ const initializeStorage = async () => {
       dateOpened: null,
       dateClosed: null
     });
+    
+    // Create participation record if we have a valid seasonId
+    if (seasonId) {
+      try {
+        await storage.createParticipation({
+          chefId: chef.id,
+          seasonId: seasonId,
+          placement: Math.floor(Math.random() * 10) + 1, // Random placement between 1-10
+          eliminated: Math.random() > 0.2, // 80% chance of being eliminated
+          winCount: Math.floor(Math.random() * 3) // 0-2 wins
+        });
+      } catch (error) {
+        console.error(`Error creating participation for chef ${chef.id} and season ${seasonId}:`, error);
+      }
+    }
   }
   
   console.log('Database initialization complete.');

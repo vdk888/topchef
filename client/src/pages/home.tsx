@@ -5,9 +5,15 @@ import RestaurantMap from "@/components/restaurant-map";
 import Header from "@/components/header";
 import { Restaurant } from "@shared/schema";
 
+// Extended Restaurant interface with additional fields needed in the frontend
+interface ExtendedRestaurant extends Restaurant {
+  chefName?: string;
+  season?: number;
+}
+
 const Home = () => {
   const [selectedCountry, setSelectedCountry] = useState<string>("France");
-  const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
+  const [selectedRestaurant, setSelectedRestaurant] = useState<ExtendedRestaurant | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string>("May 15, 2024");
   const { toast } = useToast();
 
@@ -29,7 +35,7 @@ const Home = () => {
   };
 
   // Handle restaurant selection
-  const handleSelectRestaurant = (restaurant: Restaurant) => {
+  const handleSelectRestaurant = (restaurant: ExtendedRestaurant | null) => {
     setSelectedRestaurant(restaurant);
   };
 

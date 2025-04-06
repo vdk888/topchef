@@ -4,11 +4,17 @@ import L from 'leaflet';
 import RestaurantInfoPanel from './restaurant-info-panel';
 import { Restaurant } from '@shared/schema';
 
+// Extended Restaurant interface with additional fields needed in the frontend
+interface ExtendedRestaurant extends Restaurant {
+  chefName?: string;
+  season?: number;
+}
+
 interface RestaurantMapProps {
   restaurants: Restaurant[];
   selectedCountry: string;
-  selectedRestaurant: Restaurant | null;
-  onSelectRestaurant: (restaurant: Restaurant) => void;
+  selectedRestaurant: ExtendedRestaurant | null;
+  onSelectRestaurant: (restaurant: ExtendedRestaurant | null) => void;
   isLoading: boolean;
 }
 
@@ -26,7 +32,7 @@ const MapController = ({
   selectedRestaurant 
 }: { 
   restaurants: Restaurant[]; 
-  selectedRestaurant: Restaurant | null; 
+  selectedRestaurant: ExtendedRestaurant | null; 
 }) => {
   const map = useMap();
   
@@ -62,10 +68,13 @@ const RestaurantMap = ({
   const [mapReady, setMapReady] = useState<boolean>(false);
 
   // Create custom icon for markers
-  const createCustomIcon = (season: number) => {
+  const createCustomIcon = (seasonId: number | null) => {
+    // Default to "?" if no season ID is available
+    const seasonText = seasonId ? `S${seasonId}` : "?";
+    
     return L.divIcon({
       className: 'custom-marker',
-      html: `<div class="flex items-center justify-center w-8 h-8 bg-red-600 text-white font-bold rounded-full shadow-md border-2 border-white">S${season}</div>`,
+      html: `<div class="flex items-center justify-center w-8 h-8 bg-red-600 text-white font-bold rounded-full shadow-md border-2 border-white">${seasonText}</div>`,
       iconSize: [32, 32],
       iconAnchor: [16, 16]
     });
@@ -115,16 +124,48 @@ const RestaurantMap = ({
                 <Marker
                   key={restaurant.id}
                   position={position}
-                  icon={createCustomIcon(restaurant.season)}
+                  icon={createCustomIcon(restaurant.seasonId)}
                   eventHandlers={{
-                    click: () => onSelectRestaurant(restaurant)
+                    click: () => {
+                      // Fetch chef name for the restaurant
+                      const fetchChefData = async () => {
+                        try {
+                          const response = await fetch(`/api/chefs/${restaurant.chefId}`);
+                          if (response.ok) {
+                            const chef = await response.json();
+                            // Expand the restaurant with chef info
+                            onSelectRestaurant({
+                              ...restaurant,
+                              chefName: chef.name,
+                              season: restaurant.seasonId || undefined
+                            } as ExtendedRestaurant);
+                          } else {
+                            // Just pass the basic restaurant data
+                            onSelectRestaurant({
+                              ...restaurant,
+                              chefName: "Unknown Chef",
+                              season: restaurant.seasonId || undefined
+                            } as ExtendedRestaurant);
+                          }
+                        } catch (error) {
+                          console.error("Error fetching chef data:", error);
+                          onSelectRestaurant({
+                            ...restaurant,
+                            chefName: "Unknown Chef",
+                            season: restaurant.seasonId || undefined
+                          } as ExtendedRestaurant);
+                        }
+                      };
+                      
+                      fetchChefData();
+                    }
                   }}
                 >
                   <Popup>
                     <div className="text-center">
                       <h3 className="font-bold">{restaurant.restaurantName}</h3>
-                      <p className="text-sm">Chef: {restaurant.chefName}</p>
-                      <p className="text-sm">Season {restaurant.season}</p>
+                      <p className="text-sm">{restaurant.city}, {restaurant.country}</p>
+                      <p className="text-sm">Season {restaurant.seasonId || "Unknown"}</p>
                     </div>
                   </Popup>
                 </Marker>
