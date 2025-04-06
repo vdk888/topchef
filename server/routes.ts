@@ -612,22 +612,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Second query to parse the information into a structured format
       const parseQuery = `
-      Parse the following information about a restaurant and its chef into a structured format:
+      I need to parse restaurant information into a structured JSON format.
       
+      Analyze this text: 
       ${restaurantInfo}
       
-      Extract and return ONLY a JSON object with these fields (leave blank if info not available):
+      Your response must ONLY contain a valid JSON object with these fields:
       {
-        "restaurantName": "",
-        "chefName": "", 
-        "bio": "",
-        "websiteUrl": "",
-        "seasonNumber": null,
-        "eliminationInfo": "", 
-        "cuisineType": ""
+        "restaurantName": "restaurant name",
+        "chefName": "chef name", 
+        "bio": "short biography of chef",
+        "websiteUrl": "restaurant website URL",
+        "seasonNumber": season number as integer or null,
+        "eliminationInfo": "information about when eliminated", 
+        "cuisineType": "type of cuisine"
       }
       
-      ONLY return valid JSON without any additional text before or after.
+      Do not write any text before or after the JSON object. 
+      Do not include markdown formatting like \`\`\`json\`\`\`.
+      Just return the raw JSON object by itself.
       `;
       
       console.log("Parsing restaurant information into structured format");
@@ -652,8 +655,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let parsedData;
       try {
         const jsonStr = parseCompletion.choices[0]?.message?.content || "{}";
-        // Remove markdown code blocks if present (```json and ```)
-        const cleanedJson = jsonStr.trim().replace(/^```json\s*/, '').replace(/\s*```$/, '');
+        console.log("Raw JSON string:", jsonStr);
+        
+        // More aggressively extract JSON from text
+        const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+        let cleanedJson = "{}";
+        
+        if (jsonMatch) {
+          cleanedJson = jsonMatch[0];
+          // Remove any trailing text that might not be part of the JSON
+          const lastBraceIndex = cleanedJson.lastIndexOf('}');
+          if (lastBraceIndex !== -1) {
+            cleanedJson = cleanedJson.substring(0, lastBraceIndex + 1);
+          }
+        }
+        
+        console.log("Cleaned JSON:", cleanedJson);
         parsedData = JSON.parse(cleanedJson);
         
         // Store the raw response and parsed data in the database if a chef exists

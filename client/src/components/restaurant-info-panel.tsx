@@ -133,15 +133,38 @@ const RestaurantInfoPanel = ({
       }
       
       const data = await response.json();
+      console.log("Received restaurant details:", data);
       
       if (data.structuredInfo) {
         setRestaurantDetails(data.structuredInfo);
         setRawInfo(data.rawInfo);
       } else if (data.rawInfo) {
         setRawInfo(data.rawInfo);
+        // Create a simplified structure from the raw info
+        if (!data.error) {
+          setRestaurantDetails({
+            restaurantName: restaurant.restaurantName,
+            chefName: restaurant.chefName || "",
+            bio: "",
+            websiteUrl: "",
+            seasonNumber: restaurant.season || null,
+            eliminationInfo: "",
+            cuisineType: ""
+          });
+        }
       }
     } catch (error) {
       console.error("Error fetching restaurant details:", error);
+      // Set minimal details to prevent UI from breaking
+      setRestaurantDetails({
+        restaurantName: restaurant.restaurantName,
+        chefName: restaurant.chefName || "",
+        bio: "",
+        websiteUrl: "",
+        seasonNumber: restaurant.season || null,
+        eliminationInfo: "",
+        cuisineType: ""
+      });
     } finally {
       setIsLoading(false);
     }
