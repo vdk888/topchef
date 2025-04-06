@@ -1,7 +1,10 @@
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
+import { X, Info } from "lucide-react";
 import { Restaurant } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface RestaurantInfoPanelProps {
   restaurant: Restaurant;
@@ -14,11 +17,43 @@ const RestaurantInfoPanel = ({
   selectedCountry, 
   onClose 
 }: RestaurantInfoPanelProps) => {
+  const [chefInfo, setChefInfo] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showChefInfo, setShowChefInfo] = useState(false);
+
   const handleGetDirections = () => {
     const { lat, lng, restaurantName } = restaurant;
-    alert(`Opening directions to ${restaurantName}`);
     // In a production app, this would use the device's maps application
     window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`);
+  };
+  
+  const fetchChefInfo = async () => {
+    if (chefInfo) {
+      setShowChefInfo(true);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const params = new URLSearchParams({
+        chefName: restaurant.chefName,
+        restaurantName: restaurant.restaurantName
+      });
+      
+      const response = await fetch(`/api/chef-info?${params.toString()}`);
+      const data = await response.json();
+      
+      if (response.ok) {
+        setChefInfo(data.information);
+        setShowChefInfo(true);
+      } else {
+        console.error("Failed to fetch chef information:", data.error);
+      }
+    } catch (error) {
+      console.error("Error fetching chef information:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -42,8 +77,46 @@ const RestaurantInfoPanel = ({
             <div className="space-y-4">
               <div>
                 <h3 className="text-sm font-semibold text-gray-500">CHEF</h3>
-                <p className="text-base">{restaurant.chefName}</p>
+                <div className="flex items-center">
+                  <p className="text-base">{restaurant.chefName}</p>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="ml-1 h-6 w-6" 
+                    onClick={fetchChefInfo}
+                    disabled={isLoading}
+                  >
+                    <Info className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
+              
+              {showChefInfo && (
+                <div className="bg-gray-50 p-3 rounded-md">
+                  <h3 className="text-sm font-semibold text-gray-500 mb-2">CHEF INFORMATION</h3>
+                  {isLoading ? (
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-4 w-5/6" />
+                      <Skeleton className="h-4 w-4/5" />
+                      <Skeleton className="h-4 w-full" />
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-700 space-y-2">
+                      {chefInfo && chefInfo.split('\n\n').map((paragraph, index) => (
+                        <p key={index}>{paragraph}</p>
+                      ))}
+                    </div>
+                  )}
+                  <Button 
+                    variant="outline" 
+                    className="w-full mt-2 text-xs"
+                    onClick={() => setShowChefInfo(false)}
+                  >
+                    Hide Info
+                  </Button>
+                </div>
+              )}
               
               <div>
                 <h3 className="text-sm font-semibold text-gray-500">TOP CHEF SEASON</h3>

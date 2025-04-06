@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import fetch from "node-fetch";
 
 // Sample restaurant data - in a real app, this would come from a database
 const restaurantData = {
@@ -152,9 +153,13 @@ const initializeStorage = async () => {
   // Flatten the restaurant data into a single array
   const allRestaurants = Object.values(restaurantData).flat();
   
-  // Add each restaurant to storage
+  // Add each restaurant to storage with correct typing
   for (const restaurant of allRestaurants) {
-    await storage.createRestaurant(restaurant);
+    await storage.createRestaurant({
+      ...restaurant,
+      lat: restaurant.lat.toString(),
+      lng: restaurant.lng.toString()
+    });
   }
 };
 
@@ -196,6 +201,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(restaurant);
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch restaurant' });
+    }
+  });
+
+  // Endpoint for Perplexity API to get chef information
+  app.get('/api/chef-info', async (req, res) => {
+    try {
+      const { chefName, restaurantName } = req.query;
+      
+      if (!chefName || typeof chefName !== 'string') {
+        return res.status(400).json({ error: "Chef name is required" });
+      }
+
+      const perplexityApiKey = process.env.PERPLEXITY_API_KEY;
+      
+      if (!perplexityApiKey) {
+        return res.status(500).json({ error: "Perplexity API key not configured" });
+      }
+
+      const url = "https://api.perplexity.ai/chat/completions";
+      const query = restaurantName && typeof restaurantName === 'string'
+        ? `Tell me about Top Chef contestant ${chefName} and their restaurant ${restaurantName}. Include current status, career highlights, and any recent news or awards.`
+        : `Tell me about Top Chef contestant ${chefName}. Include their Top Chef journey, current restaurants, career highlights, and any recent news or awards.`;
+
+      const payload = {
+        model: "llama-3.1-sonar-small-128k-online",
+        messages: [
+          {
+            role: "system",
+            content: "You are a knowledgeable assistant providing information about Top Chef contestants. Be accurate, engaging, and concise. Format your response in clear paragraphs with information about: 1) Their Top Chef journey, 2) Current restaurant(s), 3) Recent career updates, 4) Any interesting facts or awards."
+          },
+          {
+            role: "user",
+            content: query
+          }
+        ],
+        temperature: 0.3,
+        top_p: 0.9,
+        return_images: false,
+        stream: false,
+        presence_penalty: 0,
+        frequency_penalty: 1
+      };
+
+      console.log(`Fetching chef info for: ${chefName}`);
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${perplexityApiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json() as any;
+      
+      if (!response.ok) {
+        console.error('Perplexity API error:', data);
+        return res.status(500).json({ error: "Failed to fetch chef information" });
+      }
+
+      return res.json({
+        information: data.choices?.[0]?.message?.content || "Information not available",
+        citations: data.citations || []
+      });
+    } catch (error) {
+      console.error('Error fetching chef information:', error);
+      return res.status(500).json({ error: "Failed to fetch chef information" });
     }
   });
 
