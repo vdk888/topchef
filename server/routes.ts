@@ -149,18 +149,58 @@ const restaurantData = {
 };
 
 // Initialize the storage with restaurant data
+/**
+ * This function initializes the database with sample data.
+ * It's used only if the database is empty upon app startup.
+ * For full seeding, use the seed.ts script.
+ */
 const initializeStorage = async () => {
+  // Check if we have any data in the database before initializing
+  const countries = await storage.getCountries();
+  
+  // Skip initialization if we already have data
+  if (countries.length > 0) {
+    console.log('Database already contains data. Skipping initialization.');
+    return;
+  }
+  
+  console.log('Initializing database with sample data...');
+  
   // Flatten the restaurant data into a single array
   const allRestaurants = Object.values(restaurantData).flat();
   
   // Add each restaurant to storage with correct typing
   for (const restaurant of allRestaurants) {
+    // First ensure the chef exists
+    let chef = await storage.getChefByName(restaurant.chefName);
+    
+    if (!chef) {
+      // Create chef if they don't exist
+      chef = await storage.createChef({
+        name: restaurant.chefName,
+        status: "active",
+        lastUpdated: new Date()
+      });
+    }
+    
+    // Create the restaurant linked to the chef
     await storage.createRestaurant({
-      ...restaurant,
+      chefId: chef.id,
+      restaurantName: restaurant.restaurantName,
+      description: `Restaurant by ${restaurant.chefName}`,
       lat: restaurant.lat.toString(),
-      lng: restaurant.lng.toString()
+      lng: restaurant.lng.toString(),
+      seasonId: restaurant.season,
+      city: restaurant.city,
+      country: restaurant.country,
+      isCurrent: true,
+      lastUpdated: new Date(),
+      dateOpened: null,
+      dateClosed: null
     });
   }
+  
+  console.log('Database initialization complete.');
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -188,7 +228,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Get a specific restaurant by ID
+  // Get restaurants with chef information
+  app.get('/api/restaurants-with-chefs', async (req, res) => {
+    try {
+      const country = req.query.country as string || 'USA';
+      const restaurants = await storage.getRestaurantsByCountry(country);
+      
+      // Get chef information for each restaurant
+      const restaurantsWithChefs = await Promise.all(
+        restaurants.map(async (restaurant) => {
+          const chef = await storage.getChef(restaurant.chefId);
+          return {
+            ...restaurant,
+            chef: chef || null
+          };
+        })
+      );
+      
+      res.json(restaurantsWithChefs);
+    } catch (error) {
+      console.error('Error fetching restaurants with chefs:', error);
+      res.status(500).json({ error: 'Failed to fetch restaurants with chefs' });
+    }
+  });
+  
+  // Get a specific restaurant by ID with chef information
   app.get('/api/restaurants/:id', async (req, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -198,9 +262,114 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'Restaurant not found' });
       }
       
-      res.json(restaurant);
+      // Get chef information
+      const chef = await storage.getChef(restaurant.chefId);
+      
+      // Get season information
+      const season = restaurant.seasonId ? await storage.getSeason(restaurant.seasonId) : null;
+      
+      res.json({
+        ...restaurant,
+        chef: chef || null,
+        season: season || null
+      });
     } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch restaurant' });
+      console.error('Error fetching restaurant details:', error);
+      res.status(500).json({ error: 'Failed to fetch restaurant details' });
+    }
+  });
+
+  // Get all chefs
+  app.get('/api/chefs', async (req, res) => {
+    try {
+      const chefs = await storage.getAllChefs();
+      res.json(chefs);
+    } catch (error) {
+      console.error('Error fetching chefs:', error);
+      res.status(500).json({ error: 'Failed to fetch chefs' });
+    }
+  });
+
+  // Get chef by ID
+  app.get('/api/chefs/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const chef = await storage.getChef(id);
+      
+      if (!chef) {
+        return res.status(404).json({ error: 'Chef not found' });
+      }
+      
+      // Get restaurants owned by this chef
+      const restaurants = await storage.getRestaurantsByChef(id);
+      
+      // Get seasons participated in
+      const participations = await storage.getParticipationsByChef(id);
+      
+      // Get seasons data
+      const seasonPromises = participations.map(p => storage.getSeason(p.seasonId));
+      const seasons = await Promise.all(seasonPromises);
+      
+      res.json({
+        ...chef,
+        restaurants,
+        participations,
+        seasons: seasons.filter(Boolean) // Filter out any null seasons
+      });
+    } catch (error) {
+      console.error('Error fetching chef details:', error);
+      res.status(500).json({ error: 'Failed to fetch chef details' });
+    }
+  });
+
+  // Get all seasons
+  app.get('/api/seasons', async (req, res) => {
+    try {
+      const seasons = await storage.getAllSeasons();
+      res.json(seasons);
+    } catch (error) {
+      console.error('Error fetching seasons:', error);
+      res.status(500).json({ error: 'Failed to fetch seasons' });
+    }
+  });
+
+  // Get seasons by country
+  app.get('/api/seasons/country/:country', async (req, res) => {
+    try {
+      const country = req.params.country;
+      const seasons = await storage.getSeasonsByCountry(country);
+      res.json(seasons);
+    } catch (error) {
+      console.error('Error fetching seasons by country:', error);
+      res.status(500).json({ error: 'Failed to fetch seasons by country' });
+    }
+  });
+
+  // Get season by ID with participants
+  app.get('/api/seasons/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const season = await storage.getSeason(id);
+      
+      if (!season) {
+        return res.status(404).json({ error: 'Season not found' });
+      }
+      
+      // Get participations for this season
+      const participations = await storage.getParticipationsBySeason(id);
+      
+      // Get chef details for each participation
+      const chefPromises = participations.map(p => storage.getChef(p.chefId));
+      const chefs = await Promise.all(chefPromises);
+      
+      res.json({
+        ...season,
+        participations,
+        chefs: chefs.filter(Boolean) // Filter out any null chefs
+      });
+    } catch (error) {
+      console.error('Error fetching season details:', error);
+      res.status(500).json({ error: 'Failed to fetch season details' });
     }
   });
 
@@ -269,6 +438,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching chef information:', error);
       return res.status(500).json({ error: "Failed to fetch chef information" });
+    }
+  });
+
+  // Parse and update chef data from Perplexity API
+  app.post('/api/update-chef', async (req, res) => {
+    try {
+      const { chefId, perplexityData } = req.body;
+      
+      if (!chefId || !perplexityData) {
+        return res.status(400).json({ error: "Chef ID and Perplexity data are required" });
+      }
+      
+      const chef = await storage.getChef(chefId);
+      if (!chef) {
+        return res.status(404).json({ error: "Chef not found" });
+      }
+      
+      // Process the Perplexity data to update chef information
+      // This would involve parsing the text to extract structured information
+      // For now, we'll just update the lastUpdated timestamp
+      
+      const updatedChef = await storage.updateChef(chefId, {
+        bio: perplexityData.information,
+        lastUpdated: new Date()
+      });
+      
+      res.json(updatedChef);
+    } catch (error) {
+      console.error('Error updating chef data:', error);
+      res.status(500).json({ error: 'Failed to update chef data' });
     }
   });
 
