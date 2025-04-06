@@ -18,7 +18,7 @@ const Header = ({
   lastUpdated 
 }: HeaderProps) => {
   return (
-    <header className="relative z-10 bg-white border-b border-gray-200 shadow-sm">
+    <header className="relative z-50 bg-white border-b border-gray-200 shadow-sm">
       <div className="px-4 py-3">
         <div className="flex flex-col space-y-3">
           <div className="flex items-center justify-between">
@@ -38,10 +38,10 @@ const Header = ({
             <div className="flex items-center space-x-2">
               <label htmlFor="country-select" className="text-sm font-medium text-gray-700">Country:</label>
               <Select value={selectedCountry} onValueChange={onCountryChange}>
-                <SelectTrigger className="w-32" id="country-select">
+                <SelectTrigger className="w-[180px]" id="country-select">
                   <SelectValue placeholder="Select country" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-[100]">
                   {countries.map(country => (
                     <SelectItem key={country} value={country}>
                       {country}
