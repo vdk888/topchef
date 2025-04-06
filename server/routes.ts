@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { restaurants, chefs, participations, seasons } from "../shared/schema";
 import fetch from "node-fetch";
+import { OpenAI } from "openai";
 
 // Function to clear database tables
 const clearDatabase = async () => {
@@ -560,6 +561,132 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching chef information:', error);
       return res.status(500).json({ error: "Failed to fetch chef information" });
+    }
+  });
+  
+  // Get restaurant details using OpenRouter and deepseek model
+  app.get('/api/restaurant-details', async (req, res) => {
+    try {
+      const { chefName, restaurantName, country, city } = req.query;
+      
+      if (!chefName || typeof chefName !== 'string' || !restaurantName || typeof restaurantName !== 'string') {
+        return res.status(400).json({ error: "Chef name and restaurant name are required" });
+      }
+
+      const openrouterApiKey = process.env.OPENROUTER_API_KEY;
+      
+      if (!openrouterApiKey) {
+        return res.status(500).json({ error: "OpenRouter API key not configured" });
+      }
+
+      // Initialize OpenAI client with OpenRouter base URL
+      const client = new OpenAI({
+        baseURL: "https://openrouter.ai/api/v1",
+        apiKey: openrouterApiKey,
+      });
+
+      // First query to get information about the restaurant and chef
+      const locationContext = `${city ? `in ${city}` : ''} ${country ? `in ${country}` : ''}`.trim();
+      
+      const initialQuery = `Tell me about the restaurant "${restaurantName}" by chef ${chefName} ${locationContext}. Include details about the chef's background, the restaurant concept, website URL, Top Chef season participation, and when they were eliminated if applicable.`;
+      
+      console.log(`Fetching restaurant details for: ${restaurantName} by ${chefName}`);
+      
+      const completion = await client.chat.completions.create({
+        model: "deepseek/deepseek-v3-base:free",
+        messages: [
+          {
+            role: "system",
+            content: "You are an AI that provides detailed information about restaurants from the TV show Top Chef. Focus on accurate, recent information."
+          },
+          {
+            role: "user",
+            content: initialQuery
+          }
+        ],
+        temperature: 0.5,
+        max_tokens: 1024,
+      });
+
+      const restaurantInfo = completion.choices[0].message.content;
+      
+      // Second query to parse the information into a structured format
+      const parseQuery = `
+      Parse the following information about a restaurant and its chef into a structured format:
+      
+      ${restaurantInfo}
+      
+      Extract and return ONLY a JSON object with these fields (leave blank if info not available):
+      {
+        "restaurantName": "",
+        "chefName": "", 
+        "bio": "",
+        "websiteUrl": "",
+        "seasonNumber": null,
+        "eliminationInfo": "", 
+        "cuisineType": ""
+      }
+      
+      ONLY return valid JSON without any additional text before or after.
+      `;
+      
+      console.log("Parsing restaurant information into structured format");
+      
+      const parseCompletion = await client.chat.completions.create({
+        model: "deepseek/deepseek-v3-base:free",
+        messages: [
+          {
+            role: "system",
+            content: "You are an AI that parses restaurant information into structured JSON. Always return valid JSON only."
+          },
+          {
+            role: "user",
+            content: parseQuery
+          }
+        ],
+        temperature: 0.1,
+        max_tokens: 1024,
+      });
+      
+      // Try to parse the response as JSON
+      let parsedData;
+      try {
+        const jsonStr = parseCompletion.choices[0]?.message?.content || "{}";
+        // Remove markdown code blocks if present (```json and ```)
+        const cleanedJson = jsonStr.trim().replace(/^```json\s*/, '').replace(/\s*```$/, '');
+        parsedData = JSON.parse(cleanedJson);
+        
+        // Store the raw response and parsed data in the database if a chef exists
+        if (typeof chefName === 'string') {
+          const chef = await storage.getChefByName(chefName);
+          if (chef) {
+            await storage.updateChef(chef.id, {
+              bio: parsedData.bio || null,
+              perplexityData: {
+                raw: restaurantInfo,
+                parsed: parsedData
+              }
+            });
+          }
+        }
+        
+      } catch (error) {
+        console.error("Error parsing JSON response:", error);
+        console.log("Raw response:", parseCompletion.choices[0]?.message?.content || "No content");
+        // Return the raw text if we can't parse it
+        return res.json({
+          rawInfo: restaurantInfo,
+          error: "Could not parse structured data"
+        });
+      }
+      
+      return res.json({
+        rawInfo: restaurantInfo,
+        structuredInfo: parsedData
+      });
+    } catch (error) {
+      console.error('Error fetching restaurant details:', error);
+      return res.status(500).json({ error: "Failed to fetch restaurant details" });
     }
   });
 

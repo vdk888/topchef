@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { X, Info } from "lucide-react";
+import { X, Info, ExternalLink, Award, Calendar } from "lucide-react";
 import { Restaurant } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 
 // Define the ExtendedRestaurant interface for frontend use
 interface ExtendedRestaurant extends Restaurant {
@@ -28,6 +29,17 @@ type RestaurantWithDetails = Restaurant & {
   } | null;
 };
 
+// Interface for structured restaurant details from OpenRouter/deepseek
+interface RestaurantDetails {
+  restaurantName: string;
+  chefName: string;
+  bio: string;
+  websiteUrl: string;
+  seasonNumber: number | null;
+  eliminationInfo: string;
+  cuisineType: string;
+}
+
 interface RestaurantInfoPanelProps {
   restaurant: ExtendedRestaurant;
   selectedCountry: string;
@@ -42,6 +54,8 @@ const RestaurantInfoPanel = ({
   const [chefInfo, setChefInfo] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showChefInfo, setShowChefInfo] = useState(false);
+  const [restaurantDetails, setRestaurantDetails] = useState<RestaurantDetails | null>(null);
+  const [rawInfo, setRawInfo] = useState<string | null>(null);
 
   const handleGetDirections = () => {
     const { lat, lng, restaurantName } = restaurant;
@@ -90,6 +104,53 @@ const RestaurantInfoPanel = ({
       setIsLoading(false);
     }
   };
+  
+  // Fetch restaurant details using the OpenRouter/deepseek endpoint
+  const fetchRestaurantDetails = async () => {
+    if (restaurantDetails) return; // Don't fetch if we already have the data
+    
+    setIsLoading(true);
+    
+    try {
+      // Prepare query parameters
+      const chefName = restaurant.chefName || "";
+      const restaurantName = restaurant.restaurantName || "";
+      const country = selectedCountry || "";
+      const city = restaurant.city || "";
+      
+      const params = new URLSearchParams({
+        chefName,
+        restaurantName,
+        country,
+        city
+      });
+      
+      console.log(`Fetching restaurant details for: ${restaurantName}`);
+      const response = await fetch(`/api/restaurant-details?${params.toString()}`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch restaurant details: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.structuredInfo) {
+        setRestaurantDetails(data.structuredInfo);
+        setRawInfo(data.rawInfo);
+      } else if (data.rawInfo) {
+        setRawInfo(data.rawInfo);
+      }
+    } catch (error) {
+      console.error("Error fetching restaurant details:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Fetch restaurant details when the component mounts
+  useEffect(() => {
+    fetchRestaurantDetails();
+  }, [restaurant.id]);
 
   return (
     <div className="fixed inset-y-0 right-0 w-full max-w-xs bg-white shadow-lg z-10 flex flex-col">
@@ -153,9 +214,71 @@ const RestaurantInfoPanel = ({
                 </div>
               )}
               
+              {isLoading && !restaurantDetails && (
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-5/6" />
+                  <Skeleton className="h-4 w-4/5" />
+                </div>
+              )}
+              
+              {restaurantDetails && (
+                <>
+                  {restaurantDetails.bio && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-500">CHEF BIO</h3>
+                      <p className="text-sm text-gray-700 mt-1">{restaurantDetails.bio}</p>
+                    </div>
+                  )}
+                  
+                  {restaurantDetails.websiteUrl && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-500">WEBSITE</h3>
+                      <a 
+                        href={restaurantDetails.websiteUrl.startsWith('http') 
+                          ? restaurantDetails.websiteUrl 
+                          : `https://${restaurantDetails.websiteUrl}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline flex items-center text-sm"
+                      >
+                        {restaurantDetails.websiteUrl.replace(/(https?:\/\/)?(www\.)?/, '')}
+                        <ExternalLink className="h-3 w-3 ml-1" />
+                      </a>
+                    </div>
+                  )}
+                  
+                  {restaurantDetails.cuisineType && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-500">CUISINE</h3>
+                      <Badge variant="outline" className="mt-1">
+                        {restaurantDetails.cuisineType}
+                      </Badge>
+                    </div>
+                  )}
+                </>
+              )}
+              
               <div>
                 <h3 className="text-sm font-semibold text-gray-500">TOP CHEF SEASON</h3>
-                <p className="text-base">Season {restaurant.season || restaurant.seasonId || "Unknown"}</p>
+                <div className="flex items-center">
+                  <Calendar className="h-4 w-4 mr-1 text-gray-500" />
+                  <p className="text-base">
+                    Season {
+                      restaurantDetails?.seasonNumber || 
+                      restaurant.season || 
+                      restaurant.seasonId || 
+                      "Unknown"
+                    }
+                  </p>
+                </div>
+                
+                {restaurantDetails?.eliminationInfo && (
+                  <p className="text-sm text-gray-700 mt-1">
+                    <span className="text-gray-500">Elimination: </span> 
+                    {restaurantDetails.eliminationInfo}
+                  </p>
+                )}
               </div>
               
               <div>
@@ -165,6 +288,17 @@ const RestaurantInfoPanel = ({
                   Lat: {Number(restaurant.lat).toFixed(4)}, Lng: {Number(restaurant.lng).toFixed(4)}
                 </p>
               </div>
+              
+              {rawInfo && (
+                <div className="bg-gray-50 p-3 rounded-md">
+                  <h3 className="text-sm font-semibold text-gray-500 mb-2">MORE INFORMATION</h3>
+                  <div className="text-sm text-gray-700 space-y-2">
+                    {rawInfo.split('\n\n').map((paragraph, index) => (
+                      <p key={index}>{paragraph}</p>
+                    ))}
+                  </div>
+                </div>
+              )}
               
               <Button 
                 className="w-full bg-primary hover:bg-primary/90 text-white"
