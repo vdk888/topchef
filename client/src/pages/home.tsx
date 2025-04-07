@@ -107,10 +107,31 @@ const Home = () => {
         variant: "default",
       });
 
-      // Optionally refetch data after a delay or based on backend signal
-      // For now, we just show the message. The update happens server-side.
-      // Consider adding a mechanism to notify completion and then refetch.
-      // setTimeout(() => refetch(), 5000); // Example: Refetch after 5 seconds
+      // Refetch data after a delay to allow the server to update the database
+      setTimeout(() => {
+        // Refetch restaurants
+        refetch();
+        
+        // Refetch seasons to ensure we have the latest season list
+        const refetchSeasons = async () => {
+          try {
+            const res = await fetch(`/api/seasons/country/${selectedCountry}`);
+            if (res.ok) {
+              const updatedSeasons = await res.json();
+              if (updatedSeasons.length > availableSeasons.length) {
+                toast({
+                  title: "New Seasons Found",
+                  description: "New seasons have been discovered and added to the database.",
+                  variant: "default",
+                });
+              }
+            }
+          } catch (error) {
+            console.error("Error refetching seasons:", error);
+          }
+        };
+        refetchSeasons();
+      }, 3000); // Refetch after 3 seconds
 
     } catch (error) {
       console.error("Error triggering update process:", error);

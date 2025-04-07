@@ -1031,6 +1031,138 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Helper function to check and update seasons with fewer than 10 candidates
+  async function checkAndUpdateSeasonsWithFewCandidates(country: string) {
+    console.log(`Checking seasons with few candidates for country: ${country}`);
+    
+    // Get all seasons for the country
+    const countrySeasons = await storage.getSeasonsByCountry(country);
+    let updatedSeasons = 0;
+    
+    for (const season of countrySeasons) {
+      // Get participants for this season
+      const participations = await storage.getParticipationsBySeason(season.id);
+      
+      // If this season has fewer than 10 participants, query Perplexity for a complete list
+      if (participations.length < 10) {
+        console.log(`Season ${season.number} (${season.year}) for ${country} has only ${participations.length} candidates - fetching complete list`);
+        
+        // Create a detailed prompt for Perplexity
+        const seasonPrompt = `
+        Provide a comprehensive list of ALL contestants who participated in Top Chef ${country} Season ${season.number} (${season.year}). 
+        For each contestant, provide:
+        1. Full name
+        2. Primary restaurant name at the time of the show (if known)
+        3. City and address of that restaurant (if known)
+        
+        Format the response as a clear list:
+        - Chef Name, Restaurant Name, City, Address
+        
+        Please include ALL contestants from this season, not just finalists or winners.
+        `;
+        
+        const seasonCandidatesResponse = await callPerplexity(
+          seasonPrompt, 
+          "You are an AI assistant specialized in providing accurate and complete information about the TV show Top Chef. Focus on factual information only about this specific season."
+        );
+        
+        if (seasonCandidatesResponse) {
+          console.log(`Received response for ${country} Season ${season.number} candidates. Processing...`);
+          
+          // Parse the response to extract chef and restaurant information
+          // Flexible regex pattern to handle various formats
+          const candidateRegex = /-\s*([^,]+),\s*([^,]+)?,\s*([^,]+)?,\s*([^\n]*)?/g;
+          let match;
+          let addedCandidates = 0;
+          
+          while ((match = candidateRegex.exec(seasonCandidatesResponse)) !== null) {
+            const [, chefName, restaurantName = '', city = '', address = ''] = match.map(s => s ? s.trim() : '');
+            
+            if (!chefName) continue; // Skip if no chef name found
+            
+            console.log(`Processing candidate: ${chefName}, ${restaurantName}, ${city}, ${address}`);
+            
+            try {
+              // Check if chef already exists
+              let chef = await storage.getChefByName(chefName);
+              
+              // Create chef if not exists
+              if (!chef) {
+                console.log(`Creating new chef: ${chefName}`);
+                chef = await storage.createChef({ 
+                  name: chefName, 
+                  status: 'active', 
+                  bio: '', // Will be updated later
+                  lastUpdated: new Date()
+                });
+              }
+              
+              // Check if this chef already has a participation in this season
+              const existingParticipationsResult = await db
+                .select()
+                .from(participations)
+                .where(
+                  and(
+                    eq(participations.chefId, chef.id), 
+                    eq(participations.seasonId, season.id)
+                  )
+                )
+                .limit(1);
+              
+              const existingParticipations = await existingParticipationsResult.execute();
+              
+              // Create participation if not exists
+              if (!existingParticipations[0]) {
+                await storage.createParticipation({
+                  chefId: chef.id,
+                  seasonId: season.id,
+                  // Other participation details are optional
+                });
+                console.log(`Created participation record for Chef ${chef.id} (${chefName}) in Season ${season.id}`);
+                addedCandidates++;
+              }
+              
+              // Create or update restaurant if we have restaurant info
+              if (restaurantName) {
+                // Check if restaurant already exists for this chef
+                const existingRestaurants = await storage.getRestaurantsByChef(chef.id);
+                const existingRestaurant = existingRestaurants.find(r => 
+                  r.restaurantName.toLowerCase() === restaurantName.toLowerCase());
+                
+                if (!existingRestaurant) {
+                  // Create new restaurant
+                  const fullAddress = [address, city].filter(Boolean).join(', ');
+                  
+                  await storage.createRestaurant({
+                    chefId: chef.id,
+                    restaurantName: restaurantName,
+                    country: country,
+                    city: city || "",
+                    address: fullAddress || null,
+                    lat: "0", // Placeholder - would need geocoding to get these
+                    lng: "0", // Placeholder
+                    seasonId: season.id,
+                    chefAssociationLastUpdated: new Date(),
+                    addressLastUpdated: fullAddress ? new Date() : null,
+                    restaurantNameLastUpdated: new Date()
+                  });
+                  console.log(`Created restaurant: ${restaurantName} for chef ${chefName}`);
+                }
+              }
+            } catch (error) {
+              console.error(`Error processing candidate ${chefName}:`, error);
+            }
+          }
+          
+          console.log(`Added ${addedCandidates} new candidates to ${country} Season ${season.number}`);
+          updatedSeasons++;
+        }
+      }
+    }
+    
+    return updatedSeasons;
+  }
+
   // NEW Endpoint for periodic/manual data update
   app.post('/api/update-data', async (req, res) => {
     try {
@@ -1041,7 +1173,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`Starting data update process for country: ${country}...`);
 
-      // --- 1. Check for outdated key fields ---
+      // --- 1. Check and update seasons with few candidates ---
+      const updatedSeasons = await checkAndUpdateSeasonsWithFewCandidates(country);
+      
+      // --- 2. Check for outdated key fields ---
       const threeMonthsAgo = new Date();
       threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
 
@@ -1137,9 +1272,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Create participation record
             if (currentSeasonId) {
                // Avoid duplicate participations
-               const existingParticipation = await db.select().from(participations)
+               const existingParticipationsQuery = db.select()
+                  .from(participations)
                   .where(and(eq(participations.chefId, chef.id), eq(participations.seasonId, currentSeasonId)))
-                  .limit(1).execute();
+                  .limit(1);
+                  
+               const existingParticipation = await existingParticipationsQuery.execute();
                if (!existingParticipation[0]) {
                   await storage.createParticipation({
                      chefId: chef.id,
@@ -1299,7 +1437,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       console.log(`Data update process for ${country} finished processing outdated records.`);
-      res.status(200).json({ message: `Update process initiated for ${country}. Found ${outdatedRestaurants.length} outdated records. Checked for season ${nextSeasonNumber}.` });
+      res.status(200).json({ 
+        message: `Update process completed for ${country}. Updated ${updatedSeasons} seasons with low candidate counts. Found ${outdatedRestaurants.length} outdated restaurant records. Checked for season ${nextSeasonNumber}.` 
+      });
 
     } catch (error) {
       console.error('Error during data update process:', error);
