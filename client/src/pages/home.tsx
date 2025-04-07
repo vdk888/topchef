@@ -152,16 +152,21 @@ const Home = () => {
         onSeasonChange={handleSeasonChange}
       />
       
-      {/* View Mode Toggle Button */}
-      <div className="p-2 flex justify-end border-b"> {/* Added border */}
-         <Button variant="outline" size="sm" onClick={() => setViewMode(viewMode === 'map' ? 'table' : 'map')}>
+      {/* View Mode Toggle Button - Mobile optimized */}
+      <div className="px-3 py-1.5 flex justify-end border-b bg-white"> {/* Adjusted padding & added bg */}
+         <Button 
+           variant="secondary" 
+           size="sm" 
+           className="shadow-sm"
+           onClick={() => setViewMode(viewMode === 'map' ? 'table' : 'map')}
+         >
            {viewMode === 'map' ? <List className="h-4 w-4 mr-2" /> : <Map className="h-4 w-4 mr-2" />}
-           {viewMode === 'map' ? 'Show Table' : 'Show Map'}
+           {viewMode === 'map' ? 'View as Table' : 'View on Map'}
          </Button>
       </div>
 
       {/* Main Content Area (Map or Table) */}
-      <div className="flex-1 overflow-hidden relative" style={{ height: "calc(100vh - 120px)" }}> {/* Added fixed height */}
+      <div className="flex-1 overflow-hidden relative" style={{ height: "calc(100vh - 140px)" }}> {/* Adjusted height for mobile */}
         {viewMode === 'map' ? (
           <RestaurantMap 
             restaurants={restaurants} 

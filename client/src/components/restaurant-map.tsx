@@ -74,18 +74,25 @@ const RestaurantMap = ({
     // Default to "?" if no season number is available
     const seasonText = seasonNumber ? `${seasonNumber}` : "?"; 
     
+    // Different colors for different seasons or gray if unknown
+    let bgColor = seasonNumber ? 
+      `hsl(${(seasonNumber * 30) % 360}, 70%, 50%)` : 
+      '#888888';
+    
+    // Mobile-friendly larger size with improved tap area
     return L.divIcon({
       className: 'custom-marker',
-      html: `<div class="flex items-center justify-center w-8 h-8 bg-red-600 text-white font-bold rounded-full shadow-md border-2 border-white">${seasonText}</div>`,
-      iconSize: [32, 32],
-      iconAnchor: [16, 16]
+      html: `<div class="flex items-center justify-center w-10 h-10 text-white font-bold rounded-full shadow-md border-2 border-white" style="background-color: ${bgColor}; touch-action: manipulation;">${seasonText}</div>`,
+      iconSize: [40, 40],
+      iconAnchor: [20, 20],
+      popupAnchor: [0, -20]
     });
   };
 
   // Removed handleCloseInfo as panel rendering is moved to parent
 
   return (
-    <div className="relative flex-1 overflow-hidden z-10" style={{ height: "100%", minHeight: "60vh" }}>
+    <div className="relative flex-1 overflow-hidden z-10" style={{ height: "100%", minHeight: "80vh" }}>
       {isLoading ? (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-white">
           <div className="text-center">
@@ -162,12 +169,25 @@ const RestaurantMap = ({
                     }
                   }}
                 >
-                  {/* Popup content can also use seasonNumber */}
+                  {/* Mobile-friendly popup with larger tap targets */}
                   <Popup>
-                    <div className="text-center">
-                      <h3 className="font-bold">{restaurant.restaurantName}</h3>
-                      <p className="text-sm">{restaurant.city}, {restaurant.country}</p>
-                      <p className="text-sm">Season {restaurant.seasonNumber || "Unknown"}</p>
+                    <div className="text-center p-1">
+                      <h3 className="font-bold text-sm sm:text-base">{restaurant.restaurantName}</h3>
+                      <p className="text-xs sm:text-sm mt-1">{restaurant.city}, {restaurant.country}</p>
+                      <p className="text-xs sm:text-sm mt-1">Season {restaurant.seasonNumber || "Unknown"}</p>
+                      <button 
+                        className="mt-2 w-full text-xs bg-primary text-white py-1.5 px-2 rounded hover:bg-primary/90 active:bg-primary/80 touch-manipulation"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSelectRestaurant({
+                            ...restaurant,
+                            chefName: "Loading...",
+                            seasonNumber: restaurant.seasonNumber
+                          });
+                        }}
+                      >
+                        View Details
+                      </button>
                     </div>
                   </Popup>
                 </Marker>

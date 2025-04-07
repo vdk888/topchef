@@ -129,9 +129,9 @@ const RestaurantInfoPanel = ({
   // Display loading state
   if (isLoading) {
     return (
-      <div className="fixed inset-y-0 right-0 w-full max-w-xs bg-white shadow-lg z-10 flex flex-col p-4 space-y-4">
-        <div className="flex items-center justify-between border-b pb-4">
-          <Skeleton className="h-6 w-3/4" />
+      <div className="fixed inset-0 sm:inset-y-0 sm:right-0 sm:left-auto w-full sm:max-w-sm bg-white shadow-lg z-30 flex flex-col p-4 space-y-4">
+        <div className="flex items-center justify-between border-b pb-3">
+          <Skeleton className="h-5 w-3/4" />
           <Skeleton className="h-8 w-8 rounded-full" />
         </div>
         <Skeleton className="h-4 w-1/4" />
@@ -140,7 +140,7 @@ const RestaurantInfoPanel = ({
         <Skeleton className="h-10 w-full" />
         <Skeleton className="h-4 w-1/4 mt-2" />
         <Skeleton className="h-5 w-3/4" />
-         <Skeleton className="h-4 w-1/4 mt-2" />
+        <Skeleton className="h-4 w-1/4 mt-2" />
         <Skeleton className="h-5 w-1/2" />
         <Skeleton className="h-10 w-full mt-4" />
       </div>
@@ -150,8 +150,8 @@ const RestaurantInfoPanel = ({
   // Display error state
   if (error) {
      return (
-      <div className="fixed inset-y-0 right-0 w-full max-w-xs bg-white shadow-lg z-10 flex flex-col p-4">
-         <div className="flex items-center justify-between border-b pb-4">
+      <div className="fixed inset-0 sm:inset-y-0 sm:right-0 sm:left-auto w-full sm:max-w-sm bg-white shadow-lg z-30 flex flex-col p-4">
+         <div className="flex items-center justify-between border-b pb-3">
            <h2 className="text-lg font-bold text-red-600">Error</h2>
             <Button variant="ghost" size="icon" className="rounded-full" onClick={onClose} aria-label="Close">
               <X className="h-5 w-5" />
@@ -165,8 +165,8 @@ const RestaurantInfoPanel = ({
   // Display empty state if no data after loading/no error
   if (!panelData) {
      return (
-       <div className="fixed inset-y-0 right-0 w-full max-w-xs bg-white shadow-lg z-10 flex flex-col p-4">
-         <div className="flex items-center justify-between border-b pb-4">
+       <div className="fixed inset-0 sm:inset-y-0 sm:right-0 sm:left-auto w-full sm:max-w-sm bg-white shadow-lg z-30 flex flex-col p-4">
+         <div className="flex items-center justify-between border-b pb-3">
            <h2 className="text-lg font-bold">Restaurant Info</h2>
             <Button variant="ghost" size="icon" className="rounded-full" onClick={onClose} aria-label="Close">
               <X className="h-5 w-5" />
@@ -179,19 +179,19 @@ const RestaurantInfoPanel = ({
 
   // Render panel with fetched data
   return (
-    <div className="fixed inset-y-0 right-0 w-full max-w-xs bg-white shadow-lg z-10 flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b">
-         {/* Use DataField for the header title as well */}
+    <div className="fixed inset-0 sm:inset-y-0 sm:right-0 sm:left-auto w-full sm:max-w-sm bg-white shadow-lg z-30 flex flex-col">
+      {/* Header with close button */}
+      <div className="flex items-center justify-between p-3 border-b">
+         {/* Use DataField for the header title */}
          <DataField 
             label="" // No visible label for the main title
-            value={<h2 className="text-lg font-bold">{panelData.restaurantName}</h2>} 
+            value={<h2 className="text-base font-bold truncate">{panelData.restaurantName}</h2>} 
             metadata={panelData.metadata?.restaurantName} 
          />
         <Button
           variant="ghost" 
           size="icon" 
-          className="rounded-full" 
+          className="rounded-full -mr-1" 
           onClick={onClose} 
           aria-label="Close"
         >
@@ -200,10 +200,10 @@ const RestaurantInfoPanel = ({
       </div>
       
       {/* Content */}
-      <div className="flex-1 p-4 overflow-y-auto">
+      <div className="flex-1 p-3 overflow-y-auto">
         <Card className="border-0 shadow-none">
           <CardContent className="p-0">
-            <div className="space-y-5"> {/* Increased spacing */}
+            <div className="space-y-4"> {/* Adjusted spacing for mobile */}
               
               <DataField 
                  label="CHEF" 
@@ -227,10 +227,8 @@ const RestaurantInfoPanel = ({
                  } 
                  metadata={panelData.metadata?.bio} 
               />
-              
-              {/* TODO: Add Website, Cuisine etc. using DataField if metadata is available */}
 
-              {/* Season Info - Assuming this doesn't change often, maybe no metadata needed? */}
+              {/* Season Info - Restructured for mobile */}
               {panelData.season && (
                 <div>
                   <h3 className="text-sm font-semibold text-gray-500">TOP CHEF SEASON</h3>
@@ -257,17 +255,20 @@ const RestaurantInfoPanel = ({
                  } 
                  metadata={panelData.metadata?.address} 
               />
-              
-              <Button 
-                className="w-full bg-primary hover:bg-primary/90 text-white mt-4 flex items-center"
-                onClick={handleGetDirections}
-              >
-                <MapPin className="h-4 w-4 mr-2" />
-                Get Directions
-              </Button>
             </div>
           </CardContent>
         </Card>
+      </div>
+      
+      {/* Fixed button at bottom */}
+      <div className="p-3 border-t">
+        <Button 
+          className="w-full bg-primary hover:bg-primary/90 text-white flex items-center justify-center"
+          onClick={handleGetDirections}
+        >
+          <MapPin className="h-4 w-4 mr-2" />
+          Get Directions
+        </Button>
       </div>
     </div>
   );
