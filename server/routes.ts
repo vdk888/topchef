@@ -440,15 +440,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const country = req.query.country as string || 'USA';
       const seasonQuery = req.query.season as string | undefined;
-      const seasonId = seasonQuery ? parseInt(seasonQuery) : undefined;
+      const parsedSeasonId = seasonQuery ? parseInt(seasonQuery) : undefined;
 
       // Validate seasonId if provided
-      if (seasonQuery && (isNaN(seasonId) || seasonId <= 0)) {
+      if (seasonQuery && (isNaN(Number(parsedSeasonId)) || (parsedSeasonId !== undefined && parsedSeasonId <= 0))) {
          return res.status(400).json({ error: 'Invalid season parameter' });
       }
       
       // Ensure we pass either a valid number or undefined
-      const validSeasonId = (seasonId !== undefined && !isNaN(seasonId) && seasonId > 0) ? seasonId : undefined;
+      const validSeasonId = (parsedSeasonId !== undefined && !isNaN(Number(parsedSeasonId)) && parsedSeasonId > 0) ? parsedSeasonId : undefined;
 
       console.log(`Fetching restaurants for country: ${country}` + (validSeasonId ? ` and season ID: ${validSeasonId}` : ''));
       // Explicitly type the result variable to match storage return type
@@ -1047,16 +1047,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const outdatedRestaurants = await db.select().from(restaurants).where(
         and( // Wrap conditions in and()
+          eq(restaurants.country, country),
           or(
             isNull(restaurants.chefAssociationLastUpdated),
             lt(restaurants.chefAssociationLastUpdated, threeMonthsAgo),
-          isNull(restaurants.addressLastUpdated),
-          lt(restaurants.addressLastUpdated, threeMonthsAgo),
-          isNull(restaurants.restaurantNameLastUpdated),
+            isNull(restaurants.addressLastUpdated),
+            lt(restaurants.addressLastUpdated, threeMonthsAgo),
+            isNull(restaurants.restaurantNameLastUpdated),
             lt(restaurants.restaurantNameLastUpdated, threeMonthsAgo)
-          ),
-          // Country filter
-          sql`${restaurants.country} = ${country}` 
+          )
         ) // Close and()
       ).execute();
 
