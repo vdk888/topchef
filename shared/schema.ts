@@ -64,10 +64,10 @@ export const restaurants = pgTable("restaurants", {
   dateOpened: timestamp("date_opened"),
   dateClosed: timestamp("date_closed"),
   lastUpdated: timestamp("last_updated").defaultNow(), // General record update time
-  // Granular timestamps for key fields
-  chefAssociationLastUpdated: timestamp("chef_association_last_updated"),
-  addressLastUpdated: timestamp("address_last_updated"),
-  restaurantNameLastUpdated: timestamp("restaurant_name_last_updated"),
+  // Granular timestamps for key fields - made nullable with defaultNow()
+  chefAssociationLastUpdated: timestamp("chef_association_last_updated").defaultNow(),
+  addressLastUpdated: timestamp("address_last_updated").defaultNow(),
+  restaurantNameLastUpdated: timestamp("restaurant_name_last_updated").defaultNow(),
 });
 
 // Create insert schemas
