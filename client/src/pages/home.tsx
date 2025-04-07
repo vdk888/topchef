@@ -161,7 +161,7 @@ const Home = () => {
       </div>
 
       {/* Main Content Area (Map or Table) */}
-      <div className="flex-1 overflow-hidden relative"> {/* Added relative positioning */}
+      <div className="flex-1 overflow-hidden relative" style={{ height: "calc(100vh - 120px)" }}> {/* Added fixed height */}
         {viewMode === 'map' ? (
           <RestaurantMap 
             restaurants={restaurants} 

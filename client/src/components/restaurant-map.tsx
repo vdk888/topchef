@@ -85,7 +85,7 @@ const RestaurantMap = ({
   // Removed handleCloseInfo as panel rendering is moved to parent
 
   return (
-    <div className="relative flex-1 overflow-hidden z-10">
+    <div className="relative flex-1 overflow-hidden z-10" style={{ height: "100%", minHeight: "60vh" }}>
       {isLoading ? (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-white">
           <div className="text-center">
