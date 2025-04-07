@@ -35,7 +35,7 @@ const Header = ({
   };
   
   return (
-    <header className="relative z-50 bg-white border-b border-gray-200 shadow-sm">
+    <header className="relative z-40 bg-white border-b border-gray-200 shadow-sm">
       <div className="px-3 py-2">
         <div className="flex flex-col space-y-2">
           {/* App Title - Hide on Mobile */}

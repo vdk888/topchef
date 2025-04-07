@@ -129,7 +129,7 @@ const RestaurantInfoPanel = ({
   // Display loading state
   if (isLoading) {
     return (
-      <div className="fixed inset-0 sm:inset-y-0 sm:right-0 sm:left-auto w-full sm:max-w-sm bg-white shadow-lg z-30 flex flex-col p-4 space-y-4">
+      <div className="fixed inset-0 sm:inset-y-0 sm:right-0 sm:left-auto w-full sm:max-w-sm bg-white shadow-lg z-[60] flex flex-col p-4 space-y-4">
         <div className="flex items-center justify-between border-b pb-3">
           <Skeleton className="h-5 w-3/4" />
           <Skeleton className="h-8 w-8 rounded-full" />
@@ -150,7 +150,7 @@ const RestaurantInfoPanel = ({
   // Display error state
   if (error) {
      return (
-      <div className="fixed inset-0 sm:inset-y-0 sm:right-0 sm:left-auto w-full sm:max-w-sm bg-white shadow-lg z-30 flex flex-col p-4">
+      <div className="fixed inset-0 sm:inset-y-0 sm:right-0 sm:left-auto w-full sm:max-w-sm bg-white shadow-lg z-[60] flex flex-col p-4">
          <div className="flex items-center justify-between border-b pb-3">
            <h2 className="text-lg font-bold text-red-600">Error</h2>
             <Button variant="ghost" size="icon" className="rounded-full" onClick={onClose} aria-label="Close">
@@ -165,7 +165,7 @@ const RestaurantInfoPanel = ({
   // Display empty state if no data after loading/no error
   if (!panelData) {
      return (
-       <div className="fixed inset-0 sm:inset-y-0 sm:right-0 sm:left-auto w-full sm:max-w-sm bg-white shadow-lg z-30 flex flex-col p-4">
+       <div className="fixed inset-0 sm:inset-y-0 sm:right-0 sm:left-auto w-full sm:max-w-sm bg-white shadow-lg z-[60] flex flex-col p-4">
          <div className="flex items-center justify-between border-b pb-3">
            <h2 className="text-lg font-bold">Restaurant Info</h2>
             <Button variant="ghost" size="icon" className="rounded-full" onClick={onClose} aria-label="Close">
@@ -179,7 +179,7 @@ const RestaurantInfoPanel = ({
 
   // Render panel with fetched data
   return (
-    <div className="fixed inset-0 sm:inset-y-0 sm:right-0 sm:left-auto w-full sm:max-w-sm bg-white shadow-lg z-30 flex flex-col">
+    <div className="fixed inset-0 sm:inset-y-0 sm:right-0 sm:left-auto w-full sm:max-w-sm bg-white shadow-lg z-[60] flex flex-col">
       {/* Header with close button */}
       <div className="flex items-center justify-between p-3 border-b">
          {/* Use DataField for the header title */}

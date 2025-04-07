@@ -62,3 +62,13 @@ html, body, #root {
     -webkit-tap-highlight-color: transparent;
   }
 }
+
+/* Fix z-index for selects and panel interactions */
+.SelectContent {
+  z-index: 200 !important;
+}
+
+/* Ensure restaurant info panel is always on top of everything */
+[data-radix-popper-content-wrapper] {
+  z-index: 100 !important;
+}
