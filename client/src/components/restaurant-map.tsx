@@ -1,19 +1,21 @@
 import { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, ZoomControl, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import RestaurantInfoPanel from './restaurant-info-panel';
 import { Restaurant } from '@shared/schema';
 
-// Extended Restaurant interface with additional fields needed in the frontend
+// Define the extended type expected in props, including seasonNumber
+type RestaurantWithSeasonNumber = Restaurant & { seasonNumber: number | null };
+
+// Extended Restaurant interface for selection state (might need seasonNumber too)
 interface ExtendedRestaurant extends Restaurant {
   chefName?: string;
-  season?: number;
+  seasonNumber?: number | null; // Use seasonNumber consistent with fetched data
 }
 
 interface RestaurantMapProps {
-  restaurants: Restaurant[];
+  restaurants: RestaurantWithSeasonNumber[]; // Use updated type
   selectedCountry: string;
-  selectedRestaurant: ExtendedRestaurant | null;
+  selectedRestaurant: ExtendedRestaurant | null; // Keep this for selection state type
   onSelectRestaurant: (restaurant: ExtendedRestaurant | null) => void;
   isLoading: boolean;
 }
@@ -31,7 +33,7 @@ const MapController = ({
   restaurants, 
   selectedRestaurant 
 }: { 
-  restaurants: Restaurant[]; 
+  restaurants: RestaurantWithSeasonNumber[]; // Use updated type
   selectedRestaurant: ExtendedRestaurant | null; 
 }) => {
   const map = useMap();
@@ -67,10 +69,10 @@ const RestaurantMap = ({
 }: RestaurantMapProps) => {
   const [mapReady, setMapReady] = useState<boolean>(false);
 
-  // Create custom icon for markers
-  const createCustomIcon = (seasonId: number | null) => {
-    // Default to "?" if no season ID is available
-    const seasonText = seasonId ? `S${seasonId}` : "?";
+// Create custom icon for markers using seasonNumber
+  const createCustomIcon = (seasonNumber: number | null) => {
+    // Default to "?" if no season number is available
+    const seasonText = seasonNumber ? `${seasonNumber}` : "?"; 
     
     return L.divIcon({
       className: 'custom-marker',
@@ -80,10 +82,7 @@ const RestaurantMap = ({
     });
   };
 
-  // Handle close restaurant info
-  const handleCloseInfo = () => {
-    onSelectRestaurant(null as any);
-  };
+  // Removed handleCloseInfo as panel rendering is moved to parent
 
   return (
     <div className="relative flex-1 overflow-hidden z-10">
@@ -124,7 +123,8 @@ const RestaurantMap = ({
                 <Marker
                   key={restaurant.id}
                   position={position}
-                  icon={createCustomIcon(restaurant.seasonId)}
+                  // Use restaurant.seasonNumber for the icon
+                  icon={createCustomIcon(restaurant.seasonNumber)} 
                   eventHandlers={{
                     click: () => {
                       // Fetch chef name for the restaurant
@@ -134,26 +134,27 @@ const RestaurantMap = ({
                           if (response.ok) {
                             const chef = await response.json();
                             // Expand the restaurant with chef info
+                            // Pass seasonNumber when selecting
                             onSelectRestaurant({
-                              ...restaurant,
+                              ...restaurant, 
                               chefName: chef.name,
-                              season: restaurant.seasonId || undefined
-                            } as ExtendedRestaurant);
+                              seasonNumber: restaurant.seasonNumber 
+                            });
                           } else {
                             // Just pass the basic restaurant data
                             onSelectRestaurant({
                               ...restaurant,
                               chefName: "Unknown Chef",
-                              season: restaurant.seasonId || undefined
-                            } as ExtendedRestaurant);
+                              seasonNumber: restaurant.seasonNumber
+                            });
                           }
                         } catch (error) {
                           console.error("Error fetching chef data:", error);
                           onSelectRestaurant({
                             ...restaurant,
                             chefName: "Unknown Chef",
-                            season: restaurant.seasonId || undefined
-                          } as ExtendedRestaurant);
+                            seasonNumber: restaurant.seasonNumber
+                          });
                         }
                       };
                       
@@ -161,42 +162,21 @@ const RestaurantMap = ({
                     }
                   }}
                 >
+                  {/* Popup content can also use seasonNumber */}
                   <Popup>
                     <div className="text-center">
                       <h3 className="font-bold">{restaurant.restaurantName}</h3>
                       <p className="text-sm">{restaurant.city}, {restaurant.country}</p>
-                      <p className="text-sm">Season {restaurant.seasonId || "Unknown"}</p>
+                      <p className="text-sm">Season {restaurant.seasonNumber || "Unknown"}</p>
                     </div>
                   </Popup>
                 </Marker>
               );
             })}
           </MapContainer>
-          
-          {/* Show empty state when no restaurant is selected */}
-          {!selectedRestaurant && restaurants.length > 0 && (
-            <div className="fixed bottom-0 left-0 right-0 p-4 bg-white shadow-lg rounded-t-lg transform transition-transform duration-300 ease-in-out z-10">
-              <div className="text-center p-4">
-                <div className="flex justify-center mb-3">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                  </svg>
-                </div>
-                <h3 className="text-base font-medium text-gray-900">Select a restaurant</h3>
-                <p className="mt-1 text-sm text-gray-500">Tap on a marker to view restaurant details</p>
-              </div>
-            </div>
-          )}
-          
-          {/* Display restaurant info panel when a restaurant is selected */}
-          {selectedRestaurant && (
-            <RestaurantInfoPanel
-              restaurant={selectedRestaurant}
-              selectedCountry={selectedCountry}
-              onClose={handleCloseInfo}
-            />
-          )}
-          
+
+          {/* Empty state and Info Panel rendering moved to Home component */}
+
           {/* Show message when no restaurants are found */}
           {restaurants.length === 0 && !isLoading && (
             <div className="fixed inset-0 flex items-center justify-center bg-white bg-opacity-80 z-10">

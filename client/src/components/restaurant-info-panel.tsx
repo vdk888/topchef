@@ -1,332 +1,268 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { X, Info, ExternalLink, Award, Calendar } from "lucide-react";
-import { Restaurant } from "@shared/schema";
-import { apiRequest } from "@/lib/queryClient";
+import { X, Calendar, Database, Zap, MapPin } from "lucide-react"; // Added Database, Zap, MapPin icons
+import { Restaurant, Chef, Season } from "@shared/schema"; // Import Chef, Season
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; // Added Tooltip
+import { format } from 'date-fns'; // For formatting dates
 
-// Define the ExtendedRestaurant interface for frontend use
-interface ExtendedRestaurant extends Restaurant {
-  chefName?: string;
-  season?: number;
-}
-
-// Extended restaurant type to include chef information
-type RestaurantWithDetails = Restaurant & {
-  chef?: {
-    id: number;
-    name: string;
-    bio?: string | null;
-    status: string;
-  } | null;
-  season?: {
-    id: number;
-    number: number;
-    title: string;
-    country: string;
-  } | null;
+// Type for the detailed data fetched from the new panel endpoint
+type PanelData = Restaurant & {
+  chef: Chef | null;
+  season: Season | null;
+  metadata: { // Metadata about data origin and freshness
+    restaurantName: { origin: 'db' | 'live', lastUpdated: Date | null };
+    address: { origin: 'db' | 'live', lastUpdated: Date | null };
+    chefAssociation: { origin: 'db' | 'live', lastUpdated: Date | null };
+    bio: { origin: 'db' | 'live', lastUpdated: Date | null };
+    // Add other fields corresponding to metadata object in backend response
+  };
 };
 
-// Interface for structured restaurant details from OpenRouter/deepseek
-interface RestaurantDetails {
-  restaurantName: string;
-  chefName: string;
-  bio: string;
-  websiteUrl: string;
-  seasonNumber: number | null;
-  eliminationInfo: string;
-  cuisineType: string;
+// Keep ExtendedRestaurant for initial prop type (passed from Home)
+interface ExtendedRestaurant extends Restaurant {
+  chefName?: string; // May not be needed if panelData always has chef
+  season?: number;   // May not be needed if panelData always has season
 }
 
 interface RestaurantInfoPanelProps {
-  restaurant: ExtendedRestaurant;
-  selectedCountry: string;
+  restaurant: ExtendedRestaurant; // Initial basic data used to trigger fetch
+  // selectedCountry: string; // Not needed if endpoint only uses ID
   onClose: () => void;
 }
 
-const RestaurantInfoPanel = ({ 
-  restaurant, 
-  selectedCountry, 
-  onClose 
-}: RestaurantInfoPanelProps) => {
-  const [chefInfo, setChefInfo] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [showChefInfo, setShowChefInfo] = useState(false);
-  const [restaurantDetails, setRestaurantDetails] = useState<RestaurantDetails | null>(null);
-  const [rawInfo, setRawInfo] = useState<string | null>(null);
+// Helper component to display data with origin tooltip
+const DataField = ({ label, value, metadata }: { label: string; value: React.ReactNode; metadata?: { origin: 'db' | 'live', lastUpdated: Date | null } }) => {
+  if (!value) return null;
 
-  const handleGetDirections = () => {
-    const { lat, lng, restaurantName } = restaurant;
-    // In a production app, this would use the device's maps application
-    window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`);
-  };
-  
-  const fetchChefInfo = async () => {
-    // Toggle the panel if information is already loaded
-    if (chefInfo) {
-      setShowChefInfo(!showChefInfo);
-      return;
-    }
-
-    setIsLoading(true);
-    setShowChefInfo(true);
-    
-    try {
-      // Make sure we have the correct information
-      const chefName = restaurant.chefName || "";
-      const restaurantName = restaurant.restaurantName || "";
-      
-      const params = new URLSearchParams({
-        chefName,
-        restaurantName
-      });
-      
-      console.log(`Fetching chef info for: ${chefName} at ${restaurantName}`);
-      const response = await fetch(`/api/chef-info?${params.toString()}`);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch chef information: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      if (data.information) {
-        setChefInfo(data.information);
-      } else {
-        setChefInfo("Chef information currently unavailable. Please try again later.");
-      }
-    } catch (error) {
-      console.error("Error fetching chef information:", error);
-      setChefInfo("Unable to fetch chef information at this time. Please try again later.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  // Fetch restaurant details using the OpenRouter/deepseek endpoint
-  const fetchRestaurantDetails = async () => {
-    if (restaurantDetails) return; // Don't fetch if we already have the data
-    
-    setIsLoading(true);
-    
-    try {
-      // Prepare query parameters
-      const chefName = restaurant.chefName || "";
-      const restaurantName = restaurant.restaurantName || "";
-      const country = selectedCountry || "";
-      const city = restaurant.city || "";
-      
-      const params = new URLSearchParams({
-        chefName,
-        restaurantName,
-        country,
-        city
-      });
-      
-      console.log(`Fetching restaurant details for: ${restaurantName}`);
-      const response = await fetch(`/api/restaurant-details?${params.toString()}`);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch restaurant details: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log("Received restaurant details:", data);
-      
-      if (data.structuredInfo) {
-        setRestaurantDetails(data.structuredInfo);
-        setRawInfo(data.rawInfo);
-      } else if (data.rawInfo) {
-        setRawInfo(data.rawInfo);
-        // Create a simplified structure from the raw info
-        if (!data.error) {
-          setRestaurantDetails({
-            restaurantName: restaurant.restaurantName,
-            chefName: restaurant.chefName || "",
-            bio: "",
-            websiteUrl: "",
-            seasonNumber: restaurant.season || null,
-            eliminationInfo: "",
-            cuisineType: ""
-          });
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching restaurant details:", error);
-      // Set minimal details to prevent UI from breaking
-      setRestaurantDetails({
-        restaurantName: restaurant.restaurantName,
-        chefName: restaurant.chefName || "",
-        bio: "",
-        websiteUrl: "",
-        seasonNumber: restaurant.season || null,
-        eliminationInfo: "",
-        cuisineType: ""
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  // Fetch restaurant details when the component mounts
-  useEffect(() => {
-    fetchRestaurantDetails();
-  }, [restaurant.id]);
+  const originIcon = metadata?.origin === 'live' 
+    ? <Zap className="h-3 w-3 text-yellow-500" /> 
+    : <Database className="h-3 w-3 text-blue-500" />;
+  const tooltipText = `${metadata?.origin === 'live' ? 'Live' : 'DB'} | ${metadata?.lastUpdated ? formatDate(metadata.lastUpdated) : 'N/A'}`;
 
   return (
+    <div>
+      <h3 className="text-sm font-semibold text-gray-500 flex items-center">
+        {label}
+        {metadata && (
+          <TooltipProvider delayDuration={100}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="ml-1.5 cursor-help">{originIcon}</span>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{tooltipText}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+      </h3>
+      <div className="text-base mt-0.5">{value}</div>
+    </div>
+  );
+};
+
+// Helper to format date or return 'N/A'
+const formatDate = (date: Date | string | null | undefined): string => {
+  if (!date) return 'N/A';
+  try {
+    return format(new Date(date), 'MMM d, yyyy');
+  } catch {
+    return 'Invalid Date';
+  }
+};
+
+const RestaurantInfoPanel = ({ 
+  restaurant, 
+  onClose 
+}: RestaurantInfoPanelProps) => {
+  const [panelData, setPanelData] = useState<PanelData | null>(null); // Use new PanelData type
+  const [isLoading, setIsLoading] = useState(true); // Start loading immediately
+  const [error, setError] = useState<string | null>(null);
+
+  const handleGetDirections = () => {
+    // Use lat/lng from panelData if available and valid, otherwise fallback to initial prop
+    const lat = panelData?.lat ?? restaurant.lat;
+    const lng = panelData?.lng ?? restaurant.lng;
+    window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`);
+  };
+
+  // Fetch data from the new panel endpoint
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      setError(null);
+      setPanelData(null); // Clear previous data
+
+      try {
+        console.log(`Fetching panel data for restaurant ID: ${restaurant.id}`);
+        const response = await fetch(`/api/restaurant-panel-data/${restaurant.id}`);
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({})); // Try to parse error
+          throw new Error(errorData.error || `Failed to fetch panel data: ${response.status}`);
+        }
+        
+        const data: PanelData = await response.json();
+        
+        // Convert date strings from JSON to Date objects (important for date-fns)
+        if (data.metadata?.restaurantName?.lastUpdated) data.metadata.restaurantName.lastUpdated = new Date(data.metadata.restaurantName.lastUpdated);
+        if (data.metadata?.address?.lastUpdated) data.metadata.address.lastUpdated = new Date(data.metadata.address.lastUpdated);
+        if (data.metadata?.chefAssociation?.lastUpdated) data.metadata.chefAssociation.lastUpdated = new Date(data.metadata.chefAssociation.lastUpdated);
+        if (data.metadata?.bio?.lastUpdated) data.metadata.bio.lastUpdated = new Date(data.metadata.bio.lastUpdated);
+        // Convert other date fields if necessary
+        
+        setPanelData(data); 
+
+      } catch (err) {
+        console.error("Error fetching restaurant panel data:", err);
+        setError(err instanceof Error ? err.message : "An unknown error occurred");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [restaurant.id]); // Re-fetch when the selected restaurant changes
+
+  // Display loading state
+  if (isLoading) {
+    return (
+      <div className="fixed inset-y-0 right-0 w-full max-w-xs bg-white shadow-lg z-10 flex flex-col p-4 space-y-4">
+        <div className="flex items-center justify-between border-b pb-4">
+          <Skeleton className="h-6 w-3/4" />
+          <Skeleton className="h-8 w-8 rounded-full" />
+        </div>
+        <Skeleton className="h-4 w-1/4" />
+        <Skeleton className="h-5 w-1/2" />
+        <Skeleton className="h-4 w-1/4 mt-2" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-4 w-1/4 mt-2" />
+        <Skeleton className="h-5 w-3/4" />
+         <Skeleton className="h-4 w-1/4 mt-2" />
+        <Skeleton className="h-5 w-1/2" />
+        <Skeleton className="h-10 w-full mt-4" />
+      </div>
+    );
+  }
+
+  // Display error state
+  if (error) {
+     return (
+      <div className="fixed inset-y-0 right-0 w-full max-w-xs bg-white shadow-lg z-10 flex flex-col p-4">
+         <div className="flex items-center justify-between border-b pb-4">
+           <h2 className="text-lg font-bold text-red-600">Error</h2>
+            <Button variant="ghost" size="icon" className="rounded-full" onClick={onClose} aria-label="Close">
+              <X className="h-5 w-5" />
+            </Button>
+         </div>
+         <p className="text-red-600 mt-4">{error}</p>
+      </div>
+     );
+  }
+  
+  // Display empty state if no data after loading/no error
+  if (!panelData) {
+     return (
+       <div className="fixed inset-y-0 right-0 w-full max-w-xs bg-white shadow-lg z-10 flex flex-col p-4">
+         <div className="flex items-center justify-between border-b pb-4">
+           <h2 className="text-lg font-bold">Restaurant Info</h2>
+            <Button variant="ghost" size="icon" className="rounded-full" onClick={onClose} aria-label="Close">
+              <X className="h-5 w-5" />
+            </Button>
+         </div>
+         <p className="mt-4">No data available for this restaurant.</p>
+       </div>
+     );
+  }
+
+  // Render panel with fetched data
+  return (
     <div className="fixed inset-y-0 right-0 w-full max-w-xs bg-white shadow-lg z-10 flex flex-col">
+      {/* Header */}
       <div className="flex items-center justify-between p-4 border-b">
-        <h2 className="text-lg font-bold">{restaurant.restaurantName}</h2>
+         {/* Use DataField for the header title as well */}
+         <DataField 
+            label="" // No visible label for the main title
+            value={<h2 className="text-lg font-bold">{panelData.restaurantName}</h2>} 
+            metadata={panelData.metadata?.restaurantName} 
+         />
         <Button
-          variant="ghost"
-          size="icon"
-          className="rounded-full"
-          onClick={onClose}
+          variant="ghost" 
+          size="icon" 
+          className="rounded-full" 
+          onClick={onClose} 
           aria-label="Close"
         >
           <X className="h-5 w-5" />
         </Button>
       </div>
       
+      {/* Content */}
       <div className="flex-1 p-4 overflow-y-auto">
         <Card className="border-0 shadow-none">
           <CardContent className="p-0">
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-sm font-semibold text-gray-500">CHEF</h3>
-                <div className="flex items-center">
-                  <p className="text-base">{restaurant.chefName}</p>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="ml-1 h-6 w-6" 
-                    onClick={fetchChefInfo}
-                    disabled={isLoading}
-                  >
-                    <Info className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
+            <div className="space-y-5"> {/* Increased spacing */}
               
-              {showChefInfo && (
-                <div className="bg-gray-50 p-3 rounded-md">
-                  <h3 className="text-sm font-semibold text-gray-500 mb-2">CHEF INFORMATION</h3>
-                  {isLoading ? (
-                    <div className="space-y-2">
-                      <Skeleton className="h-4 w-full" />
-                      <Skeleton className="h-4 w-5/6" />
-                      <Skeleton className="h-4 w-4/5" />
-                      <Skeleton className="h-4 w-full" />
-                    </div>
-                  ) : (
-                    <div className="text-sm text-gray-700 space-y-2">
-                      {chefInfo && chefInfo.split('\n\n').map((paragraph, index) => (
-                        <p key={index}>{paragraph}</p>
-                      ))}
-                    </div>
-                  )}
-                  <Button 
-                    variant="outline" 
-                    className="w-full mt-2 text-xs"
-                    onClick={() => setShowChefInfo(false)}
-                  >
-                    Hide Info
-                  </Button>
-                </div>
-              )}
+              <DataField 
+                 label="CHEF" 
+                 value={panelData.chef?.name || "N/A"} 
+                 metadata={panelData.metadata?.chefAssociation} 
+              />
+
+              {/* Conditionally render Bio */}
+              <DataField 
+                 label="BIO" 
+                 value={
+                    panelData.chef?.bio ? (
+                       <div className="text-sm text-gray-700 space-y-2">
+                         {panelData.chef.bio.split('\n\n').map((paragraph, index) => (
+                           <p key={index}>{paragraph}</p>
+                         ))}
+                       </div>
+                    ) : (
+                       <span className="text-sm text-gray-500 italic">Bio not available</span>
+                    )
+                 } 
+                 metadata={panelData.metadata?.bio} 
+              />
               
-              {isLoading && !restaurantDetails && (
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-5/6" />
-                  <Skeleton className="h-4 w-4/5" />
-                </div>
-              )}
-              
-              {restaurantDetails && (
-                <>
-                  {restaurantDetails.bio && (
-                    <div>
-                      <h3 className="text-sm font-semibold text-gray-500">CHEF BIO</h3>
-                      <p className="text-sm text-gray-700 mt-1">{restaurantDetails.bio}</p>
-                    </div>
-                  )}
-                  
-                  {restaurantDetails.websiteUrl && (
-                    <div>
-                      <h3 className="text-sm font-semibold text-gray-500">WEBSITE</h3>
-                      <a 
-                        href={restaurantDetails.websiteUrl.startsWith('http') 
-                          ? restaurantDetails.websiteUrl 
-                          : `https://${restaurantDetails.websiteUrl}`} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline flex items-center text-sm"
-                      >
-                        {restaurantDetails.websiteUrl.replace(/(https?:\/\/)?(www\.)?/, '')}
-                        <ExternalLink className="h-3 w-3 ml-1" />
-                      </a>
-                    </div>
-                  )}
-                  
-                  {restaurantDetails.cuisineType && (
-                    <div>
-                      <h3 className="text-sm font-semibold text-gray-500">CUISINE</h3>
-                      <Badge variant="outline" className="mt-1">
-                        {restaurantDetails.cuisineType}
-                      </Badge>
-                    </div>
-                  )}
-                </>
-              )}
-              
-              <div>
-                <h3 className="text-sm font-semibold text-gray-500">TOP CHEF SEASON</h3>
-                <div className="flex items-center">
-                  <Calendar className="h-4 w-4 mr-1 text-gray-500" />
-                  <p className="text-base">
-                    Season {
-                      restaurantDetails?.seasonNumber || 
-                      restaurant.season || 
-                      restaurant.seasonId || 
-                      "Unknown"
-                    }
-                  </p>
-                </div>
-                
-                {restaurantDetails?.eliminationInfo && (
-                  <p className="text-sm text-gray-700 mt-1">
-                    <span className="text-gray-500">Elimination: </span> 
-                    {restaurantDetails.eliminationInfo}
-                  </p>
-                )}
-              </div>
-              
-              <div>
-                <h3 className="text-sm font-semibold text-gray-500">LOCATION</h3>
-                <p className="text-base">{restaurant.city}, {selectedCountry}</p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Lat: {Number(restaurant.lat).toFixed(4)}, Lng: {Number(restaurant.lng).toFixed(4)}
-                </p>
-              </div>
-              
-              {rawInfo && (
-                <div className="bg-gray-50 p-3 rounded-md">
-                  <h3 className="text-sm font-semibold text-gray-500 mb-2">MORE INFORMATION</h3>
-                  <div className="text-sm text-gray-700 space-y-2">
-                    {rawInfo.split('\n\n').map((paragraph, index) => (
-                      <p key={index}>{paragraph}</p>
-                    ))}
+              {/* TODO: Add Website, Cuisine etc. using DataField if metadata is available */}
+
+              {/* Season Info - Assuming this doesn't change often, maybe no metadata needed? */}
+              {panelData.season && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-500">TOP CHEF SEASON</h3>
+                  <div className="flex items-center mt-0.5">
+                    <Calendar className="h-4 w-4 mr-1.5 text-gray-500" />
+                    <span className="text-base">
+                      Season {panelData.season.number || "Unknown"} ({panelData.season.year})
+                    </span>
                   </div>
                 </div>
               )}
               
+              {/* Location Info */}
+              <DataField 
+                 label="LOCATION" 
+                 value={
+                    <>
+                      {/* Display address if available, otherwise city/country */}
+                      <p>{panelData.address || `${panelData.city}, ${panelData.country}`}</p> 
+                      <p className="text-xs text-gray-500 mt-1">
+                        Lat: {Number(panelData.lat).toFixed(4)}, Lng: {Number(panelData.lng).toFixed(4)}
+                      </p>
+                    </>
+                 } 
+                 metadata={panelData.metadata?.address} 
+              />
+              
               <Button 
-                className="w-full bg-primary hover:bg-primary/90 text-white"
+                className="w-full bg-primary hover:bg-primary/90 text-white mt-4 flex items-center"
                 onClick={handleGetDirections}
               >
+                <MapPin className="h-4 w-4 mr-2" />
                 Get Directions
               </Button>
             </div>

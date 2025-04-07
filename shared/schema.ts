@@ -56,13 +56,18 @@ export const restaurants = pgTable("restaurants", {
   description: text("description"),
   lat: numeric("lat").notNull(),
   lng: numeric("lng").notNull(),
+  address: text("address"), // Added address field
   seasonId: integer("season_id"), // Can be nullable (may not be directly tied to a season)
   city: text("city").notNull(),
   country: text("country").notNull(),
   isCurrent: boolean("is_current").default(true), // Whether this is a current restaurant
   dateOpened: timestamp("date_opened"),
   dateClosed: timestamp("date_closed"),
-  lastUpdated: timestamp("last_updated").defaultNow(),
+  lastUpdated: timestamp("last_updated").defaultNow(), // General record update time
+  // Granular timestamps for key fields
+  chefAssociationLastUpdated: timestamp("chef_association_last_updated"),
+  addressLastUpdated: timestamp("address_last_updated"),
+  restaurantNameLastUpdated: timestamp("restaurant_name_last_updated"),
 });
 
 // Create insert schemas

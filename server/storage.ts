@@ -16,7 +16,10 @@ import {
   type InsertParticipation
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, sql, and, desc, asc } from "drizzle-orm";
+import { eq, sql, and, desc, asc, getTableColumns, SQL } from "drizzle-orm"; // Import getTableColumns and SQL type
+
+// Define a new type for the return value including seasonNumber
+export type RestaurantWithSeasonNumber = Restaurant & { seasonNumber: number | null };
 
 // New interface with CRUD methods for all entities
 export interface IStorage {
@@ -27,7 +30,8 @@ export interface IStorage {
   
   // Restaurant methods
   getRestaurant(id: number): Promise<Restaurant | undefined>;
-  getRestaurantsByCountry(country: string): Promise<Restaurant[]>;
+  // Use the new dedicated type in the interface
+  getRestaurantsByCountry(country: string, seasonId?: number): Promise<RestaurantWithSeasonNumber[]>; 
   getRestaurantsByChef(chefId: number): Promise<Restaurant[]>;
   createRestaurant(restaurant: InsertRestaurant): Promise<Restaurant>;
   updateRestaurant(id: number, restaurant: Partial<InsertRestaurant>): Promise<Restaurant | undefined>;
@@ -81,8 +85,44 @@ export class DbStorage implements IStorage {
     return result[0];
   }
 
-  async getRestaurantsByCountry(country: string): Promise<Restaurant[]> {
-    return await db.select().from(restaurants).where(eq(restaurants.country, country));
+  // Modified to accept optional seasonId for filtering and return seasonNumber
+  async getRestaurantsByCountry(country: string, seasonId?: number): Promise<RestaurantWithSeasonNumber[]> { // Use the dedicated type
+    // Explicitly type conditions array
+    const conditions: (SQL | undefined)[] = [eq(restaurants.country, country)]; 
+    if (seasonId !== undefined) {
+      // seasonId is definitely a number here, satisfy TypeScript inside the eq call
+      const id: number = seasonId; 
+      conditions.push(eq(restaurants.seasonId, id)); 
+    }
+    // Perform join to get season number
+    // Explicitly type the results and select columns individually
+    const results: RestaurantWithSeasonNumber[] = await db.select({ // Use the dedicated type
+        // Select all columns from restaurants explicitly
+        id: restaurants.id,
+        chefId: restaurants.chefId,
+        restaurantName: restaurants.restaurantName,
+        description: restaurants.description,
+        lat: restaurants.lat,
+        lng: restaurants.lng,
+        address: restaurants.address,
+        seasonId: restaurants.seasonId,
+        city: restaurants.city,
+        country: restaurants.country,
+        isCurrent: restaurants.isCurrent,
+        dateOpened: restaurants.dateOpened,
+        dateClosed: restaurants.dateClosed,
+        lastUpdated: restaurants.lastUpdated,
+        chefAssociationLastUpdated: restaurants.chefAssociationLastUpdated,
+        addressLastUpdated: restaurants.addressLastUpdated,
+        restaurantNameLastUpdated: restaurants.restaurantNameLastUpdated,
+        // Select the season number from the joined table
+        seasonNumber: seasons.number      
+      })
+      .from(restaurants)
+      .leftJoin(seasons, eq(restaurants.seasonId, seasons.id)) // Join based on seasonId
+      .where(and(...conditions.filter((c): c is SQL => !!c))); // Filter out undefined before spreading into and()
+      
+    return results;
   }
 
   async getRestaurantsByChef(chefId: number): Promise<Restaurant[]> {
@@ -220,10 +260,21 @@ export class MemStorage implements IStorage {
     return this.restaurants.get(id);
   }
 
-  async getRestaurantsByCountry(country: string): Promise<Restaurant[]> {
-    return Array.from(this.restaurants.values()).filter(
+  // Updated MemStorage to match IStorage signature and type
+  async getRestaurantsByCountry(country: string, seasonId?: number): Promise<(Restaurant & { seasonNumber: number | null })[]> {
+    let filtered = Array.from(this.restaurants.values()).filter(
       (restaurant) => restaurant.country === country
     );
+
+    if (seasonId !== undefined) {
+      filtered = filtered.filter(restaurant => restaurant.seasonId === seasonId);
+    }
+
+    // Add seasonNumber: null to match the return type
+    return filtered.map(restaurant => ({
+      ...restaurant,
+      seasonNumber: null // MemStorage doesn't store season details
+    }));
   }
 
   async getRestaurantsByChef(chefId: number): Promise<Restaurant[]> {
@@ -248,7 +299,12 @@ export class MemStorage implements IStorage {
       isCurrent: insertRestaurant.isCurrent ?? null,
       dateOpened: insertRestaurant.dateOpened ?? null,
       dateClosed: insertRestaurant.dateClosed ?? null,
-      lastUpdated: insertRestaurant.lastUpdated ?? new Date()
+      lastUpdated: insertRestaurant.lastUpdated ?? new Date(),
+      // Add new fields required by updated schema, defaulting to null
+      address: insertRestaurant.address ?? null, 
+      chefAssociationLastUpdated: null, 
+      addressLastUpdated: null, 
+      restaurantNameLastUpdated: null
     };
     this.restaurants.set(id, restaurant);
     return restaurant;
