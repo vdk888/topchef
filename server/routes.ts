@@ -1033,97 +1033,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Helper function to check and update seasons with fewer than 10 candidates
   async function checkAndUpdateSeasonsWithFewCandidates(country: string) {
-    console.log(`Checking seasons with few candidates for country: ${country}`);
-    
-    // Get all seasons for the country
-    const countrySeasons = await storage.getSeasonsByCountry(country);
     let updatedSeasons = 0;
     
-    for (const season of countrySeasons) {
-      // Get participants for this season
-      const participations = await storage.getParticipationsBySeason(season.id);
+    // Find all seasons for the country
+    const seasonsForCountry = await storage.getSeasonsByCountry(country);
+    console.log(`Found ${seasonsForCountry.length} seasons for ${country}`);
+    
+    for (const season of seasonsForCountry) {
+      // Check if season has fewer than 10 participants
+      const participationsForSeason = await storage.getParticipationsBySeason(season.id);
       
-      // If this season has fewer than 10 participants, query Perplexity for a complete list
-      if (participations.length < 10) {
-        console.log(`Season ${season.number} (${season.year}) for ${country} has only ${participations.length} candidates - fetching complete list`);
+      if (participationsForSeason.length < 10) {
+        console.log(`Season ${season.number} for ${country} has only ${participationsForSeason.length} candidates. Filling with Perplexity data...`);
+      
+        // Use Perplexity to get candidates for this season
+        const prompt = `List 15 confirmed candidates that participated in Top Chef ${country} Season ${season.number}. For each candidate, provide their full name, the name of their restaurant (if known), the city where the restaurant is located, and the physical address of the restaurant if available. Format the result as a list, e.g. - **[Chef Name]**, **[Restaurant Name]**, **[City]**, **[Address]**. If any information is not available, write "Restaurant not specified" or "Address not specified" or "City not specified" as appropriate.`;
         
-        // Create a detailed prompt for Perplexity
-        const seasonPrompt = `
-        Provide a comprehensive list of ALL contestants who participated in Top Chef ${country} Season ${season.number} (${season.year}). 
-        For each contestant, provide:
-        1. Full name
-        2. Primary restaurant name at the time of the show (if known)
-        3. City and address of that restaurant (if known)
+        // System prompt to help Perplexity understand the context
+        const systemPrompt = "You are an AI assistant specialized in providing information about the TV show Top Chef, including candidates from past seasons. Format the response as requested, including only confirmed participants, not speculated ones.";
         
-        Format the response as a clear list:
-        - Chef Name, Restaurant Name, City, Address
+        const perplexityResponse = await callPerplexity(prompt, systemPrompt);
         
-        Please include ALL contestants from this season, not just finalists or winners.
-        `;
-        
-        const seasonCandidatesResponse = await callPerplexity(
-          seasonPrompt, 
-          "You are an AI assistant specialized in providing accurate and complete information about the TV show Top Chef. Focus on factual information only about this specific season."
-        );
-        
-        if (seasonCandidatesResponse) {
-          console.log(`Received response for ${country} Season ${season.number} candidates. Processing...`);
+        if (perplexityResponse) {
+          console.log(`Received response for ${country} Season ${season.number}`);
           
-          // Parse the response to extract chef and restaurant information
-          // Flexible regex pattern to handle various formats
-          const candidateRegex = /-\s*([^,]+),\s*([^,]+)?,\s*([^,]+)?,\s*([^\n]*)?/g;
+          // Parse the candidates from the response using regex
+          // Expected format: - **[Chef Name]**, **[Restaurant Name]**, **[City]**, **[Address]**
+          const candidateRegex = /-\s*\*\*([^*]+)\*\*,\s*\*\*([^*]+)\*\*,\s*\*\*([^*]+)\*\*(?:,\s*\*\*([^*]+)\*\*)?/g;
           let match;
           let addedCandidates = 0;
           
-          while ((match = candidateRegex.exec(seasonCandidatesResponse)) !== null) {
-            const [, chefName, restaurantName = '', city = '', address = ''] = match.map(s => s ? s.trim() : '');
-            
-            if (!chefName) continue; // Skip if no chef name found
-            
+          while ((match = candidateRegex.exec(perplexityResponse)) !== null) {
+            // Extract info (handling possible missing 4th group for address)
+            const [, chefName, restaurantName, city, address = ""] = match.map(s => s ? s.trim() : "");
             console.log(`Processing candidate: ${chefName}, ${restaurantName}, ${city}, ${address}`);
             
+            // Skip if the restaurant or chef name is "not specified" or similar
+            if (chefName.toLowerCase().includes("not specified")) continue;
+            
             try {
-              // Check if chef already exists
+              // Check if chef exists already, create if not
               let chef = await storage.getChefByName(chefName);
-              
-              // Create chef if not exists
               if (!chef) {
                 console.log(`Creating new chef: ${chefName}`);
                 chef = await storage.createChef({ 
                   name: chefName, 
-                  status: 'active', 
-                  bio: '', // Will be updated later
+                  status: 'active',
                   lastUpdated: new Date()
                 });
               }
               
               // Check if this chef already has a participation in this season
-              const existingParticipationsResult = await db
-                .select()
-                .from(participations)
-                .where(
-                  and(
-                    eq(participations.chefId, chef.id), 
-                    eq(participations.seasonId, season.id)
-                  )
-                )
-                .limit(1);
+              const existingParticipations = await storage.getParticipationsBySeason(season.id);
+              const existingParticipation = existingParticipations.find(p => p.chefId === chef.id);
               
-              const existingParticipations = await existingParticipationsResult.execute();
-              
-              // Create participation if not exists
-              if (!existingParticipations[0]) {
-                await storage.createParticipation({
-                  chefId: chef.id,
-                  seasonId: season.id,
-                  // Other participation details are optional
-                });
-                console.log(`Created participation record for Chef ${chef.id} (${chefName}) in Season ${season.id}`);
-                addedCandidates++;
+              if (!existingParticipation) {
+                try {
+                  await storage.createParticipation({
+                    chefId: chef.id,
+                    seasonId: season.id,
+                    // Other participation details are optional
+                  });
+                  console.log(`Created participation record for Chef ${chef.id} (${chefName}) in Season ${season.id}`);
+                  addedCandidates++;
+                } catch (participationError) {
+                  console.error(`Error creating participation for chef ${chef.id}:`, participationError);
+                }
               }
               
               // Create or update restaurant if we have restaurant info
-              if (restaurantName) {
+              if (restaurantName && restaurantName.toLowerCase() !== "restaurant not specified") {
                 // Check if restaurant already exists for this chef
                 const existingRestaurants = await storage.getRestaurantsByChef(chef.id);
                 const existingRestaurant = existingRestaurants.find(r => 
@@ -1271,20 +1250,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
             // Create participation record
             if (currentSeasonId) {
-               // Avoid duplicate participations
-               const existingParticipationsQuery = db.select()
-                  .from(participations)
-                  .where(and(eq(participations.chefId, chef.id), eq(participations.seasonId, currentSeasonId)))
-                  .limit(1);
-                  
-               const existingParticipation = await existingParticipationsQuery.execute();
-               if (!existingParticipation[0]) {
-                  await storage.createParticipation({
+               try {
+                 // Avoid duplicate participations
+                 // Split the query into steps to avoid TypeScript errors
+                 const query = db.select()
+                   .from(participations);
+                   
+                 const whereChef = eq(participations.chefId, chef.id);
+                 const whereSeason = eq(participations.seasonId, currentSeasonId);
+                 
+                 const existingParticipation = await query
+                   .where(and(whereChef, whereSeason))
+                   .limit(1)
+                   .execute();
+                 if (!existingParticipation[0]) {
+                   await storage.createParticipation({
                      chefId: chef.id,
                      seasonId: currentSeasonId,
                      // Other participation details unknown initially
-                  });
-                  console.log(`Created participation record for Chef ${chef.id} in Season ${currentSeasonId}`);
+                   });
+                   console.log(`Created participation record for Chef ${chef.id} in Season ${currentSeasonId}`);
+                 }
+               } catch (participationError) {
+                 console.error(`Error creating participation for chef ${chef.id}:`, participationError);
+                 // Continue with other operations even if participation creation fails
                }
             }
           } catch (candidateError) {
