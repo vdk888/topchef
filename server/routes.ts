@@ -71,29 +71,42 @@ async function callOpenRouter(prompt: string, systemPrompt?: string): Promise<st
   }
 
   try {
-    const client = new OpenAI({
-      baseURL: "https://openrouter.ai/api/v1",
-      apiKey: openrouterApiKey,
+    console.log("Using OpenRouter API key:", openrouterApiKey.substring(0, 5) + "..." + openrouterApiKey.substring(openrouterApiKey.length - 5));
+    
+    // Create a standalone fetch-based call to avoid authentication issues with the client
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${openrouterApiKey}`,
+        "HTTP-Referer": "https://replit.com",
+        "X-Title": "Top Chef Restaurant Map"
+      },
+      body: JSON.stringify({
+        model: "deepseek/deepseek-coder:latest", // Use a more reliable model
+        messages: [
+          {
+            role: "system",
+            content: systemPrompt || "You are a helpful AI assistant."
+          },
+          {
+            role: "user", 
+            content: prompt
+          }
+        ],
+        temperature: 0.3,
+        max_tokens: 1024
+      })
     });
-
-    console.log(`Calling OpenRouter with prompt: ${prompt.substring(0, 100)}...`);
-    const completion = await client.chat.completions.create({
-      model: "deepseek/deepseek-v3-base:free", // Or another suitable model
-      messages: [
-        {
-          role: "system",
-          content: systemPrompt || "You are a helpful AI assistant."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      temperature: 0.3, // Adjust as needed
-      max_tokens: 1024,
-    });
-
-    return completion.choices[0]?.message?.content || null;
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`OpenRouter API returned ${response.status}: ${errorText}`);
+    }
+    
+    const data = await response.json() as any;
+    console.log("OpenRouter response:", JSON.stringify(data).substring(0, 200) + "...");
+    return data.choices[0]?.message?.content || null;
   } catch (error) {
     console.error('Error calling OpenRouter API:', error);
     return null;

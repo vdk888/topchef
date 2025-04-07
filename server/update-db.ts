@@ -11,7 +11,7 @@ import fetch from 'node-fetch'; // Use node-fetch as it's in package.json
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY;
 const DEEPSEEK_MODEL = "deepseek/deepseek-chat"; // Or specific version if needed
-const PERPLEXITY_MODEL = "sonar-medium-online"; // Or other suitable model
+const PERPLEXITY_MODEL = "sonar"; // Or other suitable model
 
 if (!OPENROUTER_API_KEY || !PERPLEXITY_API_KEY) {
   console.error("Error: API keys for OpenRouter (Deepseek) and/or Perplexity are missing in .env file.");
