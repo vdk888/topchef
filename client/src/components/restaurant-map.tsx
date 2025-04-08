@@ -1,22 +1,15 @@
 import { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, ZoomControl, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { Restaurant } from '@shared/schema';
+import { Restaurant, RestaurantWithDetails } from '@shared/schema'; // Import RestaurantWithDetails
 
-// Define the extended type expected in props, including seasonNumber
-type RestaurantWithSeasonNumber = Restaurant & { seasonNumber: number | null };
-
-// Extended Restaurant interface for selection state (might need seasonNumber too)
-interface ExtendedRestaurant extends Restaurant {
-  chefName?: string;
-  seasonNumber?: number | null; // Use seasonNumber consistent with fetched data
-}
+// Remove local type definitions, use the shared one
 
 interface RestaurantMapProps {
-  restaurants: RestaurantWithSeasonNumber[]; // Use updated type
+  restaurants: RestaurantWithDetails[]; // Use the shared type
   selectedCountry: string;
-  selectedRestaurant: ExtendedRestaurant | null; // Keep this for selection state type
-  onSelectRestaurant: (restaurant: ExtendedRestaurant | null) => void;
+  selectedRestaurant: RestaurantWithDetails | null; // Use the shared type
+  onSelectRestaurant: (restaurant: RestaurantWithDetails | null) => void; // Use the shared type
   isLoading: boolean;
 }
 
@@ -33,8 +26,8 @@ const MapController = ({
   restaurants, 
   selectedRestaurant 
 }: { 
-  restaurants: RestaurantWithSeasonNumber[]; // Use updated type
-  selectedRestaurant: ExtendedRestaurant | null; 
+  restaurants: RestaurantWithDetails[]; // Use the shared type
+  selectedRestaurant: RestaurantWithDetails | null; // Use the shared type
 }) => {
   const map = useMap();
   
@@ -131,41 +124,27 @@ const RestaurantMap = ({
                   key={restaurant.id}
                   position={position}
                   // Use restaurant.seasonNumber for the icon
+                  // Use restaurant.seasonNumber for the icon
                   icon={createCustomIcon(restaurant.seasonNumber)} 
                   eventHandlers={{
                     click: () => {
-                      // Fetch chef name for the restaurant
-                      const fetchChefData = async () => {
+                      // Define the click handler logic
+                      const handleMarkerClick = () => {
                         try {
-                          const response = await fetch(`/api/chefs/${restaurant.chefId}`);
-                          if (response.ok) {
-                            const chef = await response.json();
-                            // Expand the restaurant with chef info
-                            // Pass seasonNumber when selecting
-                            onSelectRestaurant({
-                              ...restaurant, 
-                              chefName: chef.name,
-                              seasonNumber: restaurant.seasonNumber 
-                            });
-                          } else {
-                            // Just pass the basic restaurant data
-                            onSelectRestaurant({
-                              ...restaurant,
-                              chefName: "Unknown Chef",
-                              seasonNumber: restaurant.seasonNumber
-                            });
-                          }
+                          // The 'restaurant' object from the map loop already has chefName
+                          // No need to fetch chef again here unless we want to refresh
+                          // For now, just pass the existing restaurant object
+                          onSelectRestaurant(restaurant); 
                         } catch (error) {
-                          console.error("Error fetching chef data:", error);
-                          onSelectRestaurant({
-                            ...restaurant,
-                            chefName: "Unknown Chef",
-                            seasonNumber: restaurant.seasonNumber
-                          });
+                           // This catch block might not be needed anymore if not fetching
+                           // If kept for future refresh logic, handle error appropriately
+                          console.error("Error during selection (should not happen if not fetching):", error);
+                          // Pass the original restaurant data even on error
+                          onSelectRestaurant(restaurant); 
                         }
                       };
-                      
-                      fetchChefData();
+                      // Call the simplified handler directly
+                      handleMarkerClick();
                     }
                   }}
                 >
@@ -174,16 +153,14 @@ const RestaurantMap = ({
                     <div className="text-center p-1">
                       <h3 className="font-bold text-sm sm:text-base">{restaurant.restaurantName}</h3>
                       <p className="text-xs sm:text-sm mt-1">{restaurant.city}, {restaurant.country}</p>
-                      <p className="text-xs sm:text-sm mt-1">Season {restaurant.seasonNumber || "Unknown"}</p>
+                      <p className="text-xs sm:text-sm mt-1">Chef: {restaurant.chefName ?? 'N/A'}</p> {/* Display Chef Name */}
+                      <p className="text-xs sm:text-sm mt-1">Season {restaurant.seasonNumber ?? "Unknown"}</p>
                       <button 
                         className="mt-2 w-full text-xs bg-primary text-white py-1.5 px-2 rounded hover:bg-primary/90 active:bg-primary/80 touch-manipulation"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onSelectRestaurant({
-                            ...restaurant,
-                            chefName: "Loading...",
-                            seasonNumber: restaurant.seasonNumber
-                          });
+                        onClick={(e) => { // This button click might be redundant if marker click selects
+                          e.stopPropagation(); 
+                          // Pass the restaurant object directly
+                          onSelectRestaurant(restaurant); 
                         }}
                       >
                         View Details

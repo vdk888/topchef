@@ -13,13 +13,14 @@ import {
   type Season,
   type InsertSeason,
   type Participation,
-  type InsertParticipation
+  type InsertParticipation,
+  type RestaurantWithDetails // Import the shared type
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, sql, and, desc, asc, getTableColumns, SQL } from "drizzle-orm"; // Import getTableColumns and SQL type
 
-// Define a new type for the return value including seasonNumber
-export type RestaurantWithSeasonNumber = Restaurant & { seasonNumber: number | null };
+// Re-export the type so it can be imported from this module
+export type { RestaurantWithDetails };
 
 // New interface with CRUD methods for all entities
 export interface IStorage {
@@ -31,7 +32,7 @@ export interface IStorage {
   // Restaurant methods
   getRestaurant(id: number): Promise<Restaurant | undefined>;
   // Use the new dedicated type in the interface
-  getRestaurantsByCountry(country: string, seasonId?: number): Promise<RestaurantWithSeasonNumber[]>; 
+  getRestaurantsByCountry(country: string, seasonId?: number): Promise<RestaurantWithDetails[]>; // Use updated type
   getRestaurantsByChef(chefId: number): Promise<Restaurant[]>;
   createRestaurant(restaurant: InsertRestaurant): Promise<Restaurant>;
   updateRestaurant(id: number, restaurant: Partial<InsertRestaurant>): Promise<Restaurant | undefined>;
@@ -85,18 +86,18 @@ export class DbStorage implements IStorage {
     return result[0];
   }
 
-  // Modified to accept optional seasonId for filtering and return seasonNumber
-  async getRestaurantsByCountry(country: string, seasonId?: number): Promise<RestaurantWithSeasonNumber[]> { // Use the dedicated type
+  // Modified to accept optional seasonId, join with chefs, and return details
+  async getRestaurantsByCountry(country: string, seasonId?: number): Promise<RestaurantWithDetails[]> { // Use updated type
     // Explicitly type conditions array
-    const conditions: (SQL | undefined)[] = [eq(restaurants.country, country)]; 
+    const conditions: (SQL | undefined)[] = [eq(restaurants.country, country)];
     if (seasonId !== undefined) {
       // seasonId is definitely a number here, satisfy TypeScript inside the eq call
-      const id: number = seasonId; 
-      conditions.push(eq(restaurants.seasonId, id)); 
+      const id: number = seasonId;
+      conditions.push(eq(restaurants.seasonId, id));
     }
-    // Perform join to get season number
+    // Perform join to get season number and chef name
     // Explicitly type the results and select columns individually
-    const results: RestaurantWithSeasonNumber[] = await db.select({ // Use the dedicated type
+    const results: RestaurantWithDetails[] = await db.select({ // Use updated type
         // Select all columns from restaurants explicitly
         id: restaurants.id,
         chefId: restaurants.chefId,
@@ -115,13 +116,16 @@ export class DbStorage implements IStorage {
         chefAssociationLastUpdated: restaurants.chefAssociationLastUpdated,
         addressLastUpdated: restaurants.addressLastUpdated,
         restaurantNameLastUpdated: restaurants.restaurantNameLastUpdated,
-        // Select the season number from the joined table
-        seasonNumber: seasons.number      
+        // Select the season number from the joined seasons table
+        seasonNumber: seasons.number,
+        // Select the chef name from the joined chefs table
+        chefName: chefs.name
       })
       .from(restaurants)
-      .leftJoin(seasons, eq(restaurants.seasonId, seasons.id)) // Join based on seasonId
+      .leftJoin(seasons, eq(restaurants.seasonId, seasons.id)) // Join seasons
+      .leftJoin(chefs, eq(restaurants.chefId, chefs.id)) // Join chefs
       .where(and(...conditions.filter((c): c is SQL => !!c))); // Filter out undefined before spreading into and()
-      
+
     return results;
   }
 
@@ -261,7 +265,7 @@ export class MemStorage implements IStorage {
   }
 
   // Updated MemStorage to match IStorage signature and type
-  async getRestaurantsByCountry(country: string, seasonId?: number): Promise<(Restaurant & { seasonNumber: number | null })[]> {
+  async getRestaurantsByCountry(country: string, seasonId?: number): Promise<RestaurantWithDetails[]> { // Use updated type
     let filtered = Array.from(this.restaurants.values()).filter(
       (restaurant) => restaurant.country === country
     );
@@ -270,10 +274,11 @@ export class MemStorage implements IStorage {
       filtered = filtered.filter(restaurant => restaurant.seasonId === seasonId);
     }
 
-    // Add seasonNumber: null to match the return type
+    // Add seasonNumber and chefName as null to match the return type
     return filtered.map(restaurant => ({
       ...restaurant,
-      seasonNumber: null // MemStorage doesn't store season details
+      seasonNumber: null, // MemStorage doesn't store season details
+      chefName: null // MemStorage doesn't store chef details
     }));
   }
 

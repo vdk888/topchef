@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage, type RestaurantWithSeasonNumber } from "./storage"; // Import RestaurantWithSeasonNumber
+import { storage, type RestaurantWithDetails } from "./storage"; // Use the updated type name
 import { db } from "./db";
 import { restaurants, chefs, participations, seasons, Restaurant } from "../shared/schema";
 import fetch from "node-fetch";
@@ -18,7 +18,7 @@ async function callPerplexity(prompt: string, systemPrompt?: string): Promise<st
 
   const url = "https://api.perplexity.ai/chat/completions";
   const payload = {
-    model: "llama-3.1-sonar-small-128k-online", // Or another suitable model
+    model: "sonar", // Or another suitable model
     messages: [
       {
         role: "system",
@@ -83,7 +83,7 @@ async function callOpenRouter(prompt: string, systemPrompt?: string): Promise<st
         "X-Title": "Top Chef Restaurant Map"
       },
       body: JSON.stringify({
-        model: "deepseek/deepseek-coder:latest", // Use a more reliable model
+        model: "deepseek/deepseek-chat-v3-0324:free", // Use a more reliable model
         messages: [
           {
             role: "system",
@@ -465,7 +465,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`Fetching restaurants for country: ${country}` + (validSeasonId ? ` and season ID: ${validSeasonId}` : ''));
       // Explicitly type the result variable to match storage return type
-      const restaurants: RestaurantWithSeasonNumber[] = await storage.getRestaurantsByCountry(country, validSeasonId); 
+      const restaurants: RestaurantWithDetails[] = await storage.getRestaurantsByCountry(country, validSeasonId); // Use updated type
       res.json(restaurants);
     } catch (error) {
       console.error('Error fetching restaurants:', error); // Log the specific error
@@ -639,7 +639,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         : `Tell me about Top Chef contestant ${chefName}. Include their Top Chef journey, current restaurants, career highlights, and any recent news or awards.`;
 
       const payload = {
-        model: "llama-3.1-sonar-small-128k-online",
+        model: "sonar",
         messages: [
           {
             role: "system",
@@ -858,6 +858,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Interface for the expected structure of fresh data from Perplexity
+  interface FreshRestaurantData {
+    restaurantName?: string | null;
+    address?: string | null;
+    currentChefName?: string | null;
+    bio?: string | null;
+    // Add other potential fields if needed
+  }
+
   // NEW Endpoint for fetching detailed panel data with age checks and conditional AI calls
   app.get('/api/restaurant-panel-data/:id', async (req, res) => {
     try {
@@ -912,9 +921,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           if (perplexityResponse) {
             try {
-              // TODO: Step 3c: Parse response
-              const freshData = JSON.parse(perplexityResponse);
-              console.log(`Fresh data for Restaurant ID ${id}:`, freshData);
+              // TODO: Step 3c: Parse response - Add cleaning step and type
+              let freshData: FreshRestaurantData = {}; // Apply the interface type
+              const jsonStr = perplexityResponse;
+              const firstBrace = jsonStr.indexOf('{');
+              const lastBrace = jsonStr.lastIndexOf('}');
+
+              if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+                const potentialJson = jsonStr.substring(firstBrace, lastBrace + 1);
+                try {
+                  freshData = JSON.parse(potentialJson);
+                  console.log(`Parsed fresh data for Restaurant ID ${id}:`, freshData);
+                } catch (parseError) {
+                  console.error(`Failed to parse extracted JSON from Perplexity for Restaurant ID ${id}:`, parseError);
+                  console.log("Potential JSON substring:", potentialJson);
+                  // Keep freshData as {} and proceed, or throw error? For now, proceed.
+                }
+              } else {
+                 console.warn(`Could not find valid JSON structure in Perplexity response for Restaurant ID ${id}. Response: ${jsonStr}`);
+                 // Keep freshData as {}
+              }
+              
+              // Check if freshData is empty after potential parsing failure
+              if (Object.keys(freshData).length === 0) {
+                 console.error(`Proceeding with empty freshData for Restaurant ID ${id} after parsing attempt.`);
+                 // Decide if we should skip the comparison/update or handle differently
+                 // For now, the logic will proceed but likely won't update anything
+              }
 
               // TODO: Step 3d: Use OpenRouter to compare freshData with responseData
               const comparisonPrompt = `Compare the existing data with the newly fetched data for restaurant "${restaurant.restaurantName}". Existing: ${JSON.stringify(responseData)}. Fresh: ${JSON.stringify(freshData)}. Identify any significant contradictions or discrepancies. Respond with "CONFLICT" if contradictions exist, otherwise respond with "OK".`;
@@ -936,17 +969,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
                  console.log(`No conflict for Restaurant ID ${id}. Merging updates.`);
                  const now = new Date();
                  for (const key of fieldsToRefresh) {
-                    // Use explicit checks and update DB for each field
+                    // Use explicit checks and update DB for each field, handling nulls
                     if (key === 'restaurantName' && freshData.restaurantName !== undefined && responseData.restaurantName !== freshData.restaurantName) {
-                       responseData.restaurantName = freshData.restaurantName;
-                       responseData.metadata.restaurantName = { origin: 'live', lastUpdated: now };
-                       // Update DB field restaurantName and restaurantNameLastUpdated
-                       await db.update(restaurants)
-                         .set({ restaurantName: freshData.restaurantName, restaurantNameLastUpdated: now })
-                         .where(eq(restaurants.id, id));
-                       console.log(`Updated DB field ${key} for Restaurant ID ${id}`);
+                       // Only update if freshData.restaurantName is a non-null string (DB requires it)
+                       if (freshData.restaurantName) { 
+                          responseData.restaurantName = freshData.restaurantName;
+                          responseData.metadata.restaurantName = { origin: 'live', lastUpdated: now };
+                          // Update DB field restaurantName and restaurantNameLastUpdated
+                          await db.update(restaurants)
+                            .set({ restaurantName: freshData.restaurantName, restaurantNameLastUpdated: now })
+                            .where(eq(restaurants.id, id));
+                          console.log(`Updated DB field ${key} for Restaurant ID ${id}`);
+                       } else {
+                          console.warn(`Skipping update for ${key} for Restaurant ID ${id} because fetched value was null/empty.`);
+                       }
                     } else if (key === 'address' && freshData.address !== undefined && responseData.address !== freshData.address) {
-                       responseData.address = freshData.address;
+                       // Allow null for address
+                       responseData.address = freshData.address; 
                        responseData.metadata.address = { origin: 'live', lastUpdated: now };
                        // Update DB field address and addressLastUpdated
                        // TODO: Consider updating lat/lng if address changes significantly (requires geocoding)
@@ -956,15 +995,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
                        console.log(`Updated DB field ${key} for Restaurant ID ${id}`);
                     } else if (key === 'currentChefName' && freshData.currentChefName !== undefined && responseData.chef?.name !== freshData.currentChefName) {
                        let newChefId = responseData.chef?.id; // Keep old ID if new chef not found
-                       const newChef = await storage.getChefByName(freshData.currentChefName);
+                       let newChef = null;
+                       // Only search if currentChefName is a non-null string
+                       if (freshData.currentChefName) {
+                          newChef = await storage.getChefByName(freshData.currentChefName);
+                       }
+                       
                        if (newChef) {
                           newChefId = newChef.id;
-                       } else {
+                       } else if (freshData.currentChefName) { // Only warn if we had a name to search for
                           // Optionally create the new chef if not found? For now, log warning.
                           console.warn(`Chef "${freshData.currentChefName}" not found in DB. Cannot update association for restaurant ${id}.`);
+                       } else {
+                          // freshData.currentChefName was null or empty, cannot update association
+                          console.warn(`Skipping chef association update for Restaurant ID ${id} because fetched chef name was null/empty.`);
                        }
-                       // Only update if chef was found and ID is different
-                       if (newChefId && newChefId !== responseData.chef?.id) { 
+                       
+                       // Only update if chef was found/exists and ID is different
+                       if (newChefId && newChefId !== responseData.chef?.id && freshData.currentChefName) { 
                           if (responseData.chef) responseData.chef.name = freshData.currentChefName; // Update name in response object
                           responseData.metadata.chefAssociation = { origin: 'live', lastUpdated: now };
                           // Update DB field chefId and chefAssociationLastUpdated
@@ -972,7 +1020,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                             .set({ chefId: newChefId, chefAssociationLastUpdated: now })
                             .where(eq(restaurants.id, id));
                           console.log(`Updated DB field chefId/chefAssociationLastUpdated for Restaurant ID ${id} to ${newChefId}`);
-                       } else if (newChefId && newChefId === responseData.chef?.id) {
+                       } else if (newChefId && newChefId === responseData.chef?.id && freshData.currentChefName) {
                           // If chef name from AI matches existing chef, just update timestamp
                            await db.update(restaurants)
                             .set({ chefAssociationLastUpdated: now })
@@ -981,16 +1029,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
                        }
                     } else if (key === 'bio' && freshData.bio !== undefined && responseData.chef?.bio !== freshData.bio) {
                        if (responseData.chef) { // Ensure chef exists before updating bio
+                          // Allow null for bio
                           responseData.chef.bio = freshData.bio; // Update bio in response object
                           responseData.metadata.bio = { origin: 'live', lastUpdated: now };
                           // Update the chefs table
                           await db.update(chefs)
-                            .set({ bio: freshData.bio, lastUpdated: now })
+                            .set({ bio: freshData.bio, lastUpdated: now }) // Pass null directly if that's the value
                             .where(eq(chefs.id, responseData.chef.id));
                           console.log(`Updated DB field bio for Chef ID ${responseData.chef.id}`);
+                       } else {
+                          console.warn(`Cannot update bio for Restaurant ID ${id} because chef data is missing.`);
                        }
                     }
-                    // Add checks for other fields if necessary
+                    // Add checks for other fields if necessary, handling nulls appropriately
                  }
               }
             } catch (e) {
@@ -1068,25 +1119,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const perplexityResponse = await callPerplexity(prompt, systemPrompt);
         
         if (perplexityResponse) {
-          console.log(`Received response for ${country} Season ${season.number}`);
-          
-          // Parse the candidates from the response using regex
-          // Expected format: - **[Chef Name]**, **[Restaurant Name]**, **[City]**, **[Address]**
-          const candidateRegex = /-\s*\*\*([^*]+)\*\*,\s*\*\*([^*]+)\*\*,\s*\*\*([^*]+)\*\*(?:,\s*\*\*([^*]+)\*\*)?/g;
-          let match;
+          console.log(`Received response for ${country} Season ${season.number}. Parsing with Deepseek...`);
+
+          // NEW: Use Deepseek via OpenRouter to parse the Perplexity response
+          const parsingPrompt = `The following text contains a list of Top Chef candidates, potentially mixed with other text. Please extract the candidates and return ONLY a valid JSON array where each object has the keys 'chefName', 'restaurantName', 'city', and 'address'. Use the value 'Not specified' if a piece of information is missing in the text for a candidate. Ensure the restaurantName is 'Not specified' if the text indicates no restaurant or similar phrasing. Do not include any text before or after the JSON array.
+
+Text to parse:
+\`\`\`
+${perplexityResponse}
+\`\`\``;
+
+          const openRouterResponse = await callOpenRouter(parsingPrompt, "You are an AI assistant that parses text into structured JSON. Respond ONLY with the JSON array.");
+
           let addedCandidates = 0;
-          
-          while ((match = candidateRegex.exec(perplexityResponse)) !== null) {
-            // Extract info (handling possible missing 4th group for address)
-            const [, chefName, restaurantName, city, address = ""] = match.map(s => s ? s.trim() : "");
-            console.log(`Processing candidate: ${chefName}, ${restaurantName}, ${city}, ${address}`);
-            
-            // Skip if the restaurant or chef name is "not specified" or similar
-            if (chefName.toLowerCase().includes("not specified")) continue;
-            
+          if (openRouterResponse) {
             try {
-              // Check if chef exists already, create if not
-              let chef = await storage.getChefByName(chefName);
+              // Attempt to parse the JSON response from Deepseek
+              const candidates = JSON.parse(openRouterResponse) as { chefName: string; restaurantName: string; city: string; address: string }[];
+
+              console.log(`Parsed ${candidates.length} candidates from Deepseek response.`);
+
+              for (const candidate of candidates) {
+                const { chefName, restaurantName, city, address } = candidate;
+                console.log(`Processing candidate: ${chefName}, ${restaurantName}, ${city}, ${address}`);
+
+                // Basic validation - skip if essential info is missing or placeholder-like
+                if (!chefName || chefName.toLowerCase() === 'not specified' || chefName.startsWith('[')) {
+                   console.warn(`Skipping candidate due to invalid name: ${chefName}`);
+                   continue;
+                }
+                // Normalize "Not specified" variations for restaurant name check
+                const normalizedRestaurantName = restaurantName?.toLowerCase() ?? 'not specified';
+                const isRestaurantSpecified = normalizedRestaurantName !== 'not specified' && normalizedRestaurantName !== 'restaurant not specified' && !normalizedRestaurantName.startsWith('[');
+
+
+                // Check if chef exists already, create if not
+                let chef = await storage.getChefByName(chefName);
               if (!chef) {
                 console.log(`Creating new chef: ${chefName}`);
                 chef = await storage.createChef({ 
@@ -1095,11 +1163,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   lastUpdated: new Date()
                 });
               }
-              
+
               // Check if this chef already has a participation in this season
               const existingParticipations = await storage.getParticipationsBySeason(season.id);
               const existingParticipation = existingParticipations.find(p => p.chefId === chef.id);
-              
+
               if (!existingParticipation) {
                 try {
                   await storage.createParticipation({
@@ -1112,26 +1180,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 } catch (participationError) {
                   console.error(`Error creating participation for chef ${chef.id}:`, participationError);
                 }
+              } else {
+                 console.log(`Participation record already exists for Chef ${chef.id} (${chefName}) in Season ${season.id}`);
               }
-              
-              // Create or update restaurant if we have restaurant info
-              if (restaurantName && restaurantName.toLowerCase() !== "restaurant not specified") {
+
+              // Create or update restaurant only if a valid restaurant name was provided
+              if (isRestaurantSpecified) {
                 // Check if restaurant already exists for this chef
                 const existingRestaurants = await storage.getRestaurantsByChef(chef.id);
-                const existingRestaurant = existingRestaurants.find(r => 
+                const existingRestaurant = existingRestaurants.find(r =>
                   r.restaurantName.toLowerCase() === restaurantName.toLowerCase());
-                
+
                 if (!existingRestaurant) {
                   // Create new restaurant
-                  const fullAddress = [address, city].filter(Boolean).join(', ');
-                  
+                  const normalizedCity = (!city || city.toLowerCase() === 'not specified' || city.startsWith('[')) ? "" : city;
+                  const normalizedAddress = (!address || address.toLowerCase() === 'not specified' || address.startsWith('[')) ? "" : address;
+                  const fullAddress = [normalizedAddress, normalizedCity].filter(Boolean).join(', ');
+
                   await storage.createRestaurant({
                     chefId: chef.id,
-                    restaurantName: restaurantName,
+                    restaurantName: restaurantName, // Use the original case name
                     country: country,
-                    city: city || "",
+                    city: normalizedCity,
                     address: fullAddress || null,
-                    lat: "0", // Placeholder - would need geocoding to get these
+                    lat: "0", // Placeholder - would need geocoding
                     lng: "0", // Placeholder
                     seasonId: season.id,
                     chefAssociationLastUpdated: new Date(),
@@ -1139,17 +1211,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     restaurantNameLastUpdated: new Date()
                   });
                   console.log(`Created restaurant: ${restaurantName} for chef ${chefName}`);
+                } else {
+                   console.log(`Restaurant "${restaurantName}" already exists for chef ${chefName}`);
                 }
+              } else {
+                 console.log(`Skipping restaurant creation for chef ${chefName} as restaurant name was not specified.`);
               }
-            } catch (error) {
-              console.error(`Error processing candidate ${chefName}:`, error);
-            }
+            } // End for loop (candidates)
+          } catch (parseError) {
+             console.error(`Failed to parse JSON response from Deepseek for ${country} Season ${season.number}:`, parseError);
+             console.error("Raw Deepseek response:", openRouterResponse);
           }
-          
-          console.log(`Added ${addedCandidates} new candidates to ${country} Season ${season.number}`);
-          updatedSeasons++;
-        }
-      }
+        } else {
+           console.error(`Did not receive a valid response from Deepseek for parsing ${country} Season ${season.number}`);
+        } // End if (openRouterResponse)
+
+        console.log(`Finished processing for ${country} Season ${season.number}. Added ${addedCandidates} new candidates.`);
+        if (addedCandidates > 0) updatedSeasons++;
+      } // End if (perplexityResponse)
+    } // End if (participationsForSeason.length < 10)
     }
     
     return updatedSeasons;

@@ -1,18 +1,28 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { Map, List } from "lucide-react"; // Import icons for toggle
+import { Map, List, Menu } from "lucide-react"; // Import icons for toggle AND Menu icon
 import RestaurantMap from "@/components/restaurant-map";
 // import RestaurantTable from "@/components/restaurant-table"; // Placeholder for table component
 import RestaurantInfoPanel from "@/components/restaurant-info-panel"; 
 import Header from "@/components/header";
-import { Restaurant, Season } from "@shared/schema"; // Import Season type
+import { Restaurant, Season, RestaurantWithDetails } from "@shared/schema"; // Import Season type AND the shared RestaurantWithDetails type
 import { Button } from "@/components/ui/button"; // Import Button
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet"; // Import Sheet components
+// Removed incorrect import from ../../server/storage
 
-// Extended Restaurant interface with additional fields needed in the frontend
+// Define the type used for state and passed to some components
+// Explicitly define it to match RestaurantWithDetails structure
 interface ExtendedRestaurant extends Restaurant {
-  chefName?: string;
-  season?: number;
+  seasonNumber: number | null;
+  chefName: string | null;
 }
 
 type ViewMode = 'map' | 'table';
@@ -37,11 +47,9 @@ const Home = () => {
     refetchOnWindowFocus: false,
   });
 
-  // Define the extended type for restaurants query result
-  type RestaurantWithSeasonNumber = Restaurant & { seasonNumber: number | null };
-
   // Fetch restaurants by country and selected season
-  const { data: restaurants = [], isLoading, refetch } = useQuery<RestaurantWithSeasonNumber[]>({ // Use updated type
+  // Use the correct type RestaurantWithDetails from storage.ts
+  const { data: restaurants = [], isLoading, refetch } = useQuery<RestaurantWithDetails[]>({ 
     // Include selectedSeasonId in the query key to trigger refetch on change
     queryKey: ['/api/restaurants', selectedCountry, selectedSeasonId], 
     queryFn: async () => {
@@ -160,34 +168,52 @@ const Home = () => {
   }, [refetch]); // refetch is stable, this runs once on mount
 
   return (
-    <div className="h-screen flex flex-col">
-      <Header 
-        countries={countries}
-        selectedCountry={selectedCountry}
-        onCountryChange={handleCountryChange}
-        onUpdateData={handleUpdateData}
-        lastUpdated={lastUpdated}
-        // Pass season filter props
-        availableSeasons={availableSeasons} 
-        selectedSeasonId={selectedSeasonId}
-        onSeasonChange={handleSeasonChange}
-      />
+    <div className="h-screen relative"> {/* Removed flex flex-col, added relative */}
+      {/* Sidebar Sheet */}
+      <Sheet>
+        <SheetTrigger asChild>
+          {/* Position the trigger button */}
+          <Button variant="outline" size="icon" className="absolute top-4 left-4 z-50 bg-white shadow-md">
+            <Menu className="h-5 w-5" />
+          </Button>
+        </SheetTrigger>
+        <SheetContent side="left" className="w-[300px] sm:w-[350px] z-[100] flex flex-col"> {/* Added flex flex-col */}
+          <SheetHeader>
+            <SheetTitle>Filters & Options</SheetTitle>
+            <SheetDescription>
+              Select country, season, and manage data.
+            </SheetDescription>
+          </SheetHeader>
+          {/* Render Header content inside the sheet */}
+          <div className="flex-1 overflow-y-auto"> {/* Make content scrollable */}
+            <Header 
+              countries={countries}
+              selectedCountry={selectedCountry}
+              onCountryChange={handleCountryChange}
+              onUpdateData={handleUpdateData}
+              lastUpdated={lastUpdated}
+              availableSeasons={availableSeasons} 
+              selectedSeasonId={selectedSeasonId}
+              onSeasonChange={handleSeasonChange}
+            />
+          </div>
+           {/* Optionally add the view toggle inside the sheet */}
+           <div className="mt-auto border-t pt-4"> {/* Push to bottom */}
+             <Button 
+               variant="secondary" 
+               size="sm" 
+               className="w-full"
+               onClick={() => setViewMode(viewMode === 'map' ? 'table' : 'map')}
+             >
+               {viewMode === 'map' ? <List className="h-4 w-4 mr-2" /> : <Map className="h-4 w-4 mr-2" />}
+               {viewMode === 'map' ? 'Switch to Table View' : 'Switch to Map View'}
+             </Button>
+           </div>
+        </SheetContent>
+      </Sheet>
       
-      {/* View Mode Toggle Button - Mobile optimized */}
-      <div className="px-3 py-1.5 flex justify-end border-b bg-white"> {/* Adjusted padding & added bg */}
-         <Button 
-           variant="secondary" 
-           size="sm" 
-           className="shadow-sm"
-           onClick={() => setViewMode(viewMode === 'map' ? 'table' : 'map')}
-         >
-           {viewMode === 'map' ? <List className="h-4 w-4 mr-2" /> : <Map className="h-4 w-4 mr-2" />}
-           {viewMode === 'map' ? 'View as Table' : 'View on Map'}
-         </Button>
-      </div>
-
-      {/* Main Content Area (Map or Table) */}
-      <div className="flex-1 overflow-hidden relative" style={{ height: "calc(100vh - 140px)" }}> {/* Adjusted height for mobile */}
+      {/* Main Content Area (Map or Table) - Takes full screen */}
+      <div className="h-screen overflow-hidden"> {/* Adjusted height and removed relative positioning */}
         {viewMode === 'map' ? (
           <RestaurantMap 
             restaurants={restaurants} 
@@ -209,15 +235,17 @@ const Home = () => {
                        <tr className="text-left border-b">
                          <th className="p-1">Name</th>
                          <th className="p-1">City</th>
-                         <th className="p-1">Chef ID</th> 
+                         <th className="p-1">Chef Name</th> 
                        </tr>
                      </thead>
                      <tbody>
-                       {restaurants.map(r => (
+                       {/* Ensure 'r' is typed correctly if needed, but TS should infer from useQuery */}
+                       {restaurants.map(r => ( 
                          <tr key={r.id} className="border-b hover:bg-gray-50 cursor-pointer" onClick={() => handleSelectRestaurant(r)}>
                            <td className="p-1">{r.restaurantName}</td>
                            <td className="p-1">{r.city}</td>
-                           <td className="p-1">{r.chefId}</td>
+                           {/* Render chefName, provide fallback if null */}
+                           <td className="p-1">{r.chefName ?? 'N/A'}</td> 
                          </tr>
                        ))}
                      </tbody>
@@ -229,28 +257,18 @@ const Home = () => {
           // <RestaurantTable restaurants={restaurants} isLoading={isLoading} onSelectRestaurant={handleSelectRestaurant} /> 
         )}
       
-        {/* Info Panel / Empty State for Map View */}
-        {/* This empty state only makes sense for the map view */}
-        {!selectedRestaurant && viewMode === 'map' && restaurants.length > 0 && !isLoading && (
-          <div className="absolute bottom-0 left-0 right-0 p-4 bg-white shadow-lg rounded-t-lg transform transition-transform duration-300 ease-in-out z-20"> 
-            <div className="text-center p-4">
-              <div className="flex justify-center mb-3">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                </svg>
-              </div>
-              <h3 className="text-base font-medium text-gray-900">Select a restaurant</h3>
-              <p className="mt-1 text-sm text-gray-500">Tap on a marker to view restaurant details</p>
-            </div>
-          </div>
-        )}
+        {/* Removed the "Select a restaurant" empty state panel */}
+        
       </div> {/* Close Main Content Area */}
 
       {/* Render Info Panel if a restaurant is selected (works for both views) */}
+      {/* Keep z-index lower than sheet trigger/content */}
       {selectedRestaurant && (
         <RestaurantInfoPanel
           restaurant={selectedRestaurant}
           onClose={() => handleSelectRestaurant(null)} 
+          // Add z-index to ensure it's above map but below sheet
+          className="z-30" 
         />
       )}
     </div>

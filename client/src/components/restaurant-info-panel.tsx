@@ -2,13 +2,14 @@ import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { X, Calendar, Database, Zap, MapPin } from "lucide-react"; // Added Database, Zap, MapPin icons
-import { Restaurant, Chef, Season } from "@shared/schema"; // Import Chef, Season
+import { Restaurant, Chef, Season, RestaurantWithDetails } from "@shared/schema"; // Import Chef, Season, AND RestaurantWithDetails
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; // Added Tooltip
 import { format } from 'date-fns'; // For formatting dates
+import { cn } from "@/lib/utils"; // Import cn utility
 
 // Type for the detailed data fetched from the new panel endpoint
-type PanelData = Restaurant & {
+type PanelData = Restaurant & { // This might need updating if panel endpoint returns more/different fields than base Restaurant
   chef: Chef | null;
   season: Season | null;
   metadata: { // Metadata about data origin and freshness
@@ -20,16 +21,13 @@ type PanelData = Restaurant & {
   };
 };
 
-// Keep ExtendedRestaurant for initial prop type (passed from Home)
-interface ExtendedRestaurant extends Restaurant {
-  chefName?: string; // May not be needed if panelData always has chef
-  season?: number;   // May not be needed if panelData always has season
-}
+// Remove local ExtendedRestaurant definition
 
 interface RestaurantInfoPanelProps {
-  restaurant: ExtendedRestaurant; // Initial basic data used to trigger fetch
+  restaurant: RestaurantWithDetails; // Use the shared type for the initial prop
   // selectedCountry: string; // Not needed if endpoint only uses ID
   onClose: () => void;
+  className?: string; // Add optional className prop
 }
 
 // Helper component to display data with origin tooltip
@@ -75,7 +73,8 @@ const formatDate = (date: Date | string | null | undefined): string => {
 
 const RestaurantInfoPanel = ({ 
   restaurant, 
-  onClose 
+  onClose,
+  className // Destructure className
 }: RestaurantInfoPanelProps) => {
   const [panelData, setPanelData] = useState<PanelData | null>(null); // Use new PanelData type
   const [isLoading, setIsLoading] = useState(true); // Start loading immediately
@@ -129,7 +128,8 @@ const RestaurantInfoPanel = ({
   // Display loading state
   if (isLoading) {
     return (
-      <div className="fixed inset-0 sm:inset-y-0 sm:right-0 sm:left-auto w-full sm:max-w-sm bg-white shadow-lg z-[60] flex flex-col p-4 space-y-4">
+      // Apply className to the root div
+      <div className={cn("fixed inset-0 sm:inset-y-0 sm:right-0 sm:left-auto w-full sm:max-w-sm bg-white shadow-lg z-[60] flex flex-col p-4 space-y-4", className)}>
         <div className="flex items-center justify-between border-b pb-3">
           <Skeleton className="h-5 w-3/4" />
           <Skeleton className="h-8 w-8 rounded-full" />
@@ -150,7 +150,8 @@ const RestaurantInfoPanel = ({
   // Display error state
   if (error) {
      return (
-      <div className="fixed inset-0 sm:inset-y-0 sm:right-0 sm:left-auto w-full sm:max-w-sm bg-white shadow-lg z-[60] flex flex-col p-4">
+      // Apply className to the root div
+      <div className={cn("fixed inset-0 sm:inset-y-0 sm:right-0 sm:left-auto w-full sm:max-w-sm bg-white shadow-lg z-[60] flex flex-col p-4", className)}>
          <div className="flex items-center justify-between border-b pb-3">
            <h2 className="text-lg font-bold text-red-600">Error</h2>
             <Button variant="ghost" size="icon" className="rounded-full" onClick={onClose} aria-label="Close">
@@ -165,7 +166,8 @@ const RestaurantInfoPanel = ({
   // Display empty state if no data after loading/no error
   if (!panelData) {
      return (
-       <div className="fixed inset-0 sm:inset-y-0 sm:right-0 sm:left-auto w-full sm:max-w-sm bg-white shadow-lg z-[60] flex flex-col p-4">
+       // Apply className to the root div
+       <div className={cn("fixed inset-0 sm:inset-y-0 sm:right-0 sm:left-auto w-full sm:max-w-sm bg-white shadow-lg z-[60] flex flex-col p-4", className)}>
          <div className="flex items-center justify-between border-b pb-3">
            <h2 className="text-lg font-bold">Restaurant Info</h2>
             <Button variant="ghost" size="icon" className="rounded-full" onClick={onClose} aria-label="Close">
@@ -179,7 +181,8 @@ const RestaurantInfoPanel = ({
 
   // Render panel with fetched data
   return (
-    <div className="fixed inset-0 sm:inset-y-0 sm:right-0 sm:left-auto w-full sm:max-w-sm bg-white shadow-lg z-[60] flex flex-col">
+    // Apply className to the root div
+    <div className={cn("fixed inset-0 sm:inset-y-0 sm:right-0 sm:left-auto w-full sm:max-w-sm bg-white shadow-lg z-[60] flex flex-col", className)}>
       {/* Header with close button */}
       <div className="flex items-center justify-between p-3 border-b">
          {/* Use DataField for the header title */}

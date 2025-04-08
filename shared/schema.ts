@@ -91,3 +91,9 @@ export type InsertParticipation = z.infer<typeof insertParticipationSchema>;
 
 export type Restaurant = typeof restaurants.$inferSelect;
 export type InsertRestaurant = z.infer<typeof insertRestaurantSchema>;
+
+// New type combining Restaurant with seasonNumber and chefName for frontend use
+export type RestaurantWithDetails = Restaurant & {
+  seasonNumber: number | null;
+  chefName: string | null;
+};
