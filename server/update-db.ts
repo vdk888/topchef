@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 dotenv.config(); // Load environment variables from .env file
 
 import { db } from './db';
-import { restaurants, chefs, seasons } from '../shared/schema';
+import { restaurants, chefs, seasons, participations } from '../shared/schema';
 import { sql, isNull, eq, and } from 'drizzle-orm';
 import OpenAI from 'openai';
 import fetch from 'node-fetch'; // Use node-fetch as it's in package.json
@@ -82,6 +82,147 @@ async function callPerplexity(prompt: string): Promise<string | null> {
     console.error(`---> Error calling Perplexity: ${error}`);
     return null;
   }
+}
+
+// --- New: Update Season Candidates If Incomplete ---
+export async function updateSeasonCandidatesIfIncomplete(seasonId: number) {
+  // 1. Count candidates for this season
+  const candidateCount = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(participations)
+    .where(eq(participations.seasonId, seasonId));
+
+  if ((candidateCount[0]?.count ?? 0) >= 15) {
+    console.log(`Season ${seasonId} already has 15 or more candidates.`);
+    return;
+  }
+
+  // 2. Fetch season info
+  const season = await db.select().from(seasons).where(eq(seasons.id, seasonId)).limit(1);
+  if (!season[0]) {
+    console.warn(`Season ${seasonId} not found.`);
+    return;
+  }
+
+  // 3. Craft prompt for Perplexity
+  const prompt = `List all candidates for Top Chef ${season[0].country} season ${season[0].number} (${season[0].year}). For each candidate, provide: full name, short biography, status (active/retired), image URL (if available), and their final placement in the season. Format as JSON array: [{name, bio, status, imageUrl, placement}].`;
+
+  // 4. Call Perplexity
+  const perplexityResponse = await callPerplexity(prompt);
+  if (!perplexityResponse) {
+    console.warn("Perplexity did not return candidate data.");
+    return;
+  }
+
+  // 5. Use DeepSeek to parse Perplexity's response into structured JSON
+  const deepseekPrompt = `Parse the following text and output a JSON array as described: ${perplexityResponse}`;
+  const parsedJson = await callDeepseek(deepseekPrompt);
+
+  let candidates: any[] = [];
+  try {
+    candidates = JSON.parse(parsedJson ?? "[]");
+  } catch (e) {
+    console.error("Failed to parse DeepSeek output as JSON:", parsedJson);
+    return;
+  }
+
+  // 6. Upsert candidates and participations
+  for (const c of candidates) {
+    let chef = await db.select().from(chefs).where(eq(chefs.name, c.name)).limit(1);
+    let chefId: number;
+    if (chef.length === 0) {
+      // Insert new chef
+      const inserted = await db.insert(chefs).values({
+        name: c.name,
+        bio: c.bio,
+        status: c.status,
+        imageUrl: c.imageUrl,
+        perplexityData: c, // store raw
+      }).returning({ id: chefs.id });
+      chefId = inserted[0].id;
+    } else {
+      chefId = chef[0].id;
+      // Optionally update fields if missing
+      await db.update(chefs).set({
+        bio: chef[0].bio ?? c.bio,
+        status: chef[0].status ?? c.status,
+        imageUrl: chef[0].imageUrl ?? c.imageUrl,
+        perplexityData: c,
+      }).where(eq(chefs.id, chefId));
+    }
+    // Upsert participation
+    const existing = await db.select().from(participations)
+      .where(and(eq(participations.chefId, chefId), eq(participations.seasonId, seasonId)));
+    if (existing.length === 0) {
+      await db.insert(participations).values({
+        chefId,
+        seasonId,
+        placement: c.placement,
+        isWinner: c.placement === 1,
+        eliminated: c.placement !== 1,
+        notes: "",
+      });
+    }
+  }
+  console.log(`Updated candidates for season ${seasonId}.`);
+}
+
+// --- New: Fill Missing Restaurant Fields ---
+export async function fillMissingRestaurantFields(restaurantId: number) {
+  const restaurant = await db.select().from(restaurants).where(eq(restaurants.id, restaurantId)).limit(1);
+  if (!restaurant[0]) {
+    console.warn(`Restaurant ${restaurantId} not found.`);
+    return;
+  }
+  const r = restaurant[0];
+
+  // Determine missing fields
+  const missingFields: string[] = [];
+  if (!r.address) missingFields.push("address");
+  if (!r.description) missingFields.push("description");
+  if (!r.lat || !r.lng) missingFields.push("latitude/longitude");
+  if (!r.city) missingFields.push("city");
+  if (!r.country) missingFields.push("country");
+
+  if (missingFields.length === 0) {
+    console.log(`No missing fields for restaurant ${restaurantId}.`);
+    return;
+  }
+
+  // Craft prompt for Perplexity
+  const prompt = `For the restaurant \"${r.restaurantName}\" (chef: ${r.chefId}), please provide the following missing information: ${missingFields.join(", ")}. Respond in JSON: {${missingFields.map(f => `\"${f}\": ...`).join(", ")}}`;
+
+  // Call Perplexity
+  const perplexityResponse = await callPerplexity(prompt);
+  if (!perplexityResponse) {
+    console.warn("Perplexity did not return restaurant data.");
+    return;
+  }
+
+  // Use DeepSeek to parse Perplexity's response into structured JSON
+  const deepseekPrompt = `Parse the following and output a JSON object with the requested fields: ${perplexityResponse}`;
+  const parsedJson = await callDeepseek(deepseekPrompt);
+
+  let data: any = {};
+  try {
+    data = JSON.parse(parsedJson ?? "{}");
+  } catch (e) {
+    console.error("Failed to parse DeepSeek output as JSON:", parsedJson);
+    return;
+  }
+
+  // Update restaurant with any newly found fields
+  await db.update(restaurants).set({
+    address: r.address ?? data.address,
+    description: r.description ?? data.description,
+    lat: r.lat ?? data.lat,
+    lng: r.lng ?? data.lng,
+    city: r.city ?? data.city,
+    country: r.country ?? data.country,
+    lastUpdated: new Date(),
+  }).where(eq(restaurants.id, restaurantId));
+
+  console.log(`Updated restaurant ${restaurantId} with missing fields.`);
 }
 
 // --- Main Update Logic ---

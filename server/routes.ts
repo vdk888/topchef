@@ -7,6 +7,7 @@ import fetch from "node-fetch";
 import { OpenAI } from "openai";
 import { sql, desc, max, or, isNull, lt, and, eq } from "drizzle-orm"; // Import and, eq
 // Removed duplicate: import { db } from "./db"; 
+import { fillMissingRestaurantFields, updateSeasonCandidatesIfIncomplete } from "./update-db";
 
 // Helper function to call Perplexity API
 async function callPerplexity(prompt: string, systemPrompt?: string): Promise<string | null> {
@@ -1095,146 +1096,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Helper function to check and update seasons with fewer than 10 candidates
-  async function checkAndUpdateSeasonsWithFewCandidates(country: string) {
-    let updatedSeasons = 0;
-    
-    // Find all seasons for the country
-    const seasonsForCountry = await storage.getSeasonsByCountry(country);
-    console.log(`Found ${seasonsForCountry.length} seasons for ${country}`);
-    
-    for (const season of seasonsForCountry) {
-      // Check if season has fewer than 10 participants
-      const participationsForSeason = await storage.getParticipationsBySeason(season.id);
-      
-      if (participationsForSeason.length < 10) {
-        console.log(`Season ${season.number} for ${country} has only ${participationsForSeason.length} candidates. Filling with Perplexity data...`);
-      
-        // Use Perplexity to get candidates for this season
-        const prompt = `List 15 confirmed candidates that participated in Top Chef ${country} Season ${season.number}. For each candidate, provide their full name, the name of their restaurant (if known), the city where the restaurant is located, and the physical address of the restaurant if available. Format the result as a list, e.g. - **[Chef Name]**, **[Restaurant Name]**, **[City]**, **[Address]**. If any information is not available, write "Restaurant not specified" or "Address not specified" or "City not specified" as appropriate.`;
-        
-        // System prompt to help Perplexity understand the context
-        const systemPrompt = "You are an AI assistant specialized in providing information about the TV show Top Chef, including candidates from past seasons. Format the response as requested, including only confirmed participants, not speculated ones.";
-        
-        const perplexityResponse = await callPerplexity(prompt, systemPrompt);
-        
-        if (perplexityResponse) {
-          console.log(`Received response for ${country} Season ${season.number}. Parsing with Deepseek...`);
-
-          // NEW: Use Deepseek via OpenRouter to parse the Perplexity response
-          const parsingPrompt = `The following text contains a list of Top Chef candidates, potentially mixed with other text. Please extract the candidates and return ONLY a valid JSON array where each object has the keys 'chefName', 'restaurantName', 'city', and 'address'. Use the value 'Not specified' if a piece of information is missing in the text for a candidate. Ensure the restaurantName is 'Not specified' if the text indicates no restaurant or similar phrasing. Do not include any text before or after the JSON array.
-
-Text to parse:
-\`\`\`
-${perplexityResponse}
-\`\`\``;
-
-          const openRouterResponse = await callOpenRouter(parsingPrompt, "You are an AI assistant that parses text into structured JSON. Respond ONLY with the JSON array.");
-
-          let addedCandidates = 0;
-          if (openRouterResponse) {
-            try {
-              // Attempt to parse the JSON response from Deepseek
-              const candidates = JSON.parse(openRouterResponse) as { chefName: string; restaurantName: string; city: string; address: string }[];
-
-              console.log(`Parsed ${candidates.length} candidates from Deepseek response.`);
-
-              for (const candidate of candidates) {
-                const { chefName, restaurantName, city, address } = candidate;
-                console.log(`Processing candidate: ${chefName}, ${restaurantName}, ${city}, ${address}`);
-
-                // Basic validation - skip if essential info is missing or placeholder-like
-                if (!chefName || chefName.toLowerCase() === 'not specified' || chefName.startsWith('[')) {
-                   console.warn(`Skipping candidate due to invalid name: ${chefName}`);
-                   continue;
-                }
-                // Normalize "Not specified" variations for restaurant name check
-                const normalizedRestaurantName = restaurantName?.toLowerCase() ?? 'not specified';
-                const isRestaurantSpecified = normalizedRestaurantName !== 'not specified' && normalizedRestaurantName !== 'restaurant not specified' && !normalizedRestaurantName.startsWith('[');
-
-
-                // Check if chef exists already, create if not
-                let chef = await storage.getChefByName(chefName);
-              if (!chef) {
-                console.log(`Creating new chef: ${chefName}`);
-                chef = await storage.createChef({ 
-                  name: chefName, 
-                  status: 'active',
-                  lastUpdated: new Date()
-                });
-              }
-
-              // Check if this chef already has a participation in this season
-              const existingParticipations = await storage.getParticipationsBySeason(season.id);
-              const existingParticipation = existingParticipations.find(p => p.chefId === chef.id);
-
-              if (!existingParticipation) {
-                try {
-                  await storage.createParticipation({
-                    chefId: chef.id,
-                    seasonId: season.id,
-                    // Other participation details are optional
-                  });
-                  console.log(`Created participation record for Chef ${chef.id} (${chefName}) in Season ${season.id}`);
-                  addedCandidates++;
-                } catch (participationError) {
-                  console.error(`Error creating participation for chef ${chef.id}:`, participationError);
-                }
-              } else {
-                 console.log(`Participation record already exists for Chef ${chef.id} (${chefName}) in Season ${season.id}`);
-              }
-
-              // Create or update restaurant only if a valid restaurant name was provided
-              if (isRestaurantSpecified) {
-                // Check if restaurant already exists for this chef
-                const existingRestaurants = await storage.getRestaurantsByChef(chef.id);
-                const existingRestaurant = existingRestaurants.find(r =>
-                  r.restaurantName.toLowerCase() === restaurantName.toLowerCase());
-
-                if (!existingRestaurant) {
-                  // Create new restaurant
-                  const normalizedCity = (!city || city.toLowerCase() === 'not specified' || city.startsWith('[')) ? "" : city;
-                  const normalizedAddress = (!address || address.toLowerCase() === 'not specified' || address.startsWith('[')) ? "" : address;
-                  const fullAddress = [normalizedAddress, normalizedCity].filter(Boolean).join(', ');
-
-                  await storage.createRestaurant({
-                    chefId: chef.id,
-                    restaurantName: restaurantName, // Use the original case name
-                    country: country,
-                    city: normalizedCity,
-                    address: fullAddress || null,
-                    lat: "0", // Placeholder - would need geocoding
-                    lng: "0", // Placeholder
-                    seasonId: season.id,
-                    chefAssociationLastUpdated: new Date(),
-                    addressLastUpdated: fullAddress ? new Date() : null,
-                    restaurantNameLastUpdated: new Date()
-                  });
-                  console.log(`Created restaurant: ${restaurantName} for chef ${chefName}`);
-                } else {
-                   console.log(`Restaurant "${restaurantName}" already exists for chef ${chefName}`);
-                }
-              } else {
-                 console.log(`Skipping restaurant creation for chef ${chefName} as restaurant name was not specified.`);
-              }
-            } // End for loop (candidates)
-          } catch (parseError) {
-             console.error(`Failed to parse JSON response from Deepseek for ${country} Season ${season.number}:`, parseError);
-             console.error("Raw Deepseek response:", openRouterResponse);
-          }
-        } else {
-           console.error(`Did not receive a valid response from Deepseek for parsing ${country} Season ${season.number}`);
-        } // End if (openRouterResponse)
-
-        console.log(`Finished processing for ${country} Season ${season.number}. Added ${addedCandidates} new candidates.`);
-        if (addedCandidates > 0) updatedSeasons++;
-      } // End if (perplexityResponse)
-    } // End if (participationsForSeason.length < 10)
-    }
-    
-    return updatedSeasons;
-  }
-
   // NEW Endpoint for periodic/manual data update
   app.post('/api/update-data', async (req, res) => {
     try {
@@ -1246,8 +1107,11 @@ ${perplexityResponse}
       console.log(`Starting data update process for country: ${country}...`);
 
       // --- 1. Check and update seasons with few candidates ---
-      const updatedSeasons = await checkAndUpdateSeasonsWithFewCandidates(country);
-      
+      const seasonsForCountry = await db.select().from(seasons).where(eq(seasons.country, country));
+      for (const s of seasonsForCountry) {
+        await updateSeasonCandidatesIfIncomplete(s.id);
+      }
+
       // --- 2. Check for outdated key fields ---
       const threeMonthsAgo = new Date();
       threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
@@ -1520,7 +1384,7 @@ ${perplexityResponse}
 
       console.log(`Data update process for ${country} finished processing outdated records.`);
       res.status(200).json({ 
-        message: `Update process completed for ${country}. Updated ${updatedSeasons} seasons with low candidate counts. Found ${outdatedRestaurants.length} outdated restaurant records. Checked for season ${nextSeasonNumber}.` 
+        message: `Update process completed for ${country}. Updated seasons with low candidate counts. Found ${outdatedRestaurants.length} outdated restaurant records. Checked for season ${nextSeasonNumber}.` 
       });
 
     } catch (error) {
@@ -1556,6 +1420,21 @@ ${perplexityResponse}
     } catch (error) {
       console.error('Error updating chef data:', error);
       res.status(500).json({ error: 'Failed to update chef data' });
+    }
+  });
+
+  // --- New: Fill missing fields for a restaurant by ID ---
+  app.post('/api/restaurants/:id/fill-missing-fields', async (req, res) => {
+    const restaurantId = Number(req.params.id);
+    if (!restaurantId || isNaN(restaurantId)) {
+      return res.status(400).json({ error: "Invalid or missing restaurant ID" });
+    }
+    try {
+      await fillMissingRestaurantFields(restaurantId);
+      res.status(200).json({ message: `Missing fields for restaurant ${restaurantId} have been filled (if any were missing).` });
+    } catch (error) {
+      console.error(`Error filling missing fields for restaurant ${restaurantId}:`, error);
+      res.status(500).json({ error: 'Failed to fill missing restaurant fields' });
     }
   });
 

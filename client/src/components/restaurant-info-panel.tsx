@@ -79,12 +79,44 @@ const RestaurantInfoPanel = ({
   const [panelData, setPanelData] = useState<PanelData | null>(null); // Use new PanelData type
   const [isLoading, setIsLoading] = useState(true); // Start loading immediately
   const [error, setError] = useState<string | null>(null);
+  const [isFilling, setIsFilling] = useState(false);
+  const [fillError, setFillError] = useState<string | null>(null);
+  const [fillSuccess, setFillSuccess] = useState<string | null>(null);
 
   const handleGetDirections = () => {
     // Use lat/lng from panelData if available and valid, otherwise fallback to initial prop
     const lat = panelData?.lat ?? restaurant.lat;
     const lng = panelData?.lng ?? restaurant.lng;
     window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`);
+  };
+
+  // Helper to check if any important fields are missing
+  const hasMissingFields = !panelData?.address || !panelData?.chef || !panelData?.season;
+
+  // Handler for AI fill
+  const handleFillMissingFields = async () => {
+    setIsFilling(true);
+    setFillError(null);
+    setFillSuccess(null);
+    try {
+      const response = await fetch(`/api/restaurants/${restaurant.id}/fill-missing-fields`, {
+        method: 'POST',
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to fill missing fields: ${response.status}`);
+      }
+      setFillSuccess('Fields filled! Refreshing...');
+      // Refetch the panel data after a short delay
+      setTimeout(() => {
+        setFillSuccess(null);
+        setPanelData(null); // Will trigger useEffect to refetch
+      }, 1200);
+    } catch (err) {
+      setFillError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setIsFilling(false);
+    }
   };
 
   // Fetch data from the new panel endpoint
@@ -272,6 +304,19 @@ const RestaurantInfoPanel = ({
           <MapPin className="h-4 w-4 mr-2" />
           Get Directions
         </Button>
+        {/* AI Fill Button (if missing fields) */}
+        {hasMissingFields && (
+          <Button
+            className="w-full bg-yellow-500 hover:bg-yellow-600 text-white flex items-center justify-center mt-2"
+            onClick={handleFillMissingFields}
+            disabled={isFilling}
+          >
+            <Zap className="h-4 w-4 mr-2" />
+            {isFilling ? 'Filling...' : 'Fill Missing Fields (AI)'}
+          </Button>
+        )}
+        {fillError && <div className="text-red-600 text-sm mt-2">{fillError}</div>}
+        {fillSuccess && <div className="text-green-600 text-sm mt-2">{fillSuccess}</div>}
       </div>
     </div>
   );
