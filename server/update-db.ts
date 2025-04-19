@@ -25,6 +25,34 @@ const openrouterClient = new OpenAI({
 
 // --- Helper Functions ---
 
+/**
+ * Extracts the first valid JSON array or object from a string.
+ * Handles markdown code blocks and extra text from LLMs.
+ */
+function extractJsonBlock(text: string): string | null {
+  if (!text) return null;
+  // Try to match a JSON array or object inside triple backticks
+  const codeBlockMatch = text.match(/```(?:json)?([\s\S]*?)```/i);
+  if (codeBlockMatch) {
+    text = codeBlockMatch[1];
+  }
+  // Now try to extract a JSON array or object
+  const arrayMatch = text.match(/\[([\s\S]*?)\]/m);
+  if (arrayMatch) {
+    return '[' + arrayMatch[1] + ']';
+  }
+  const objectMatch = text.match(/\{([\s\S]*?)\}/m);
+  if (objectMatch) {
+    return '{' + objectMatch[1] + '}';
+  }
+  // As fallback, if text itself looks like JSON, return as is
+  if ((text.trim().startsWith('[') && text.trim().endsWith(']')) ||
+      (text.trim().startsWith('{') && text.trim().endsWith('}'))) {
+    return text.trim();
+  }
+  return null;
+}
+
 async function callDeepseek(prompt: string): Promise<string | null> {
   console.log(`---> Calling Deepseek...`);
   try {
@@ -116,13 +144,14 @@ export async function updateSeasonCandidatesIfIncomplete(seasonId: number) {
 
   // 5. Use DeepSeek to parse Perplexity's response into structured JSON
   const deepseekPrompt = `Parse the following text and output a JSON array as described: ${perplexityResponse}`;
-  const parsedJson = await callDeepseek(deepseekPrompt);
+  const parsedJsonRaw = await callDeepseek(deepseekPrompt);
 
   let candidates: any[] = [];
+  const potentialJson = extractJsonBlock(parsedJsonRaw ?? '');
   try {
-    candidates = JSON.parse(parsedJson ?? "[]");
+    candidates = JSON.parse(potentialJson ?? '[]');
   } catch (e) {
-    console.error("Failed to parse DeepSeek output as JSON:", parsedJson);
+    console.error("Failed to parse DeepSeek output as JSON:", parsedJsonRaw);
     return;
   }
 
