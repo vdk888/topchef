@@ -15,6 +15,7 @@
         .update-section { margin-bottom: 30px; padding: 15px; border: 1px solid #ccc; background-color: #f8f8f8; border-radius: 5px;}
         .update-section label { margin-right: 10px; }
         .update-section input[type="text"] { padding: 8px; margin-right: 10px; }
+        .update-section input[type="number"] { padding: 8px; margin-right: 10px; }
         .update-section button { padding: 8px 15px; cursor: pointer; }
         .status-message { margin-top: 15px; padding: 10px; border-radius: 3px; }
         .status-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
@@ -35,6 +36,16 @@
             <button type="submit">Fetch & Update All Info</button>
         </form>
         <div id="updateStatus" class="status-message" style="display: none;"></div>
+    </div>
+
+    <div class="update-section">
+        <h2>Season Update</h2>
+        <form id="updateSeasonForm">
+            <label for="seasonNumber">Season Number:</label>
+            <input type="number" id="seasonNumber" name="season_number" min="1" required>
+            <button type="submit">Fetch & Fill Season</button>
+        </form>
+        <div id="updateSeasonStatus" class="status-message" style="display: none;"></div>
     </div>
 
     <h2>Candidate Data</h2>
@@ -124,10 +135,8 @@
                     },
                     body: JSON.stringify({ chef_name: chefName }),
                 });
-
                 const result = await response.json();
-
-                if (response.ok && result.success) {
+                if (result.success) {
                     updateStatus.textContent = `Successfully updated information for ${chefName}. Refreshing page...`;
                     updateStatus.className = 'status-message status-success';
                     // Reload the page to show updated data after a short delay
@@ -142,6 +151,46 @@
                 console.error('Update error:', error);
                 updateStatus.textContent = 'An unexpected error occurred during the update.';
                 updateStatus.className = 'status-message status-error';
+            }
+        });
+
+        // Handle season update form submission
+        const updateSeasonForm = document.getElementById('updateSeasonForm');
+        const updateSeasonStatus = document.getElementById('updateSeasonStatus');
+        const seasonNumberInput = document.getElementById('seasonNumber');
+
+        updateSeasonForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const seasonNumber = seasonNumberInput.value.trim();
+            if (!seasonNumber) return;
+
+            updateSeasonStatus.textContent = 'Updating season... Please wait.';
+            updateSeasonStatus.className = 'status-message loading';
+            updateSeasonStatus.style.display = 'block';
+
+            try {
+                const response = await fetch('/update-season', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ season_number: seasonNumber }),
+                });
+                const result = await response.json();
+                if (result.success) {
+                    updateSeasonStatus.textContent = `Successfully updated information for season ${seasonNumber}. Refreshing page...`;
+                    updateSeasonStatus.className = 'status-message status-success';
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    updateSeasonStatus.textContent = `Error: ${result.message || 'Failed to update season.'}`;
+                    updateSeasonStatus.className = 'status-message status-error';
+                }
+            } catch (error) {
+                console.error('Update season error:', error);
+                updateSeasonStatus.textContent = 'An unexpected error occurred during the season update.';
+                updateSeasonStatus.className = 'status-message status-error';
             }
         });
     </script>

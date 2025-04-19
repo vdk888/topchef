@@ -24,6 +24,9 @@ templates = Jinja2Templates(directory="topchef_app/templates")
 class UpdateRequest(BaseModel):
     chef_name: str
 
+class SeasonUpdateRequest(BaseModel):
+    season_number: int
+
 # --- Event Handlers ---
 @app.on_event("startup")
 async def startup_event():
@@ -93,6 +96,44 @@ async def update_candidate_manual(update_request: UpdateRequest):
         logging.error(f"Error during manual update for {chef_name}: {e}", exc_info=True)
         return JSONResponse(status_code=500, content={"success": False, "message": f"An unexpected server error occurred: {e}"})
 
+
+@app.post("/update-season", response_class=JSONResponse)
+async def update_season_manual(update_request: SeasonUpdateRequest):
+    """Handles manual update requests for a full season."""
+    season_number = update_request.season_number
+    logging.info(f"Manual update request received for season: {season_number}")
+
+    if not season_number:
+        logging.warning("Manual update request received with empty season number.")
+        raise HTTPException(status_code=400, detail="Season number cannot be empty.")
+
+    try:
+        # Fetch all candidates for the given season
+        logging.info(f"Fetching all candidates for season {season_number}...")
+        candidate_list = fetch_and_parse_candidate_info(season_number, fields_requested="season_candidates")
+        if not candidate_list or not isinstance(candidate_list, list):
+            logging.error(f"Failed to fetch or parse candidate list for season {season_number}.")
+            return JSONResponse(status_code=500, content={"success": False, "message": f"Could not retrieve or parse candidate list for season {season_number}."})
+
+        upserted = 0
+        failed = 0
+        for candidate_data in candidate_list:
+            if not isinstance(candidate_data, dict):
+                logging.warning(f"Skipping invalid candidate data for season {season_number}: {candidate_data}")
+                failed += 1
+                continue
+            # Ensure season is set
+            candidate_data['top_chef_season'] = season_number
+            success = upsert_candidate(candidate_data)
+            if success:
+                upserted += 1
+            else:
+                failed += 1
+        logging.info(f"Season update finished for season {season_number}. Upserted: {upserted}, Failed: {failed}")
+        return JSONResponse(content={"success": True, "message": f"Successfully updated season {season_number}. Upserted: {upserted}, Failed: {failed}"})
+    except Exception as e:
+        logging.error(f"Error during manual update for season {season_number}: {e}", exc_info=True)
+        return JSONResponse(status_code=500, content={"success": False, "message": f"An unexpected server error occurred: {e}"})
 
 # --- Main Execution ---
 if __name__ == "__main__":
