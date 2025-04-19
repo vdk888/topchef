@@ -4,16 +4,20 @@ import sys
 # Import the new LLM-driven agent cycle function
 from agent import run_llm_driven_agent_cycle
 
+import random # Needed for the prompt
+
 # --- Configuration ---
-# How often to run the check (in minutes)
-CHECK_INTERVAL_MINUTES = 60
+# How often to run the check (in seconds)
+CHECK_INTERVAL_SECONDS = 30
 
 def job():
-    """The job to be scheduled: run the LLM-driven agent cycle."""
-    print(f"Scheduler triggered LLM-driven agent cycle job at {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    """The job to be scheduled: run the LLM-driven agent cycle with the initial thought prompt."""
+    print(f"Scheduler triggered job for StephAI at {time.strftime('%Y-%m-%d %H:%M:%S')}", flush=True)
+    # Define the initial prompt for StephAI's thought process
+    initial_prompt = "Okay StephAI, time for your routine check. Ask yourself: did you check the Top Chef database recently? You should check a random season for missing data."
     try:
-        # Call the new function
-        run_llm_driven_agent_cycle()
+        # Pass the initial prompt to the agent cycle
+        run_llm_driven_agent_cycle(initial_prompt)
     except Exception as e:
         print(f"Error during scheduled run_llm_driven_agent_cycle: {e}", file=sys.stderr)
         # Log the full traceback for better debugging
@@ -21,19 +25,15 @@ def job():
         traceback.print_exc(file=sys.stderr)
 
 # --- Schedule the Job ---
-print(f"Scheduling autonomous update cycle to run every {CHECK_INTERVAL_MINUTES} minutes.")
-# schedule.every(CHECK_INTERVAL_MINUTES).minutes.do(job)
-# For testing, run more frequently (e.g., every 1 minute)
-schedule.every(1).minute.do(job)
-# Or run immediately once for testing:
-# job()
+print(f"Scheduling StephAI's check to run every {CHECK_INTERVAL_SECONDS} seconds.", flush=True)
+schedule.every(CHECK_INTERVAL_SECONDS).seconds.do(job)
 
 
 # --- Run the Scheduler ---
-print("Scheduler started. Running initial check now...")
-job() # Run once immediately
+print("Scheduler started. StephAI will perform its first check shortly...", flush=True)
+# Don't run immediately, let the schedule trigger the first run naturally after the interval.
 
-print("Entering scheduling loop (press Ctrl+C to stop)...")
+print("Entering scheduling loop (press Ctrl+C to stop)...", flush=True)
 while True:
     try:
         schedule.run_pending()

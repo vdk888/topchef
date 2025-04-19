@@ -106,13 +106,13 @@
 </head>
 <body>
 
-    <h1>Top Chef France Database</h1>
+    <h1>Top Chef France Database Keeper: StephAI</h1>
 
     <p class="console-info">
-        An autonomous agent (DeepSeek via OpenRouter) is running in the background (via `scheduler.py`) to periodically check for missing information in the database below and attempt to fill it using web searches (via Perplexity). Agent activity is logged below in real-time. Refresh the page to see database updates.
+        StephAI, an autonomous agent, is running in the background (via `scheduler.py`) to periodically check the database below for missing information and attempt to fill it using web searches. StephAI's thoughts and actions are logged below in real-time. Refresh the page to see database updates reflected in the table.
     </p>
 
-    <h2>Chef Data</h2>
+    <h2>Chef Database</h2>
     {% if chefs %}
         <table>
             <thead>
@@ -140,12 +140,12 @@
             </tbody>
         </table>
     {% else %}
-        <p>No chef data found in the database.</p>
+        <p>No chef data found in the database, or database connection failed.</p>
     {% endif %}
 
-    <h2>Agent Log</h2>
+    <h2>StephAI's Activity Log</h2>
     <div id="log-container">
-        Connecting to agent log stream...
+        Waiting for StephAI's first check...
     </div>
 
     <script>
@@ -172,32 +172,65 @@
 
             const timestampSpan = document.createElement('span');
             timestampSpan.classList.add('log-timestamp');
-            timestampSpan.textContent = new Date(log.timestamp * 1000).toLocaleTimeString(); // Format timestamp
+            timestampSpan.textContent = new Date(log.timestamp * 1000).toLocaleTimeString();
 
-            const typeSpan = document.createElement('span');
-            typeSpan.classList.add('log-type', `log-type-${log.type}`); // Add class based on type
-            typeSpan.textContent = `[${log.type.toUpperCase()}]`;
+            // Display Role (StephAI, scheduler, tool_executor, system)
+            const roleSpan = document.createElement('span');
+            roleSpan.style.fontWeight = 'bold';
+            roleSpan.style.marginRight = '10px';
+            role_display = log.role || 'system'; // Default role
+            roleSpan.textContent = `${role_display}:`;
+             // Simple role-based coloring (customize as needed)
+            if (role_display === 'StephAI') roleSpan.style.color = '#e5c07b'; // Yellow
+            else if (role_display === 'tool_executor') roleSpan.style.color = '#98c379'; // Green
+            else if (role_display === 'scheduler') roleSpan.style.color = '#61afef'; // Blue
+            else roleSpan.style.color = '#abb2bf'; // Default
 
+
+            // Display Message/Data
             const dataSpan = document.createElement('span');
-            dataSpan.classList.add('log-data');
+            // dataSpan.classList.add('log-data'); // Remove fixed indent for conversational flow
             dataSpan.textContent = formatLogData(log.data);
 
             entryDiv.appendChild(timestampSpan);
-            entryDiv.appendChild(typeSpan);
+            entryDiv.appendChild(roleSpan); // Add role span
             entryDiv.appendChild(dataSpan);
 
             logContainer.appendChild(entryDiv);
 
+            // Add specific formatting based on log type
+            formatEntryByType(entryDiv, log);
+
             // Auto-scroll to the bottom
             logContainer.scrollTop = logContainer.scrollHeight;
         }
+
+        function formatEntryByType(entryDiv, log) {
+            // Example: Make errors more prominent
+             const dataSpan = entryDiv.querySelector('.log-data'); // Find the data span we added
+             if (!dataSpan) return;
+
+            if (log.type.includes('error')) {
+                entryDiv.style.backgroundColor = '#4d3333'; // Dark red background for errors
+                dataSpan.style.color = '#e06c75'; // Lighter red text
+                dataSpan.style.fontWeight = 'bold';
+            } else if (log.type === 'llm_response') {
+                 // Maybe style LLM responses slightly differently if needed
+                 dataSpan.style.fontStyle = 'italic';
+            } else if (log.type === 'tool_result' || log.type === 'tool_start') {
+                 dataSpan.style.color = '#98c379'; // Green for tool actions/results
+            } else if (log.type === 'llm_tool_request') {
+                 dataSpan.style.color = '#56b6c2'; // Cyan for tool requests
+            }
+        }
+
 
         // --- SSE Connection ---
         const eventSource = new EventSource("{{ url_for('stream_logs') }}");
 
         eventSource.onopen = function() {
             logContainer.innerHTML = ''; // Clear initial message
-            addLogEntry({ type: 'stream_info', data: 'Connected to agent log stream.', timestamp: Date.now() / 1000 });
+            addLogEntry({ type: 'stream_info', data: 'Connected to StephAI\'s log stream.', timestamp: Date.now() / 1000, role: 'system' });
         };
 
         eventSource.onmessage = function(event) {
@@ -213,9 +246,8 @@
 
         eventSource.onerror = function(err) {
             console.error("EventSource failed:", err);
-            addLogEntry({ type: 'stream_error', data: 'Log stream connection error. Trying to reconnect...', timestamp: Date.now() / 1000 });
+            addLogEntry({ type: 'stream_error', data: 'Log stream connection error. Reconnecting...', timestamp: Date.now() / 1000, role: 'system' });
             // EventSource attempts reconnection automatically by default
-            // You might want to add logic here to stop trying after too many errors
         };
 
     </script>

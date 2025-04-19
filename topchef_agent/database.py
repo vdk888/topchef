@@ -85,6 +85,29 @@ def load_database():
         # Return empty list on error, allows UI to potentially still load
     return chefs_list
 
+def get_distinct_seasons():
+    """Retrieves a list of distinct season numbers from the database."""
+    seasons = []
+    try:
+        with get_db() as db:
+            # Query distinct season numbers, filter out None, order them
+            results = db.query(Chef.season).distinct().filter(Chef.season != None).order_by(Chef.season).all()
+            seasons = [s[0] for s in results] # Extract season number from tuple
+    except Exception as e:
+        print(f"Error getting distinct seasons: {e}")
+    return seasons
+
+def get_chefs_by_season(season_number: int):
+    """Loads chef records for a specific season from the database."""
+    chefs_list = []
+    try:
+        with get_db() as db:
+            chefs = db.query(Chef).filter(Chef.season == season_number).order_by(Chef.name).all()
+            chefs_list = [chef.to_dict() for chef in chefs]
+    except Exception as e:
+        print(f"Error loading chefs for season {season_number}: {e}")
+    return chefs_list
+
 def update_chef(chef_id: int, update_data: dict):
     """Updates a specific chef record in the database."""
     updated = False
