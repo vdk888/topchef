@@ -131,24 +131,23 @@ const clearDatabase = async () => {
 // Sample restaurant data - in a real app, this would come from a database
 const restaurantData = {
   "France": [
-    // Top Chef France Seasons
-    { id: 50, chefName: "Jean-François Piège", restaurantName: "Le Grand Restaurant", lat: 48.8707, lng: 2.3072, season: 1, city: "Paris", country: "France" },
-    { id: 51, chefName: "Ghislaine Arabian", restaurantName: "Les Petites Sorcières", lat: 48.8367, lng: 2.3403, season: 1, city: "Paris", country: "France" },
-    { id: 52, chefName: "Stéphanie Le Quellec", restaurantName: "La Scène", lat: 48.8704, lng: 2.3073, season: 2, city: "Paris", country: "France" },
-    { id: 53, chefName: "Ronan Kernen", restaurantName: "La Villa Madie", lat: 43.2047, lng: 5.5385, season: 2, city: "Cassis", country: "France" },
-    { id: 54, chefName: "Jean-Philippe Doux", restaurantName: "Le Jardin des Sens", lat: 43.6109, lng: 3.8772, season: 3, city: "Montpellier", country: "France" },
-    { id: 55, chefName: "Naoëlle D'Hainaut", restaurantName: "L'Or Q'idée", lat: 49.0586, lng: 2.1005, season: 4, city: "L'Isle-Adam", country: "France" },
-    { id: 56, chefName: "Pierre Augé", restaurantName: "La Maison de Petit Pierre", lat: 43.3409, lng: 3.2164, season: 5, city: "Béziers", country: "France" },
-    { id: 57, chefName: "Xavier Koenig", restaurantName: "Restaurant Xavier Koenig", lat: 47.9432, lng: 7.2660, season: 6, city: "Colmar", country: "France" },
-    { id: 58, chefName: "Xavier Pincemin", restaurantName: "Le Trianon Palace", lat: 48.8048, lng: 2.1118, season: 7, city: "Versailles", country: "France" },
-    { id: 59, chefName: "Coline Faulquier", restaurantName: "Signature", lat: 43.2965, lng: 5.3698, season: 7, city: "Marseille", country: "France" },
-    { id: 60, chefName: "Jérémie Izarn", restaurantName: "La Tour d'Argent", lat: 48.8512, lng: 2.3541, season: 8, city: "Paris", country: "France" },
-    { id: 61, chefName: "Camille Delcroix", restaurantName: "Le Bacchus", lat: 50.9308, lng: 1.6966, season: 9, city: "Calais", country: "France" },
-    { id: 62, chefName: "Samuel Albert", restaurantName: "Les Petits Prés", lat: 47.4745, lng: -0.5512, season: 10, city: "Angers", country: "France" },
-    { id: 63, chefName: "David Gallienne", restaurantName: "Le Jardin des Plumes", lat: 49.0778, lng: 1.5805, season: 11, city: "Giverny", country: "France" },
-    { id: 64, chefName: "Mohamed Cheikh", restaurantName: "Manzili", lat: 48.8566, lng: 2.3522, season: 12, city: "Paris", country: "France" },
-    { id: 65, chefName: "Louise Bourrat", restaurantName: "Bourrache", lat: 38.7223, lng: -9.1393, season: 13, city: "Lisbon", country: "France" },
-    { id: 66, chefName: "Hugo Riboulet", restaurantName: "Table du Chef", lat: 48.8566, lng: 2.3522, season: 14, city: "Paris", country: "France" }
+    { id: 50, chefName: "Jean-François Piège", restaurantName: "Le Grand Restaurant", lat: "48.8707", lng: "2.3072", season: 1, city: "Paris", country: "France", description: null, address: null },
+    { id: 51, chefName: "Ghislaine Arabian", restaurantName: "Les Petites Sorcières", lat: "48.8367", lng: "2.3403", season: 1, city: "Paris", country: "France", description: null, address: null },
+    { id: 52, chefName: "Stéphanie Le Quellec", restaurantName: "La Scène", lat: "48.8704", lng: "2.3073", season: 2, city: "Paris", country: "France", description: null, address: null },
+    { id: 53, chefName: "Ronan Kernen", restaurantName: "La Villa Madie", lat: "43.2047", lng: "5.5385", season: 2, city: "Cassis", country: "France", description: null, address: null },
+    { id: 54, chefName: "Jean-Philippe Doux", restaurantName: "Le Jardin des Sens", lat: "43.6109", lng: "3.8772", season: 3, city: "Montpellier", country: "France", description: null, address: null },
+    { id: 55, chefName: "Naoëlle D'Hainaut", restaurantName: "L'Or Q'idée", lat: "49.0586", lng: "2.1005", season: 4, city: "L'Isle-Adam", country: "France", description: null, address: null },
+    { id: 56, chefName: "Pierre Augé", restaurantName: "La Maison de Petit Pierre", lat: "43.3409", lng: "3.2164", season: 5, city: "Béziers", country: "France", description: null, address: null },
+    { id: 57, chefName: "Xavier Koenig", restaurantName: "Restaurant Xavier Koenig", lat: "47.9432", lng: "7.2660", season: 6, city: "Colmar", country: "France", description: null, address: null },
+    { id: 58, chefName: "Xavier Pincemin", restaurantName: "Le Trianon Palace", lat: "48.8048", lng: "2.1118", season: 7, city: "Versailles", country: "France", description: null, address: null },
+    { id: 59, chefName: "Coline Faulquier", restaurantName: "Signature", lat: "43.2965", lng: "5.3698", season: 7, city: "Marseille", country: "France", description: null, address: null },
+    { id: 60, chefName: "Jérémie Izarn", restaurantName: "La Tour d'Argent", lat: "48.8512", lng: "2.3541", season: 8, city: "Paris", country: "France", description: null, address: null },
+    { id: 61, chefName: "Camille Delcroix", restaurantName: "Le Bacchus", lat: "50.9308", lng: "1.6966", season: 9, city: "Calais", country: "France", description: null, address: null },
+    { id: 62, chefName: "Samuel Albert", restaurantName: "Les Petits Prés", lat: "47.4745", lng: "-0.5512", season: 10, city: "Angers", country: "France", description: null, address: null },
+    { id: 63, chefName: "David Gallienne", restaurantName: "Le Jardin des Plumes", lat: "49.0778", lng: "1.5805", season: 11, city: "Giverny", country: "France", description: null, address: null },
+    { id: 64, chefName: "Mohamed Cheikh", restaurantName: "Manzili", lat: "48.8566", lng: "2.3522", season: 12, city: "Paris", country: "France", description: null, address: null },
+    { id: 65, chefName: "Louise Bourrat", restaurantName: "Bourrache", lat: "38.7223", lng: "-9.1393", season: 13, city: "Lisbon", country: "France", description: null, address: null },
+    { id: 66, chefName: "Hugo Riboulet", restaurantName: "Table du Chef", lat: "48.8566", lng: "2.3522", season: 14, city: "Paris", country: "France", description: null, address: null }
   ]
 };
 
@@ -688,6 +687,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // 2. Check age of fields (e.g., 3 months)
       const threeMonthsAgo = new Date();
       threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+
       const fieldsToRefresh: string[] = [];
 
       if (!responseData.metadata.restaurantName.lastUpdated || responseData.metadata.restaurantName.lastUpdated < threeMonthsAgo) fieldsToRefresh.push('restaurantName');
@@ -726,11 +726,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 } catch (parseError) {
                   console.error(`Failed to parse extracted JSON substring for Restaurant ID ${id}:`, parseError);
                   console.log("Potential JSON substring:", potentialJson);
-                  // Keep freshData as {} and proceed, or throw error? For now, proceed.
+                  freshData = {}; // Fallback to empty object
                 }
               } else {
                  console.warn(`Could not find valid JSON structure in Perplexity response for Restaurant ID ${id}. Response: ${jsonStr}`);
-                 // Keep freshData as {}
+                 freshData = {}; // Fallback if no braces found
               }
               
               // Check if freshData is empty after potential parsing failure
