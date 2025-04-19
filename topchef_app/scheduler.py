@@ -9,9 +9,15 @@ from database import (
     initialize_database,
     upsert_candidate,
     get_candidates_needing_major_update,
-    get_seasons_needing_candidates
+    get_seasons_needing_candidates,
+    get_all_candidates
 )
-from llm_interactions import fetch_and_parse_candidate_info
+from llm_interactions import (
+    fetch_and_parse_candidate_info,
+    generate_perplexity_prompt,
+    call_perplexity,
+    parse_perplexity_response
+)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -97,12 +103,62 @@ def complete_seasons_task():
 
     logging.info(f"Complete seasons task finished. Added/Updated: {added_count}, Fetch/Parse Failed: {failed_fetch_parse}, Upsert Failed: {failed_upsert}")
 
+def complete_all_candidate_fields_task():
+    """Fills all missing fields for every candidate, grouping by (chef_name, season), looping until complete."""
+    logging.info("Starting full candidate completeness task...")
+    fields = [
+        'chef_name', 'restaurant_name', 'restaurant_address', 'top_chef_season',
+        'culinary_style', 'career_highlights', 'signature_dish'
+    ]
+    max_loops = 5
+    for loop in range(max_loops):
+        candidates = get_all_candidates()
+        incomplete = []
+        # Find all candidates with missing fields
+        for c in candidates:
+            missing = [f for f in fields if not c.get(f) or str(c.get(f)).strip().lower() in ("", "n/a", "none")]
+            if missing:
+                incomplete.append((c['chef_name'], c.get('top_chef_season'), missing))
+        if not incomplete:
+            logging.info("All candidate fields are complete.")
+            break
+        logging.info(f"Loop {loop+1}: {len(incomplete)} candidates with missing fields.")
+        for chef_name, season, missing_fields in incomplete:
+            # Group by (chef_name, season) for context
+            topic = chef_name
+            if season:
+                topic = f"{chef_name}, Top Chef France season {season}"
+            prompt = generate_perplexity_prompt(topic, fields_requested="all")
+            if not prompt:
+                logging.warning(f"Could not generate prompt for {topic}")
+                continue
+            response = call_perplexity(prompt)
+            if not response:
+                logging.warning(f"No response from Perplexity for {topic}")
+                continue
+            parsed = parse_perplexity_response(response, topic)
+            if not parsed:
+                logging.warning(f"Failed to parse Perplexity response for {topic}")
+                continue
+            # Only update fields that were missing
+            update_data = {f: parsed.get(f) for f in missing_fields if parsed.get(f)}
+            update_data['chef_name'] = chef_name
+            if season:
+                update_data['top_chef_season'] = season
+            if upsert_candidate(update_data):
+                logging.info(f"Updated {chef_name} (season {season}) with fields: {list(update_data.keys())}")
+            else:
+                logging.warning(f"Failed to upsert for {chef_name} (season {season})")
+            time.sleep(2)
+        time.sleep(5)
+    logging.info("Full candidate completeness task finished.")
 
 def run_scheduled_tasks():
     """Runs all scheduled tasks immediately."""
     logging.info("Manually triggering scheduled tasks...")
     update_major_fields_task()
     complete_seasons_task()
+    complete_all_candidate_fields_task()
     logging.info("Manual trigger finished.")
 
 def run_scheduler():
@@ -113,6 +169,7 @@ def run_scheduler():
     # Schedule to run at specific times daily (can change to specific days if needed)
     schedule.every().day.at("02:00").do(update_major_fields_task)
     schedule.every().day.at("02:15").do(complete_seasons_task) # Stagger tasks slightly
+    schedule.every().day.at("02:30").do(complete_all_candidate_fields_task) # Add new task
 
     # --- Run Once on Startup ---
     logging.info("Running initial scheduled tasks on startup...")

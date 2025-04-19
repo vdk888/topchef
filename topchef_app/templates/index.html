@@ -48,6 +48,12 @@
         <div id="updateSeasonStatus" class="status-message" style="display: none;"></div>
     </div>
 
+    <div class="update-section">
+        <h2>Full Data Completion</h2>
+        <button id="updateAllCandidatesBtn">Fill All Missing Data for All Candidates</button>
+        <div id="updateAllCandidatesStatus" class="status-message" style="display: none;"></div>
+    </div>
+
     <h2>Candidate Data</h2>
 
     <label for="filterInput">Filter Table:</label>
@@ -193,6 +199,33 @@
                 updateSeasonStatus.className = 'status-message status-error';
             }
         });
+
+        // Handle full data completion button
+        const updateAllCandidatesBtn = document.getElementById('updateAllCandidatesBtn');
+        const updateAllCandidatesStatus = document.getElementById('updateAllCandidatesStatus');
+        if (updateAllCandidatesBtn) {
+            updateAllCandidatesBtn.addEventListener('click', async () => {
+                updateAllCandidatesStatus.textContent = 'Starting full data completion... Please wait.';
+                updateAllCandidatesStatus.className = 'status-message loading';
+                updateAllCandidatesStatus.style.display = 'block';
+                try {
+                    const response = await fetch('/update-all-candidates', {
+                        method: 'POST',
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        updateAllCandidatesStatus.textContent = 'Full data completion task started. Check logs for progress.';
+                        updateAllCandidatesStatus.className = 'status-message status-success';
+                    } else {
+                        updateAllCandidatesStatus.textContent = `Error: ${result.message || 'Failed to start full data completion.'}`;
+                        updateAllCandidatesStatus.className = 'status-message status-error';
+                    }
+                } catch (error) {
+                    updateAllCandidatesStatus.textContent = 'An unexpected error occurred.';
+                    updateAllCandidatesStatus.className = 'status-message status-error';
+                }
+            });
+        }
     </script>
 
 </body>

@@ -9,7 +9,7 @@ import uvicorn
 # Import functions from our modules
 from database import initialize_database, get_all_candidates, upsert_candidate
 from llm_interactions import fetch_and_parse_candidate_info
-from scheduler import start_scheduler_thread
+from scheduler import start_scheduler_thread, complete_all_candidate_fields_task
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -169,6 +169,16 @@ async def update_season_manual(update_request: SeasonUpdateRequest):
     except Exception as e:
         logging.error(f"Error during manual update for season {season_number}: {e}", exc_info=True)
         return JSONResponse(status_code=500, content={"success": False, "message": f"An unexpected server error occurred: {e}"})
+
+@app.post("/update-all-candidates", response_class=JSONResponse)
+async def update_all_candidates_manual():
+    """Manually triggers the full candidate completeness task (fills all missing fields for all candidates)."""
+    import threading
+    logging.info("Manual trigger: Starting full candidate completeness task...")
+    # Run in background thread to avoid blocking request
+    thread = threading.Thread(target=complete_all_candidate_fields_task, daemon=True)
+    thread.start()
+    return JSONResponse(content={"success": True, "message": "Full candidate completeness task started. Check logs for progress."})
 
 # --- Main Execution ---
 if __name__ == "__main__":
