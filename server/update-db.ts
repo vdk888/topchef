@@ -309,10 +309,12 @@ async function main() {
     await findAndUpdateMissingInfo();
     // Add calls to other update functions here (e.g., find missing restaurant names, chef bios, etc.)
     console.log('\nDatabase update check completed.');
-    process.exit(0);
+    // Don't exit - allow the server to continue running
+    // process.exit(0); - Removed this to keep server alive
   } catch (error) {
     console.error('\nError during database update process:', error);
-    process.exit(1);
+    // Don't exit on error - just log it and continue
+    // process.exit(1); - Removed this to keep server alive
   }
 }
 
