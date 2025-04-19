@@ -128,17 +128,10 @@ def complete_all_candidate_fields_task():
             topic = chef_name
             if season:
                 topic = f"{chef_name}, Top Chef France season {season}"
-            prompt = generate_perplexity_prompt(topic, fields_requested="all")
-            if not prompt:
-                logging.warning(f"Could not generate prompt for {topic}")
-                continue
-            response = call_perplexity(prompt)
-            if not response:
-                logging.warning(f"No response from Perplexity for {topic}")
-                continue
-            parsed = parse_perplexity_response(response, topic)
+            # Always request ALL fields for maximum info
+            parsed = fetch_and_parse_candidate_info(topic, fields_requested="all")
             if not parsed:
-                logging.warning(f"Failed to parse Perplexity response for {topic}")
+                logging.warning(f"Failed to fetch/parse info for {topic}")
                 continue
             # Only update fields that were missing
             update_data = {f: parsed.get(f) for f in missing_fields if parsed.get(f)}
