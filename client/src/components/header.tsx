@@ -61,23 +61,10 @@ const Header = ({
                 <SelectTrigger className="flex-1 min-w-0" id="country-select">
                   <SelectValue placeholder="Select country" />
                 </SelectTrigger>
-                <SelectContent className="z-[100]"> {/* Ensure high z-index */}
-                {/* Priority for France */}
-                {countries.includes("France") && (
+                <SelectContent className="z-[100]">
                   <SelectItem key="France" value="France">
                     France
                   </SelectItem>
-                )}
-                {/* Then display other countries alphabetically */}
-                {countries
-                  .filter(country => country !== "France")
-                  .sort()
-                  .map(country => (
-                    <SelectItem key={country} value={country}>
-                      {country}
-                    </SelectItem>
-                  ))
-                }
                 </SelectContent>
               </Select>
             </div>

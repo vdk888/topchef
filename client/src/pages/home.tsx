@@ -152,7 +152,7 @@ const Home = () => {
   };
 
   // Get all available countries for the dropdown
-  const { data: countries = [] } = useQuery<string[]>({
+  const { data: countries = ["France"] } = useQuery<string[]>({
     queryKey: ['/api/countries'],
     queryFn: async () => {
       const res = await fetch('/api/countries');

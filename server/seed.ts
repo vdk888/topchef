@@ -25,7 +25,6 @@ async function seedSeasons() {
   const seasonsData = [
     { number: 1, year: 2010, title: "Top Chef France - Saison 1", country: "France", numberOfEpisodes: 8, winner: "Romain Tischenko" },
     { number: 2, year: 2011, title: "Top Chef France - Saison 2", country: "France", numberOfEpisodes: 10, winner: "Stéphanie Le Quellec" },
-    // Add more seasons as needed...
     { number: 15, year: 2024, title: "Top Chef France - Saison 15", country: "France", numberOfEpisodes: 15, winner: "Jorick Dorignac" },
   ];
 
@@ -40,18 +39,12 @@ async function seedChefs() {
   console.log('Seeding chefs data (France)...');
 
   const chefsData = [
-    // Season 1
     { name: "Romain Tischenko", status: "active", bio: "Vainqueur de la Saison 1 de Top Chef France.", imageUrl: null },
     { name: "Pierre Sang Boyer", status: "active", bio: "Finaliste de la Saison 1, connu pour sa cuisine franco-coréenne.", imageUrl: null },
     { name: "Brice Morvent", status: "active", bio: "Candidat de la Saison 1.", imageUrl: null },
-
-    // Season 2
     { name: "Stéphanie Le Quellec", status: "active", bio: "Vainqueur de la Saison 2, cheffe étoilée.", imageUrl: null },
-
-    // Season 15
     { name: "Jorick Dorignac", status: "active", bio: "Vainqueur de la Saison 15.", imageUrl: null },
     { name: "Clotaire Poirier", status: "active", bio: "Finaliste de la Saison 15.", imageUrl: null },
-    // Add more chefs as needed...
   ];
 
   for (const chef of chefsData) {
@@ -143,8 +136,6 @@ async function seedParticipations() {
         });
       }
     }
-
-    // Add more participations as needed...
 
     const count = await db.select({ count: sql<number>`count(*)` }).from(participations);
     console.log(`Inserted ${count[0].count} participations total`);
@@ -243,8 +234,6 @@ async function seedRestaurants() {
         lastUpdated: new Date(),
       });
     }
-
-    // Add more restaurants as needed...
 
     const count = await db.select({ count: sql<number>`count(*)` }).from(restaurants);
     console.log(`Inserted ${count[0].count} restaurants total`);

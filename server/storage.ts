@@ -224,12 +224,7 @@ export class DbStorage implements IStorage {
 
   // Utility methods
   async getCountries(): Promise<string[]> {
-    // Get unique countries from restaurants
-    const result = await db.select({ country: restaurants.country }).from(restaurants)
-      .groupBy(restaurants.country)
-      .orderBy(asc(restaurants.country));
-    
-    return result.map(row => row.country);
+    return ["France"];
   }
 }
 
@@ -387,14 +382,7 @@ export class MemStorage implements IStorage {
 
   // Utility methods
   async getCountries(): Promise<string[]> {
-    const uniqueCountries = new Set<string>();
-    
-    // Get unique countries from restaurants
-    Array.from(this.restaurants.values()).forEach(restaurant => {
-      uniqueCountries.add(restaurant.country);
-    });
-    
-    return Array.from(uniqueCountries).sort();
+    return ["France"];
   }
 }
 
