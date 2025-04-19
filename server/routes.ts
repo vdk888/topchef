@@ -163,9 +163,9 @@ const initializeStorage = async () => {
   
   // Skip initialization if we already have data
   if (countries.length > 0) {
-    // Force re-initialization for testing purposes - remove this in production
-    await clearDatabase();
-    console.log('Cleared existing data for re-initialization...');
+    // Don't clear existing data - just use what's already in the database
+    console.log('Database already has data, skipping initialization...');
+    return; // Exit early - don't re-initialize
   }
   
   console.log('Initializing database with sample data...');
