@@ -31,7 +31,7 @@ def _call_deepseek(prompt, system_message="You are a helpful assistant."):
                 "HTTP-Referer": OPENROUTER_SITE_URL,
                 "X-Title": OPENROUTER_SITE_NAME,
             },
-            model="deepseek/deepseek-chat", # Using the general chat model
+            model="deepseek/deepseek-chat-v3-0324:free", # Using the general chat model
             messages=[
                 {"role": "system", "content": system_message},
                 {"role": "user", "content": prompt}
@@ -118,7 +118,7 @@ def call_perplexity(prompt):
 
     url = "https://api.perplexity.ai/chat/completions"
     payload = {
-        "model": "llama-3-sonar-large-32k-online", # Using a capable online model
+        "model": "sonar", # Using a capable online model
         "messages": [
             {"role": "system", "content": "You are a helpful assistant providing information about Top Chef France candidates. Be precise and factual."},
             {"role": "user", "content": prompt}
