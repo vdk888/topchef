@@ -110,13 +110,13 @@ def run_scheduler():
     logging.info("Scheduler started.")
 
     # --- Schedule Definitions ---
-    # Schedule to run on the 30th day of every month at a specific time (e.g., 02:00)
-    schedule.every().month.at("02:00").do(update_major_fields_task)
-    schedule.every().month.at("02:15").do(complete_seasons_task) # Stagger tasks slightly
+    # Schedule to run at specific times daily (can change to specific days if needed)
+    schedule.every().day.at("02:00").do(update_major_fields_task)
+    schedule.every().day.at("02:15").do(complete_seasons_task) # Stagger tasks slightly
 
     # --- Run Once on Startup ---
-    logging.info("Running initial check on startup...")
-    run_scheduled_tasks() # Run checks immediately when the app starts
+    logging.info("Skipping initial check on startup...")
+    # run_scheduled_tasks() # Run checks immediately when the app starts - disabled for faster startup
 
     # --- Scheduler Loop ---
     while True:

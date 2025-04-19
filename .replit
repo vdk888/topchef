@@ -1,3 +1,4 @@
+modules = ["python-3.11"]
 [workflows]
 runButton = "Start application"
 
@@ -24,3 +25,15 @@ task = "packager.installForAll"
 task = "shell.exec"
 args = "python topchef_app/main.py"
 waitForPort = 5000
+
+[nix]
+channel = "stable-24_05"
+packages = ["libxcrypt"]
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[[ports]]
+localPort = 8000
+externalPort = 8000

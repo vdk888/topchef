@@ -96,8 +96,8 @@ async def update_candidate_manual(update_request: UpdateRequest):
 
 # --- Main Execution ---
 if __name__ == "__main__":
-    # Get port from environment variable or default to 8000
-    port = int(os.getenv("PORT", 8000))
-    logging.info(f"Starting Uvicorn server on http://127.0.0.1:{port}")
+    # Get port from environment variable or default to 5000 (Replit expecting this port)
+    port = int(os.getenv("PORT", 5000))
+    logging.info(f"Starting Uvicorn server on http://0.0.0.0:{port}")
     # Note: `reload=True` is useful for development but should be False in production
-    uvicorn.run("main:app", host="127.0.0.1", port=port, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
