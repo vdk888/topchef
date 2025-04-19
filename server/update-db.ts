@@ -112,6 +112,23 @@ async function callPerplexity(prompt: string): Promise<string | null> {
   }
 }
 
+/**
+ * Attempts to convert a placement string to an integer.
+ * Maps common terms ("Winner", "Runner-up", etc.) to numbers.
+ * Returns null if not parseable.
+ */
+function parsePlacement(placement: any): number | null {
+  if (typeof placement === 'number') return placement;
+  if (typeof placement !== 'string') return null;
+  const normalized = placement.trim().toLowerCase();
+  if (normalized === 'winner') return 1;
+  if (normalized === 'runner-up' || normalized === 'runner up' || normalized === 'finalist') return 2;
+  // Try to extract a number from the string
+  const numMatch = normalized.match(/(\d+)/);
+  if (numMatch) return parseInt(numMatch[1], 10);
+  return null;
+}
+
 // --- New: Update Season Candidates If Incomplete ---
 export async function updateSeasonCandidatesIfIncomplete(seasonId: number) {
   // 1. Count candidates for this season
@@ -183,13 +200,18 @@ export async function updateSeasonCandidatesIfIncomplete(seasonId: number) {
     const existing = await db.select().from(participations)
       .where(and(eq(participations.chefId, chefId), eq(participations.seasonId, seasonId)));
     if (existing.length === 0) {
+      // Sanitize placement field
+      const parsedPlacement = parsePlacement(c.placement);
+      if (parsedPlacement === null && c.placement) {
+        console.warn(`Could not parse placement for chef ${c.name}: ${c.placement}`);
+      }
       await db.insert(participations).values({
         chefId,
         seasonId,
-        placement: c.placement,
-        isWinner: c.placement === 1,
-        eliminated: c.placement !== 1,
-        notes: "",
+        placement: parsedPlacement,
+        isWinner: parsedPlacement === 1,
+        eliminated: parsedPlacement !== 1 && parsedPlacement !== null,
+        notes: c.placement && parsedPlacement === null ? `Raw placement: ${c.placement}` : "",
       });
     }
   }
