@@ -123,30 +123,33 @@ def call_perplexity(prompt):
             {"role": "system", "content": "You are a helpful assistant providing information about Top Chef France candidates. Be precise and factual."},
             {"role": "user", "content": prompt}
         ],
-        "temperature": 0.3, # Slightly lower temperature for factuality
+        "stream": False
     }
     headers = {
         "Authorization": f"Bearer {PERPLEXITY_API_KEY}",
-        "Content-Type": "application/json",
-        "Accept": "application/json"
+        "Content-Type": "application/json"
     }
-
+    # Add detailed logging for debugging
+    logging.debug(f"Perplexity API request URL: {url}")
+    logging.debug(f"Perplexity API request headers: {headers}")
+    logging.debug(f"Perplexity API request payload: {payload}")
     try:
-        response = requests.post(url, json=payload, headers=headers, timeout=60) # Increased timeout
-        response.raise_for_status() # Raise HTTPError for bad responses (4xx or 5xx)
-
+        response = requests.post(url, json=payload, headers=headers, timeout=30)
+        logging.debug(f"Perplexity API response status: {response.status_code}")
+        logging.debug(f"Perplexity API response body: {response.text}")
+        response.raise_for_status()
         response_data = response.json()
-        content = response_data.get("choices", [{}])[0].get("message", {}).get("content")
-
+        content = response_data.get("choices", [{}])[0].get("message", {}).get("content", None)
         if content:
             logging.info(f"Perplexity response received for prompt: '{prompt[:50]}...'")
             return content
         else:
             logging.warning(f"Empty content received from Perplexity for prompt: '{prompt[:50]}...' Full response: {response_data}")
             return None
-
     except requests.exceptions.RequestException as e:
         logging.error(f"Error calling Perplexity API: {e}")
+        logging.error(f"Perplexity API request payload: {payload}")
+        logging.error(f"Perplexity API response (if any): {getattr(e.response, 'text', None)}")
         return None
     except Exception as e:
         logging.error(f"Unexpected error during Perplexity call: {e}")
