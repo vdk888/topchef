@@ -1,0 +1,8 @@
+requests
+psycopg2-binary
+python-dotenv
+schedule
+openai
+fastapi
+uvicorn[standard]
+jinja2
