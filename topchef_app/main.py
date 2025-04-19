@@ -18,7 +18,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 app = FastAPI(title="Top Chef DB")
 
 # Setup Jinja2 templates
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory="topchef_app/templates")
 
 # --- Pydantic Models ---
 class UpdateRequest(BaseModel):
