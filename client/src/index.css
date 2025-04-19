@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+}
+
+/* Fix for Leaflet map container height in mobile view */
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* Ensure the Leaflet map takes full available space */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+}
+
+/* Fix Leaflet default icon paths */
+.leaflet-default-icon-path {
+  background-image: url("https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png");
+}
+
+.leaflet-default-shadow-path {
+  background-image: url("https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png");
+}
+
+/* Mobile-specific improvements */
+@media (max-width: 640px) {
+  /* Make popups easier to close */
+  .leaflet-popup-close-button {
+    padding: 8px !important;
+    font-size: 22px !important;
+    width: 32px !important;
+    height: 32px !important;
+  }
+  
+  /* Enhanced zoom controls */
+  .leaflet-control-zoom a {
+    width: 36px !important;
+    height: 36px !important;
+    line-height: 36px !important;
+    font-size: 20px !important;
+  }
+  
+  /* Make attribution text more readable */
+  .leaflet-control-attribution {
+    font-size: 10px !important;
+  }
+  
+  /* Prevent text selection for better touch experience */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Fix z-index for selects and panel interactions */
+.SelectContent {
+  z-index: 200 !important;
+}
+
+/* Ensure restaurant info panel is always on top of everything */
+[data-radix-popper-content-wrapper] {
+  z-index: 100 !important;
+}
