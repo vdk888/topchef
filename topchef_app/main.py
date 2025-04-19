@@ -99,7 +99,7 @@ async def update_candidate_manual(update_request: UpdateRequest):
 
 @app.post("/update-season", response_class=JSONResponse)
 async def update_season_manual(update_request: SeasonUpdateRequest):
-    """Handles manual update requests for a full season."""
+    """Handles manual update requests for a full season. Ensures all major fields are filled for each candidate."""
     season_number = update_request.season_number
     logging.info(f"Manual update request received for season: {season_number}")
 
@@ -107,8 +107,22 @@ async def update_season_manual(update_request: SeasonUpdateRequest):
         logging.warning("Manual update request received with empty season number.")
         raise HTTPException(status_code=400, detail="Season number cannot be empty.")
 
+    def is_major_data_complete(candidate_data):
+        major_fields = ['chef_name', 'restaurant_name', 'restaurant_address', 'top_chef_season']
+        # Restaurant address must be a plausible postal address (not just a city name)
+        address = candidate_data.get('restaurant_address', '').strip()
+        if address.lower() in ["paris", "n/a", "", None]:
+            return False
+        # Require at least 2 words for address
+        if len(address.split()) < 2:
+            return False
+        for field in major_fields:
+            if not candidate_data.get(field):
+                return False
+        return True
+
     try:
-        # Fetch all candidates for the given season
+        # Fetch all candidates for the given season (names only)
         logging.info(f"Fetching all candidates for season {season_number}...")
         candidate_list = fetch_and_parse_candidate_info(season_number, fields_requested="season_candidates")
         if not candidate_list or not isinstance(candidate_list, list):
@@ -117,18 +131,39 @@ async def update_season_manual(update_request: SeasonUpdateRequest):
 
         upserted = 0
         failed = 0
+        retried = 0
         for candidate_data in candidate_list:
             if not isinstance(candidate_data, dict):
                 logging.warning(f"Skipping invalid candidate data for season {season_number}: {candidate_data}")
                 failed += 1
                 continue
-            # Ensure season is set
-            candidate_data['top_chef_season'] = season_number
-            success = upsert_candidate(candidate_data)
-            if success:
+            chef_name = candidate_data.get('chef_name') or candidate_data.get('name')
+            if not chef_name:
+                failed += 1
+                continue
+            # Attempt to fill all major fields by repeated fetches if needed
+            attempts = 0
+            max_attempts = 4
+            complete = False
+            enriched_candidate = None
+            while attempts < max_attempts and not complete:
+                enriched_candidate = fetch_and_parse_candidate_info(chef_name, fields_requested="all")
+                if enriched_candidate:
+                    enriched_candidate['top_chef_season'] = season_number
+                    complete = is_major_data_complete(enriched_candidate)
+                    if not complete:
+                        logging.warning(f"Major data incomplete for {chef_name} on attempt {attempts+1}. Retrying...")
+                        attempts += 1
+                    else:
+                        break
+                else:
+                    attempts += 1
+            if complete and enriched_candidate:
                 upserted += 1
+                upsert_candidate(enriched_candidate)
             else:
                 failed += 1
+                logging.error(f"Could not complete major data for {chef_name} after {max_attempts} attempts.")
         logging.info(f"Season update finished for season {season_number}. Upserted: {upserted}, Failed: {failed}")
         return JSONResponse(content={"success": True, "message": f"Successfully updated season {season_number}. Upserted: {upserted}, Failed: {failed}"})
     except Exception as e:
