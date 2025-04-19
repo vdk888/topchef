@@ -115,8 +115,8 @@ def run_scheduler():
     schedule.every().day.at("02:15").do(complete_seasons_task) # Stagger tasks slightly
 
     # --- Run Once on Startup ---
-    logging.info("Skipping initial check on startup...")
-    # run_scheduled_tasks() # Run checks immediately when the app starts - disabled for faster startup
+    logging.info("Running initial scheduled tasks on startup...")
+    run_scheduled_tasks() # Run checks immediately when the app starts
 
     # --- Scheduler Loop ---
     while True:
