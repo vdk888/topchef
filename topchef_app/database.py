@@ -1,7 +1,7 @@
 import psycopg2
 import os
 from dotenv import load_dotenv
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import logging
 
 load_dotenv() # Load environment variables from .env file
@@ -63,7 +63,7 @@ def upsert_candidate(candidate_data):
     if not conn:
         return False
 
-    now = datetime.now(psycopg2.tz.FixedOffsetTimezone(offset=0, name=None)) # Use UTC for timestamps
+    now = datetime.now(timezone.utc) # Use UTC for timestamps
 
     # Define major and minor fields based on the spec
     major_fields = ['restaurant_name', 'restaurant_address', 'top_chef_season']
@@ -119,7 +119,7 @@ def get_candidates_needing_major_update(age_limit_months=3):
     candidates = []
     try:
         with conn.cursor() as cur:
-            three_months_ago = datetime.now(psycopg2.tz.FixedOffsetTimezone(offset=0, name=None)) - timedelta(days=age_limit_months * 30)
+            three_months_ago = datetime.now(timezone.utc) - timedelta(days=age_limit_months * 30)
             cur.execute("""
                 SELECT chef_name, top_chef_season
                 FROM candidates
