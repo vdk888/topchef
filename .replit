@@ -23,7 +23,12 @@ task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python topchef_app/main.py"
+# Run scheduler in background (&) and use Gunicorn for the Flask app
+# Ensure we are in the correct directory first
+# Bind Gunicorn to 0.0.0.0:5000 to be accessible within Replit
+# Use gevent worker for SSE compatibility if needed, start with default sync worker
+args = "cd topchef_agent && python scheduler.py & gunicorn main:app --bind 0.0.0.0:5000"
+# Gunicorn runs on port 5000
 waitForPort = 5000
 
 [nix]

@@ -1,0 +1,8 @@
+openai
+requests
+python-dotenv
+Flask
+schedule
+SQLAlchemy>=1.4 # Use a specific enough version
+psycopg2-binary # PostgreSQL driver
+gunicorn # WSGI server for production/deployment

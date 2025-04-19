@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Top Chef France Database Agent</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: #fff;
+            box-shadow: 0 2px 3px rgba(0,0,0,0.1);
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px 12px;
+            text-align: left;
+            vertical-align: top; /* Align content top for consistency */
+        }
+        th {
+            background-color: #e2e2e2;
+            font-weight: bold;
+            text-transform: capitalize; /* Nicer header display */
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .missing-data {
+            color: #b94a48; /* Reddish color for missing data */
+            font-style: italic;
+        }
+        .action-button {
+            display: inline-block;
+            padding: 10px 15px;
+            margin-top: 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+            text-decoration: none; /* If using <a> tag */
+        }
+        .action-button:hover {
+            background-color: #0056b3;
+        }
+        .console-info {
+            margin-top: 15px;
+            font-size: 0.9em;
+            color: #555;
+        }
+        #log-container {
+            margin-top: 30px;
+            padding: 15px;
+            background-color: #282c34; /* Dark background for logs */
+            color: #abb2bf; /* Light text */
+            border-radius: 5px;
+            height: 400px; /* Fixed height */
+            overflow-y: scroll; /* Enable scrolling */
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.85em;
+            line-height: 1.4;
+            white-space: pre-wrap; /* Preserve whitespace and wrap lines */
+        }
+        .log-entry {
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #444;
+        }
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+        .log-timestamp {
+            color: #61afef; /* Blue timestamp */
+            margin-right: 10px;
+        }
+        .log-type {
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .log-type-cycle_start, .log-type-cycle_end { color: #e5c07b; } /* Yellow */
+        .log-type-llm_request { color: #c678dd; } /* Purple */
+        .log-type-llm_response { color: #abb2bf; } /* Default light text */
+        .log-type-llm_tool_request { color: #56b6c2; } /* Cyan */
+        .log-type-tool_start { color: #98c379; } /* Green */
+        .log-type-tool_result { color: #98c379; } /* Green */
+        .log-type-tool_error, .log-type-cycle_error, .log-type-llm_error { color: #e06c75; font-weight: bold; } /* Red */
+        .log-type-cycle_info { color: #61afef; } /* Blue */
+        .log-data {
+            display: block; /* Ensure data starts on new line */
+            margin-top: 4px;
+            margin-left: 20px; /* Indent data */
+            white-space: pre-wrap; /* Ensure JSON/multiline data wraps */
+        }
+
+    </style>
+</head>
+<body>
+
+    <h1>Top Chef France Database</h1>
+
+    <p class="console-info">
+        An autonomous agent (DeepSeek via OpenRouter) is running in the background (via `scheduler.py`) to periodically check for missing information in the database below and attempt to fill it using web searches (via Perplexity). Agent activity is logged below in real-time. Refresh the page to see database updates.
+    </p>
+
+    <h2>Chef Data</h2>
+    {% if chefs %}
+        <table>
+            <thead>
+                <tr>
+                    {% for header in headers %}
+                        <th>{{ header.replace('_', ' ') }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for chef in chefs %}
+                    <tr>
+                        {% for header in headers %}
+                            <td>
+                                {% set value = chef.get(header) %}
+                                {% if value is none or value == "" %}
+                                    <span class="missing-data">Missing</span>
+                                {% else %}
+                                    {{ value }}
+                                {% endif %}
+                            </td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No chef data found in the database.</p>
+    {% endif %}
+
+    <h2>Agent Log</h2>
+    <div id="log-container">
+        Connecting to agent log stream...
+    </div>
+
+    <script>
+        const logContainer = document.getElementById('log-container');
+
+        function formatLogData(data) {
+            if (typeof data === 'string') {
+                // Attempt to parse if it looks like JSON, otherwise display as string
+                try {
+                    const parsed = JSON.parse(data);
+                    return JSON.stringify(parsed, null, 2); // Pretty print JSON
+                } catch (e) {
+                    return data; // Display as plain string if not valid JSON
+                }
+            } else if (typeof data === 'object' && data !== null) {
+                return JSON.stringify(data, null, 2); // Pretty print object
+            }
+            return String(data); // Fallback for other types
+        }
+
+        function addLogEntry(log) {
+            const entryDiv = document.createElement('div');
+            entryDiv.classList.add('log-entry');
+
+            const timestampSpan = document.createElement('span');
+            timestampSpan.classList.add('log-timestamp');
+            timestampSpan.textContent = new Date(log.timestamp * 1000).toLocaleTimeString(); // Format timestamp
+
+            const typeSpan = document.createElement('span');
+            typeSpan.classList.add('log-type', `log-type-${log.type}`); // Add class based on type
+            typeSpan.textContent = `[${log.type.toUpperCase()}]`;
+
+            const dataSpan = document.createElement('span');
+            dataSpan.classList.add('log-data');
+            dataSpan.textContent = formatLogData(log.data);
+
+            entryDiv.appendChild(timestampSpan);
+            entryDiv.appendChild(typeSpan);
+            entryDiv.appendChild(dataSpan);
+
+            logContainer.appendChild(entryDiv);
+
+            // Auto-scroll to the bottom
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        // --- SSE Connection ---
+        const eventSource = new EventSource("{{ url_for('stream_logs') }}");
+
+        eventSource.onopen = function() {
+            logContainer.innerHTML = ''; // Clear initial message
+            addLogEntry({ type: 'stream_info', data: 'Connected to agent log stream.', timestamp: Date.now() / 1000 });
+        };
+
+        eventSource.onmessage = function(event) {
+            try {
+                const logEntry = JSON.parse(event.data);
+                addLogEntry(logEntry);
+            } catch (e) {
+                console.error("Failed to parse SSE data:", event.data, e);
+                // Add raw data if parsing fails
+                addLogEntry({ type: 'stream_error', data: `Failed to parse: ${event.data}`, timestamp: Date.now() / 1000 });
+            }
+        };
+
+        eventSource.onerror = function(err) {
+            console.error("EventSource failed:", err);
+            addLogEntry({ type: 'stream_error', data: 'Log stream connection error. Trying to reconnect...', timestamp: Date.now() / 1000 });
+            // EventSource attempts reconnection automatically by default
+            // You might want to add logic here to stop trying after too many errors
+        };
+
+    </script>
+
+</body>
+</html>
