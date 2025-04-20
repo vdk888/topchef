@@ -691,7 +691,7 @@ def execute_geocode_address_and_update(chef_id: int, address: str):
         print(f"  Geocoding error: Unexpected {e}.", flush=True)
         log_to_ui("tool_error", {"name": "geocode_address_and_update", "input": tool_input_data, "error": str(e)})
         return error_msg
-        
+
 # Map tool names to their execution functions
 available_functions = {
     # "get_distinct_seasons": execute_get_distinct_seasons, # Removed
@@ -812,8 +812,8 @@ Your Workflow & Journaling:
     # Define the primary and fallback models
     llm_models_to_try = [
         "google/gemini-2.0-flash-exp:free", # Primary
-        "google/gemini-2.5-flash-preview",  # Fallback 1
-        "meta-llama/llama-4-maverick",      # Fallback 2
+        "google/gemini-2.5-pro-exp-03-25:free",  # Fallback 1
+        "meta-llama/llama-4-maverick:free",      # Fallback 2
         "openai/gpt-4o-mini"                # Fallback 3
     ]
 
