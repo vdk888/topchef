@@ -77,13 +77,10 @@ class InteractiveStephAI:
         # Dynamically build function schemas for all available tools
         function_schemas = []
         for fn_name, fn in available_functions.items():
-            # Try to extract argument names and types
             sig = inspect.signature(fn)
             params = {}
             required = []
             for pname, param in sig.parameters.items():
-                # Use annotation if available, else default to string
-                # --- BEGIN STRICT JSON SCHEMA TYPE MAPPING ---
                 ann = param.annotation
                 if ann == int:
                     ptype = "integer"
@@ -92,11 +89,10 @@ class InteractiveStephAI:
                 elif ann == bool:
                     ptype = "boolean"
                 else:
-                    ptype = "string"  # Default for str, Any, or missing
+                    ptype = "string"
                 params[pname] = {"type": ptype}
                 if param.default == inspect.Parameter.empty:
                     required.append(pname)
-            # Use docstring for description
             description = fn.__doc__.strip() if fn.__doc__ else f"Tool: {fn_name}"
             function_schemas.append({
                 "name": fn_name,
@@ -109,10 +105,8 @@ class InteractiveStephAI:
             })
 
         llm_models_to_try = LLM_MODELS_TO_TRY
-        # Wrap function schemas for OpenRouter tools API
         tools = [{"type": "function", "function": schema} for schema in function_schemas]
 
-        # Build messages for OpenAI-style API
         history = self.get_context()
         messages = []
         messages.append({
@@ -126,101 +120,86 @@ class InteractiveStephAI:
             messages.append({"role": role, "content": msg["content"]})
 
         last_api_error = None
-        response = None
         successful_model = None
-        for model_name in llm_models_to_try:
-            log_to_ui("llm_attempt", {"model": model_name}, role="system")
-            try:
-                log_to_ui("llm_request", {"messages": messages, "tools": tools, "model": model_name}, role="system")
-                response = openrouter_client.chat.completions.create(
-                    model=model_name,
-                    messages=messages,
-                    tools=tools,
-                    tool_choice="auto",
-                    max_tokens=300,
-                    temperature=0.7,
-                    stream=False
-                )
+        max_iterations = 6  # Prevent infinite loops
+        iteration = 0
+        while iteration < max_iterations:
+            iteration += 1
+            response = None
+            for model_name in llm_models_to_try:
+                log_to_ui("llm_attempt", {"model": model_name, "iteration": iteration}, role="system")
                 try:
-                    log_to_ui("llm_raw_response", {"raw_response": str(response)}, role="system")
-                except Exception as log_exc:
-                    print(f"Failed to log raw LLM response: {log_exc}", flush=True)
-                # Check for valid response
-                if not response or not response.choices or len(response.choices) == 0:
-                    log_to_ui("llm_error", {"model": model_name, "error": "Invalid or empty response", "response_raw": str(response)}, role="system")
-                    response = None
-                    continue
-                successful_model = model_name
-                break
-            except Exception as e:
-                log_to_ui("llm_error", {"model": model_name, "error": str(e)}, role="system")
-                last_api_error = e
-                continue
-
-        if not successful_model:
-            log_to_ui("llm_error", {"error": "All LLM models failed", "last_api_error": str(last_api_error)}, role="system")
-            return "[StephAI]: Désolé, tous les modèles de langage ont échoué. Veuillez réessayer plus tard."
-
-        choice = response.choices[0] if hasattr(response, 'choices') and response.choices else None
-        msg = getattr(choice, "message", None) if choice else None
-        tool_call = getattr(msg, "tool_call", None) if msg else None
-
-        if choice and getattr(choice, "finish_reason", None) == "tool_call" and tool_call:
-            tool_name = getattr(tool_call, "name", None)
-            tool_args = json.loads(getattr(tool_call, "arguments", "{}")) if getattr(tool_call, "arguments", None) else {}
-            log_to_ui("llm_tool_call", {"tool": tool_name, "arguments": tool_args}, role=AGENT_NAME)
-            if tool_name in available_functions:
-                try:
-                    tool_result = available_functions[tool_name](**tool_args)
-                except Exception as tool_exc:
-                    log_to_ui("tool_error", {"tool": tool_name, "error": str(tool_exc)}, role="system")
-                    return f"[StephAI]: Désolé, il y a eu une erreur lors de l'exécution de l'outil {tool_name} : {tool_exc}"
-                messages.append({
-                    "role": "function",
-                    "name": tool_name,
-                    "content": tool_result
-                })
-                log_to_ui("llm_request_post_tool", {"messages": messages}, role="system")
-                # Try tool result with fallback models again
-                response2 = None
-                successful_model2 = None
-                for model_name2 in llm_models_to_try:
+                    log_to_ui("llm_request", {"messages": messages, "tools": tools, "model": model_name}, role="system")
+                    response = openrouter_client.chat.completions.create(
+                        model=model_name,
+                        messages=messages,
+                        tools=tools,
+                        tool_choice="auto",
+                        max_tokens=300,
+                        temperature=0.7,
+                        stream=False
+                    )
                     try:
-                        response2 = openrouter_client.chat.completions.create(
-                            model=model_name2,
-                            messages=messages,
-                            tools=tools,
-                            tool_choice="auto",
-                            max_tokens=300,
-                            temperature=0.7,
-                            stream=False
-                        )
-                        try:
-                            log_to_ui("llm_raw_response", {"raw_response": str(response2)}, role="system")
-                        except Exception as log_exc:
-                            print(f"Failed to log raw LLM response (post tool): {log_exc}", flush=True)
-                        if not response2 or not response2.choices or len(response2.choices) == 0:
-                            log_to_ui("llm_error", {"model": model_name2, "error": "Invalid or empty response (post tool)", "response_raw": str(response2)}, role="system")
-                            response2 = None
-                            continue
-                        successful_model2 = model_name2
-                        break
-                    except Exception as e2:
-                        log_to_ui("llm_error", {"model": model_name2, "error": str(e2)}, role="system")
+                        log_to_ui("llm_raw_response", {"raw_response": str(response)}, role="system")
+                    except Exception as log_exc:
+                        print(f"Failed to log raw LLM response: {log_exc}", flush=True)
+                    if not response or not response.choices or len(response.choices) == 0:
+                        log_to_ui("llm_error", {"model": model_name, "error": "Invalid or empty response", "response_raw": str(response)}, role="system")
+                        response = None
                         continue
-                if not successful_model2:
-                    return "[StephAI]: Désolé, tous les modèles de langage ont échoué après l'appel de l'outil."
-                content = response2.choices[0].message.content.strip() if response2.choices and hasattr(response2.choices[0], 'message') and hasattr(response2.choices[0].message, 'content') else "[StephAI]: Désolé, je n'ai pas pu traiter le résultat de l'outil."
-                log_to_ui("llm_response", {"response": content}, role=AGENT_NAME)
-                return content
-            else:
-                log_to_ui("llm_error", {"error": f"Outil inconnu : {tool_name}"}, role="system")
-                return f"[StephAI]: Désolé, j'ai essayé d'utiliser un outil indisponible : {tool_name}."
-        else:
-            # fallback: log and return LLM content or error
-            content = msg.content.strip() if msg and hasattr(msg, "content") and msg.content else "[StephAI]: Désolé, je n'ai pas pu traiter votre requête."
-            log_to_ui("llm_response", {"response": content, "raw_choice": str(choice), "raw_response": str(response)}, role=AGENT_NAME)
-            return content
+                    successful_model = model_name
+                    break
+                except Exception as e:
+                    log_to_ui("llm_error", {"model": model_name, "error": str(e)}, role="system")
+                    last_api_error = e
+                    continue
+
+            if not successful_model:
+                log_to_ui("llm_error", {"error": "All LLM models failed", "last_api_error": str(last_api_error)}, role="system")
+                return "[StephAI]: Désolé, tous les modèles de langage ont échoué. Veuillez réessayer plus tard."
+
+            choice = response.choices[0] if hasattr(response, 'choices') and response.choices else None
+            msg = getattr(choice, "message", None) if choice else None
+            # --- SUPPORT BOTH tool_calls (list) AND tool_call (single) ---
+            tool_calls = []
+            if msg:
+                # OpenAI v1: tool_calls is a list of tool call objects
+                if hasattr(msg, "tool_calls") and msg.tool_calls:
+                    tool_calls = msg.tool_calls
+                # OpenAI v0: tool_call is a single object
+                elif hasattr(msg, "tool_call") and msg.tool_call:
+                    tool_calls = [msg.tool_call]
+            
+            if choice and getattr(choice, "finish_reason", None) in ("tool_call", "tool_calls") and tool_calls:
+                for tool_call in tool_calls:
+                    tool_name = getattr(tool_call, "function", None)
+                    if tool_name and hasattr(tool_name, "name"):
+                        tool_name = tool_name.name
+                        tool_args = json.loads(getattr(tool_call.function, "arguments", "{}")) if getattr(tool_call.function, "arguments", None) else {}
+                    else:
+                        tool_name = getattr(tool_call, "name", None)
+                        tool_args = json.loads(getattr(tool_call, "arguments", "{}")) if getattr(tool_call, "arguments", None) else {}
+                    log_to_ui("llm_tool_call", {"tool": tool_name, "arguments": tool_args, "iteration": iteration}, role=AGENT_NAME)
+                    if tool_name in available_functions:
+                        try:
+                            tool_result = available_functions[tool_name](**tool_args)
+                        except Exception as tool_exc:
+                            log_to_ui("tool_error", {"tool": tool_name, "error": str(tool_exc)}, role="system")
+                            return f"[StephAI]: Désolé, il y a eu une erreur lors de l'exécution de l'outil {tool_name} : {tool_exc}"
+                        # Add the function result as a function response
+                        messages.append({
+                            "role": "function",
+                            "name": tool_name,
+                            "content": tool_result
+                        })
+                    else:
+                        return f"[StephAI]: Outil inconnu: {tool_name}"
+                continue  # Loop again so LLM can react to tool result (may chain tools)
+            # If no tool call, return the LLM's message
+            if msg and getattr(msg, "content", None):
+                return msg.content
+        # If we exit loop without a return, something went wrong
+        return "[StephAI]: Je n'ai pas compris la demande ou trop d'appels d'outils."
 
     def get_response(self, timeout=0.1):
         try:
