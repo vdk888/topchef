@@ -1,0 +1,8 @@
+openai
+requests
+python-dotenv
+Flask
+schedule
+SQLAlchemy>=1.4
+psycopg2-binary
+gunicorn

@@ -1,0 +1,13 @@
+Metadata-Version: 2.4
+Name: topchef-agent
+Version: 0.1.0
+Summary: Top Chef Agent Application
+Requires-Python: >=3.11
+Requires-Dist: openai
+Requires-Dist: requests
+Requires-Dist: python-dotenv
+Requires-Dist: Flask
+Requires-Dist: schedule
+Requires-Dist: SQLAlchemy>=1.4
+Requires-Dist: psycopg2-binary
+Requires-Dist: gunicorn

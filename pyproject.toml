@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "topchef-agent"
+version = "0.1.0"
+description = "Top Chef Agent Application"
+requires-python = ">=3.11"
+dependencies = [
+    "openai",
+    "requests",
+    "python-dotenv",
+    "Flask",
+    "schedule",
+    "SQLAlchemy>=1.4",
+    "psycopg2-binary",
+    "gunicorn",
+]
+
+[tool.setuptools]
+package-dir = {"" = "topchef_agent"}

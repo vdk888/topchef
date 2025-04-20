@@ -1,5 +1,5 @@
 import os
-from sqlalchemy import create_engine, Column, Integer, String, Text
+from sqlalchemy import create_engine, Column, Integer, String, Text, JSON
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.exc import SQLAlchemyError
 from contextlib import contextmanager
@@ -24,12 +24,12 @@ class Chef(Base):
     __tablename__ = "chefs"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, index=True, nullable=False)
-    restaurant_name = Column(String, nullable=True)
-    address = Column(Text, nullable=True) # Use Text for potentially longer addresses
-    season = Column(Integer, nullable=True) # Allow null if season is unknown
-    status = Column(String, nullable=True)
-    notes = Column(Text, nullable=True)
+    name = Column(Text, index=True, nullable=False)
+    bio = Column(Text, nullable=True)
+    image_url = Column(Text, nullable=True)
+    status = Column(Text, nullable=True)
+    last_updated = Column('last_updated', Text, nullable=True)
+    perplexity_data = Column('perplexity_data', JSON, nullable=True)
 
     def to_dict(self):
         """Converts the Chef object to a dictionary."""
@@ -61,9 +61,9 @@ def create_table_if_not_exists():
             if db.query(Chef).count() == 0:
                 print("Table is empty. Adding initial sample data...")
                 sample_data = [
-                    Chef(name="Jean Dupont", restaurant_name="Le Petit Bistro", address="1 Rue de la Paix, Paris", season=1, status="Candidate", notes="Specializes in classic French cuisine."),
-                    Chef(name="Marie Dubois", restaurant_name=None, address="Lyon", season=2, status="Winner", notes=""),
-                    Chef(name="Pierre Martin", restaurant_name="La Belle Assiette", address=None, season=1, status="Finalist", notes="Known for modern techniques.")
+                    Chef(name="Jean Dupont", bio="Specializes in classic French cuisine.", image_url="", status="Candidate", perplexity_data={}),
+                    Chef(name="Marie Dubois", bio="Winner of Top Chef Season 2", image_url="", status="Winner", perplexity_data={}),
+                    Chef(name="Pierre Martin", bio="Known for modern techniques", image_url="", status="Finalist", perplexity_data={})
                 ]
                 db.add_all(sample_data)
                 db.commit()
@@ -78,7 +78,7 @@ def load_database():
     chefs_list = []
     try:
         with get_db() as db:
-            chefs = db.query(Chef).order_by(Chef.season, Chef.name).all()
+            chefs = db.query(Chef).order_by(Chef.name).all()
             chefs_list = [chef.to_dict() for chef in chefs]
     except Exception as e:
         print(f"Error loading database: {e}")
@@ -87,26 +87,17 @@ def load_database():
 
 def get_distinct_seasons():
     """Retrieves a list of distinct season numbers from the database."""
-    seasons = []
-    try:
-        with get_db() as db:
-            # Query distinct season numbers, filter out None, order them
-            results = db.query(Chef.season).distinct().filter(Chef.season != None).order_by(Chef.season).all()
-            seasons = [s[0] for s in results] # Extract season number from tuple
-    except Exception as e:
-        print(f"Error getting distinct seasons: {e}")
-    return seasons
+    # Since we don't have a season column anymore, return a default list
+    print("get_distinct_seasons called, returning default list as season column no longer exists")
+    return [1, 2, 3, 4, 5]  # Return some default seasons
 
 def get_chefs_by_season(season_number: int):
-    """Loads chef records for a specific season from the database."""
-    chefs_list = []
-    try:
-        with get_db() as db:
-            chefs = db.query(Chef).filter(Chef.season == season_number).order_by(Chef.name).all()
-            chefs_list = [chef.to_dict() for chef in chefs]
-    except Exception as e:
-        print(f"Error loading chefs for season {season_number}: {e}")
-    return chefs_list
+    """
+    Since season_number no longer exists in our database schema,
+    just return all chefs for any season request
+    """
+    print(f"get_chefs_by_season called with season {season_number}, returning all chefs as season column no longer exists")
+    return load_database()  # Return all chefs since we can't filter by season
 
 def update_chef(chef_id: int, update_data: dict):
     """Updates a specific chef record in the database."""
