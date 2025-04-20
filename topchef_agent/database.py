@@ -1,5 +1,5 @@
 import os
-from sqlalchemy import create_engine, Column, Integer, String, Text, JSON
+from sqlalchemy import create_engine, Column, Integer, String, Text, JSON, text # Added text
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.exc import SQLAlchemyError
 from contextlib import contextmanager
@@ -124,6 +124,78 @@ def update_chef(chef_id: int, update_data: dict):
         return False # Indicate error during update
     return updated # Return True if commit was successful or no changes needed, False on error
 
+# --- NEW FUNCTION TO ADD COLUMN ---
+def add_column(table_name: str, column_name: str, column_type: str):
+    """Adds a new column to the specified table."""
+    # Basic validation to prevent obvious SQL injection issues (though limited)
+    # A more robust solution might involve checking against known table/column name patterns
+    # or using a library specifically for schema migrations.
+    allowed_chars = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_")
+    if not all(c in allowed_chars for c in table_name) or \
+       not all(c in allowed_chars for c in column_name):
+        print(f"Error: Invalid characters in table or column name ('{table_name}', '{column_name}').")
+        return False
+
+    # Be cautious with column_type - could still be vulnerable.
+    # Consider validating against a list of allowed SQL types if needed.
+    # Ensure column_type doesn't contain harmful constructs like semicolons
+    if ';' in column_type:
+        print(f"Error: Invalid characters in column type ('{column_type}').")
+        return False
+
+    sql_command = text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}")
+    try:
+        with engine.connect() as connection:
+            with connection.begin(): # Use a transaction
+                connection.execute(sql_command)
+        print(f"Successfully added column '{column_name}' to table '{table_name}'.")
+        return True
+    except SQLAlchemyError as e:
+        print(f"Error adding column '{column_name}' to table '{table_name}': {e}")
+        # Check if the error is because the column already exists
+        if "already exists" in str(e).lower():
+             print(f"Column '{column_name}' likely already exists.")
+             return True # Treat as success if it already exists
+        return False
+    except Exception as e:
+        # Catch other potential errors
+        print(f"Unexpected error adding column: {e}")
+        return False
+
+# --- NEW FUNCTION TO REMOVE COLUMN ---
+def remove_column(table_name: str, column_name: str):
+    """Removes a column from the specified table."""
+    # Basic validation
+    allowed_chars = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_")
+    if not all(c in allowed_chars for c in table_name) or \
+       not all(c in allowed_chars for c in column_name):
+        print(f"Error: Invalid characters in table or column name ('{table_name}', '{column_name}').")
+        return False
+
+    # Prevent dropping essential columns (adjust list as needed)
+    protected_columns = ["id", "name"]
+    if column_name.lower() in protected_columns:
+        print(f"Error: Cannot remove protected column '{column_name}'.")
+        return False
+
+    sql_command = text(f"ALTER TABLE {table_name} DROP COLUMN {column_name}")
+    try:
+        with engine.connect() as connection:
+            with connection.begin(): # Use a transaction
+                connection.execute(sql_command)
+        print(f"Successfully removed column '{column_name}' from table '{table_name}'.")
+        return True
+    except SQLAlchemyError as e:
+        print(f"Error removing column '{column_name}' from table '{table_name}': {e}")
+        # Check if the error is because the column doesn't exist
+        if "does not exist" in str(e).lower() or "can't drop" in str(e).lower(): # Adapt error message check as needed
+             print(f"Column '{column_name}' likely does not exist or cannot be dropped.")
+             return True # Treat as success if it doesn't exist
+        return False
+    except Exception as e:
+        # Catch other potential errors
+        print(f"Unexpected error removing column: {e}")
+        return False
 
 # --- Initial Setup ---
 # Call this once when the application starts to ensure the table exists

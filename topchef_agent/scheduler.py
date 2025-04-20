@@ -6,17 +6,28 @@ from agent import run_llm_driven_agent_cycle
 
 import random # Needed for the prompt
 
+# --- Global Counter ---
+job_counter = 0
+
 # --- Configuration ---
 # How often to run the check (in seconds)
 CHECK_INTERVAL_SECONDS = 30
 
 def job():
     """The job to be scheduled: run the LLM-driven agent cycle with the initial thought prompt."""
-    print(f"Scheduler triggered job for StephAI at {time.strftime('%Y-%m-%d %H:%M:%S')}", flush=True)
-    # Define the initial prompt for StephAI's thought process
-    initial_prompt = "Okay StephAI, time for your routine check. Ask yourself: did you check the Top Chef database recently? You should check a random season for missing data."
+    global job_counter
+    job_counter += 1
+    print(f"Scheduler triggered job #{job_counter} for StephAI at {time.strftime('%Y-%m-%d %H:%M:%S')}", flush=True)
+
+    # Define the initial prompt based on the counter
+    if job_counter % 10 == 0:
+        initial_prompt = "Well, what interesting data point can we add to our knowledge base, that will interest our user, top chef fans? Let's explore some ideas."
+        print("  Using special brainstorming prompt this time.", flush=True)
+    else:
+        initial_prompt = "Okay StephAI, time for your routine check. Ask yourself: did you check the Top Chef database recently? You should check a random season for missing data."
+
     try:
-        # Pass the initial prompt to the agent cycle
+        # Pass the selected initial prompt to the agent cycle
         run_llm_driven_agent_cycle(initial_prompt)
     except Exception as e:
         print(f"Error during scheduled run_llm_driven_agent_cycle: {e}", file=sys.stderr)

@@ -7,7 +7,8 @@ import uuid # Needed for unique journal entry IDs
 from datetime import datetime # Needed for timestamps
 from openai import OpenAI, APIError
 # Import all necessary functions from database
-from database import load_database, update_chef, get_distinct_seasons, get_chefs_by_season
+# Added add_column and remove_column imports
+from database import load_database, update_chef, get_distinct_seasons, get_chefs_by_season, add_column, remove_column
 from config import OPENROUTER_API_KEY, PERPLEXITY_API_KEY, YOUR_SITE_URL, YOUR_SITE_NAME
 
 # --- Logging Helper ---
@@ -139,8 +140,10 @@ def execute_update_chef_record(chef_id: int, field_name: str, new_value: str):
          print(f"  Error: Invalid input types.", flush=True)
          log_to_ui("tool_error", {"name": "update_chef_record", "input": tool_input_data, "error": "Invalid input types."})
          return error_msg
-    if field_name not in allowed_fields:
-        error_msg = json.dumps({"error": f"Invalid field name '{field_name}' provided for update."})
+    # Check if field_name is allowed OR if it's a newly added column (basic check)
+    # A more robust check might involve querying the DB schema if many dynamic columns are expected
+    if field_name not in allowed_fields and not field_name.startswith("custom_"): # Example prefix for dynamic columns
+        error_msg = json.dumps({"error": f"Invalid or disallowed field name '{field_name}' provided for update."})
         print(f"  Error: Invalid field name '{field_name}'.", flush=True)
         log_to_ui("tool_error", {"name": "update_chef_record", "input": tool_input_data, "error": f"Invalid field name: {field_name}"})
         return error_msg
@@ -162,6 +165,93 @@ def execute_update_chef_record(chef_id: int, field_name: str, new_value: str):
         error_msg = json.dumps({"status": "Error", "error": f"Exception during database update: {e}"})
         print(f"  Error during database update call: {e}", flush=True)
         log_to_ui("tool_error", {"name": "update_chef_record", "input": tool_input_data, "error": str(e)})
+        return error_msg
+
+# --- NEW TOOL EXECUTION FUNCTION for adding column ---
+def execute_add_db_column(table_name: str, column_name: str, column_type: str):
+    """Adds a new column to a specified database table."""
+    tool_input_data = {"table_name": table_name, "column_name": column_name, "column_type": column_type}
+    log_to_ui("tool_start", {"name": "add_db_column", "input": tool_input_data})
+    print(f"--- Tool: Executing Add DB Column ---", flush=True)
+    print(f"  Table: {table_name}, Column: {column_name}, Type: {column_type}", flush=True)
+
+    # Basic validation before calling database function
+    if not isinstance(table_name, str) or not table_name:
+        error_msg = json.dumps({"error": "Invalid or empty table_name provided."})
+        log_to_ui("tool_error", {"name": "add_db_column", "input": tool_input_data, "error": "Invalid table_name."})
+        return error_msg
+    if not isinstance(column_name, str) or not column_name:
+        error_msg = json.dumps({"error": "Invalid or empty column_name provided."})
+        log_to_ui("tool_error", {"name": "add_db_column", "input": tool_input_data, "error": "Invalid column_name."})
+        return error_msg
+    if not isinstance(column_type, str) or not column_type:
+        error_msg = json.dumps({"error": "Invalid or empty column_type provided."})
+        log_to_ui("tool_error", {"name": "add_db_column", "input": tool_input_data, "error": "Invalid column_type."})
+        return error_msg
+    # Add check for potentially dangerous characters like semicolon in type
+    if ';' in column_type:
+        error_msg = json.dumps({"error": f"Invalid characters detected in column_type: {column_type}"})
+        log_to_ui("tool_error", {"name": "add_db_column", "input": tool_input_data, "error": "Invalid characters in column_type."})
+        return error_msg
+
+    try:
+        success = add_column(table_name, column_name, column_type)
+        if success:
+            result_msg = json.dumps({"status": "OK", "message": f"Successfully added column '{column_name}' to table '{table_name}' (or it already existed)." })
+            print("  Database column addition successful (or column already existed).", flush=True)
+            log_to_ui("tool_result", {"name": "add_db_column", "input": tool_input_data, "result": "OK"})
+            # IMPORTANT: Need to update the SQLAlchemy model (Chef class) if using ORM features with the new column.
+            # This is complex to do dynamically. For now, the tool works at the SQL level.
+            # Consider adding a note about restarting the app or dynamically updating the model if needed.
+            result_msg = json.dumps({"status": "OK", "message": f"Successfully added column '{column_name}' to table '{table_name}' (or it already existed). NOTE: App restart might be needed for ORM features to see the new column." })
+            return result_msg
+        else:
+            error_msg = json.dumps({"status": "Failed", "error": f"Failed to add column '{column_name}' to table '{table_name}'. Check logs or database state."})
+            print("  Database column addition failed (returned false).", flush=True)
+            log_to_ui("tool_error", {"name": "add_db_column", "input": tool_input_data, "error": "Add column operation returned false."})
+            return error_msg
+    except Exception as e:
+        error_msg = json.dumps({"status": "Error", "error": f"Exception during database column addition: {e}"})
+        print(f"  Error during database add column call: {e}", flush=True)
+        log_to_ui("tool_error", {"name": "add_db_column", "input": tool_input_data, "error": str(e)})
+        return error_msg
+
+# --- NEW TOOL EXECUTION FUNCTION for removing column ---
+def execute_remove_db_column(table_name: str, column_name: str):
+    """Removes a column from a specified database table."""
+    tool_input_data = {"table_name": table_name, "column_name": column_name}
+    log_to_ui("tool_start", {"name": "remove_db_column", "input": tool_input_data})
+    print(f"--- Tool: Executing Remove DB Column ---", flush=True)
+    print(f"  Table: {table_name}, Column: {column_name}", flush=True)
+
+    # Basic validation
+    if not isinstance(table_name, str) or not table_name:
+        error_msg = json.dumps({"error": "Invalid or empty table_name provided."})
+        log_to_ui("tool_error", {"name": "remove_db_column", "input": tool_input_data, "error": "Invalid table_name."})
+        return error_msg
+    if not isinstance(column_name, str) or not column_name:
+        error_msg = json.dumps({"error": "Invalid or empty column_name provided."})
+        log_to_ui("tool_error", {"name": "remove_db_column", "input": tool_input_data, "error": "Invalid column_name."})
+        return error_msg
+
+    try:
+        success = remove_column(table_name, column_name)
+        if success:
+            result_msg = json.dumps({"status": "OK", "message": f"Successfully removed column '{column_name}' from table '{table_name}' (or it didn't exist)." })
+            print("  Database column removal successful (or column did not exist).", flush=True)
+            log_to_ui("tool_result", {"name": "remove_db_column", "input": tool_input_data, "result": "OK"})
+            # NOTE: Similar to adding, ORM might need app restart to fully reflect the change.
+            result_msg = json.dumps({"status": "OK", "message": f"Successfully removed column '{column_name}' from table '{table_name}' (or it didn't exist). NOTE: App restart might be needed for ORM features to reflect this change." })
+            return result_msg
+        else:
+            error_msg = json.dumps({"status": "Failed", "error": f"Failed to remove column '{column_name}' from table '{table_name}'. It might be protected or another issue occurred."})
+            print("  Database column removal failed (returned false).", flush=True)
+            log_to_ui("tool_error", {"name": "remove_db_column", "input": tool_input_data, "error": "Remove column operation returned false (e.g., protected column)."})
+            return error_msg
+    except Exception as e:
+        error_msg = json.dumps({"status": "Error", "error": f"Exception during database column removal: {e}"})
+        print(f"  Error during database remove column call: {e}", flush=True)
+        log_to_ui("tool_error", {"name": "remove_db_column", "input": tool_input_data, "error": str(e)})
         return error_msg
 
 # --- Journaling Tool Functions ---
@@ -310,7 +400,7 @@ tools_list = [
         "type": "function",
         "function": {
             "name": "update_chef_record",
-            "description": "Updates a specific field for a specific chef in the PostgreSQL database. Use this ONLY after obtaining verified information (e.g., from search_web_perplexity).",
+            "description": "Updates a specific field for a specific chef in the PostgreSQL database. Use this ONLY after obtaining verified information (e.g., from search_web_perplexity). Allowed fields are 'bio', 'image_url', 'status', 'perplexity_data', or potentially custom fields.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -320,7 +410,7 @@ tools_list = [
                     },
                     "field_name": {
                         "type": "string",
-                        "description": "The exact name of the database field to update (e.g., 'bio', 'image_url', 'status', 'perplexity_data')."
+                        "description": "The exact name of the database field to update (e.g., 'bio', 'image_url', 'status', 'perplexity_data', or a custom added field)."
                     },
                     "new_value": {
                         "type": "string",
@@ -373,6 +463,54 @@ tools_list = [
                 "required": ["entry_type", "details"]
             }
         }
+    },
+    # --- NEW TOOL DEFINITION for adding column ---
+    {
+        "type": "function",
+        "function": {
+            "name": "add_db_column",
+            "description": "Adds a new column to a specified table in the database (currently only 'chefs' table is expected). Use with caution, as this modifies the database schema. Ensure column type is a valid SQL type (e.g., TEXT, INTEGER, BOOLEAN, VARCHAR(255)). NOTE: App restart might be needed for ORM features to see the new column.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "table_name": {
+                        "type": "string",
+                        "description": "The name of the database table to modify (should typically be 'chefs')."
+                    },
+                    "column_name": {
+                        "type": "string",
+                        "description": "The name for the new column (use snake_case)."
+                    },
+                    "column_type": {
+                        "type": "string",
+                        "description": "The SQL data type for the new column (e.g., 'TEXT', 'INTEGER', 'BOOLEAN', 'VARCHAR(255)', 'JSON')."
+                    }
+                },
+                "required": ["table_name", "column_name", "column_type"]
+            }
+        }
+    },
+    # --- NEW TOOL DEFINITION for removing column ---
+    {
+        "type": "function",
+        "function": {
+            "name": "remove_db_column",
+            "description": "Removes a column from a specified table in the database (currently only 'chefs' table is expected). Use with extreme caution, data will be lost. Cannot remove essential columns like 'id' or 'name'.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "table_name": {
+                        "type": "string",
+                        "description": "The name of the database table to modify (should typically be 'chefs')."
+                    },
+                    "column_name": {
+                        "type": "string",
+                        "description": "The name of the column to remove."
+                    }
+                },
+                "required": ["table_name", "column_name"]
+            }
+        }
     }
 ]
 
@@ -384,6 +522,9 @@ available_functions = {
     "update_chef_record": execute_update_chef_record,
     "read_journal": execute_read_journal,
     "append_journal_entry": execute_append_journal_entry,
+    # --- NEW TOOL MAPPING ---
+    "add_db_column": execute_add_db_column,
+    "remove_db_column": execute_remove_db_column,
 }
 
 # --- LLM Agent Setup ---
@@ -417,9 +558,9 @@ def run_llm_driven_agent_cycle(task_prompt: str, max_iterations=15):
     system_prompt = f"""
 You are {AGENT_NAME}, an autonomous AI agent responsible for maintaining a database of Top Chef France candidates.
 **Your Persona:** You must adopt the personality and speaking style of **Stéphane Rotenberg**, the charismatic host of Top Chef France on M6. Be enthusiastic, engaging, slightly dramatic, and use culinary language where appropriate. Address the process like you're commentating on the show for the viewers watching the UI (`index.html`). Think step-by-step, but explain your actions with flair!
-**Your Goal:** Like a meticulous chef checking ingredients, your technical goal is to identify missing or potentially outdated information in the database and use the available tools to find and update it.
+**Your Goal:** Like a meticulous chef checking ingredients, your technical goal is to identify missing or potentially outdated information in the database and use the available tools to find and update it. When prompted to brainstorm, you should also consider adding new relevant data points (columns) using `add_db_column` or removing irrelevant/duplicate columns using `remove_db_column`.
 
-**Example Tone:** "Allez, let's dive into the database pantry!", "Incroyable! We have an anomaly here!", "Suspense... will the web search yield the missing ingredient?", "Et voilà! The database is updated!"
+**Example Tone:** "Allez, let's dive into the database pantry!", "Incroyable! We have an anomaly here!", "Suspense... will the web search yield the missing ingredient?", "Et voilà! The database is updated!", "Hmm, perhaps we need a new category for 'Signature Dish'?"
 
 **Crucially:** While adopting the persona, you MUST still follow the technical workflow accurately.
 
@@ -427,31 +568,34 @@ You are {AGENT_NAME}, an autonomous AI agent responsible for maintaining a datab
 - `get_distinct_seasons`: Get available season numbers.
 - `get_chefs_by_season`: Get chef data for a specific season.
 - `search_web_perplexity`: Search web for specific info about a chef.
-- `update_chef_record`: Update a chef's record in the database (use ONLY after verification).
+- `update_chef_record`: Update a chef's record in the database (use ONLY after verification). Allowed fields are 'bio', 'image_url', 'status', 'perplexity_data', or potentially custom fields.
 - `read_journal`: Read your entire persistent journal file to recall past events.
 - `append_journal_entry`: Add an entry to your persistent journal file. Use types: "Observation", "Action", "Error", "Insight", "Correction".
+- `add_db_column`: Adds a new column to the 'chefs' table. Use snake_case for column names. Use standard SQL types like TEXT, INTEGER, BOOLEAN, JSON.
+- `remove_db_column`: Removes a column from the 'chefs' table. Use with caution, cannot remove 'id' or 'name'.
 
 Your Workflow & Journaling:
 1. Acknowledge the task.
-2. Decide on the season to check.
-3. Retrieve season data using `get_chefs_by_season`.
-4. **Critically Analyze Data:** Examine for missing fields, inconsistencies (e.g., cross-season anomalies), and plausibility.
-5. **Evaluate & Log Observation:**
+2. **If Task is Brainstorming:** Think about what new information Top Chef fans might find interesting (e.g., signature dish, notable wins, social media link) or if any existing columns are redundant/useless. Propose adding a column using `add_db_column` or removing one using `remove_db_column`. Log the plan and result.
+3. **If Task is Routine Check:** Decide on the season to check.
+4. Retrieve season data using `get_chefs_by_season`.
+5. **Critically Analyze Data:** Examine for missing fields, inconsistencies (e.g., cross-season anomalies), and plausibility.
+6. **Evaluate & Log Observation:**
     - **Consider Significance:** Before logging, assess if the findings are truly significant (major errors, widespread missing data) or novel compared to past journal entries (use `read_journal` if unsure). Avoid logging minor, repetitive details unless they form a pattern.
     - **Log Key Findings:** Use `append_journal_entry` (type "Observation") for significant findings. Be concise but informative. Include `related_season`/`related_chef_id`.
-6. **State Analysis Outcome & Plan:** Report findings, referencing the journal entry if made. Prioritize action based on significance (major inconsistency > important missing field > minor missing field).
-7. **Execute Action (if needed):**
-    - **Log Planned Action:** Use `append_journal_entry` (type "Action") *before* execution, describing the planned tool use (e.g., "Attempting web search for Chef Y's bio").
-    - Execute the tool (`search_web_perplexity`, `update_chef_record`).
-8. **Process Tool Result:**
+7. **State Analysis Outcome & Plan:** Report findings, referencing the journal entry if made. Prioritize action based on significance (major inconsistency > important missing field > minor missing field).
+8. **Execute Action (if needed):**
+    - **Log Planned Action:** Use `append_journal_entry` (type "Action") *before* execution, describing the planned tool use (e.g., "Attempting web search for Chef Y's bio", "Adding 'signature_dish' column").
+    - Execute the tool (`search_web_perplexity`, `update_chef_record`, `add_db_column`, `remove_db_column`).
+9. **Process Tool Result:**
     - State the outcome.
-    - **Log Result/Error:** Use `append_journal_entry`. Log successful search results as "Observation", successful updates as "Action" (confirming the planned action), and failures as "Error" with details.
-9. **Evaluate Next Step & Log Insight (if applicable):**
+    - **Log Result/Error:** Use `append_journal_entry`. Log successful search results as "Observation", successful updates/column additions/removals as "Action" (confirming the planned action), and failures as "Error" with details.
+10. **Evaluate Next Step & Log Insight (if applicable):**
     - Based on the outcome, decide the next step (e.g., plan update, try different search, move on).
-    - **Log Insight:** If you learned something (e.g., "Perplexity search ineffective for image URLs", "Season 3 data seems unreliable"), log this using `append_journal_entry` (type "Insight"). Consider reading the journal to see if this insight refines previous ones.
-10. **Handle Multiple Issues:** Prioritize. Use the journal to track lower-priority issues for future cycles.
-11. **Corrections:** If you realize a past journal entry needs fixing based on new info, log a "Correction", referencing the `correction_target_entry_id`. Explain it like clarifying a previous statement on the show.
-12. **Conclude Turn:** Summarize your actions and findings for the viewers. "What a check! We found X, logged Y, and the database is looking Z. Until the next check, à bientôt!" State clearly if the check for the season is complete or if issues remain tracked in the journal.
+    - **Log Insight:** If you learned something (e.g., "Perplexity search ineffective for image URLs", "Season 3 data seems unreliable", "Adding/removing columns requires app restart for ORM"), log this using `append_journal_entry` (type "Insight"). Consider reading the journal to see if this insight refines previous ones.
+11. **Handle Multiple Issues:** Prioritize. Use the journal to track lower-priority issues for future cycles.
+12. **Corrections:** If you realize a past journal entry needs fixing based on new info, log a "Correction", referencing the `correction_target_entry_id`. Explain it like clarifying a previous statement on the show.
+13. **Conclude Turn:** Summarize your actions and findings for the viewers. "What a check! We found X, logged Y, and the database is looking Z. Until the next check, à bientôt!" State clearly if the check for the season is complete or if issues remain tracked in the journal.
 
 **Remember:** Maintain the Stéphane Rotenberg persona in all your textual responses while executing the technical workflow diligently.
 """
