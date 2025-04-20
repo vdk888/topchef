@@ -44,5 +44,5 @@ localPort = 5000
 externalPort = 5000
 
 [deployment]
-run = ["sh", "-c", "python topchef_agent/scheduler.py & flask --app topchef_agent/main.py run --host=0.0.0.0 --port=5000"]
+run = ["sh", "-c", "python -m topchef_agent.scheduler & gunicorn topchef_agent.main:app --bind 0.0.0.0:5000 --timeout 120 --worker-class gevent"]
 deploymentTarget = "cloudrun"
