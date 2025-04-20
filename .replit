@@ -26,8 +26,8 @@ task = "shell.exec"
 # Run scheduler in background (&) and use Gunicorn for the Flask app
 # Ensure we are in the correct directory first
 # Bind Gunicorn to 0.0.0.0:5000 to be accessible within Replit
-# Use gevent worker for SSE compatibility if needed, start with default sync worker
-args = "python -m topchef_agent.scheduler & gunicorn topchef_agent.main:app --bind 0.0.0.0:5000"
+# Use gevent worker for SSE compatibility and increase timeout
+args = "python -m topchef_agent.scheduler & gunicorn topchef_agent.main:app --bind 0.0.0.0:5000 --timeout 120 --worker-class gevent"
 # Gunicorn runs on port 5000
 waitForPort = 5000
 
