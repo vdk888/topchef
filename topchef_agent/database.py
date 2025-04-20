@@ -178,33 +178,28 @@ def load_database(max_retries=2, delay=1):
     # Should not be reached if successful, but return empty list as fallback
     return []
 
-
-# Removed get_distinct_seasons() and get_chefs_by_season() as they are deprecated
-
-def update_chef(chef_id: int, update_data: dict):
-    """Updates a specific chef record in the database."""
-    updated = False
-    try:
-        with get_db() as db:
-            chef = db.query(Chef).filter(Chef.id == chef_id).first()
-            if chef:
-                for key, value in update_data.items():
-                    # Only update if the key is a valid column and value is different
-                    if hasattr(chef, key) and getattr(chef, key) != value:
-                        setattr(chef, key, value)
-                        updated = True
-                if updated:
-                    db.commit()
-                    print(f"Updated chef record ID: {chef_id}")
-                else:
-                    print(f"No changes detected for chef record ID: {chef_id}")
-            else:
-                print(f"Error: Chef with ID {chef_id} not found for update.")
-                return False # Indicate chef not found
-    except Exception as e:
-        print(f"Error updating chef ID {chef_id}: {e}")
-        return False # Indicate error during update
-    return updated # Return True if commit was successful or no changes needed, False on error
+def get_chefs_by_season(season_number, max_retries=2, delay=1):
+    """Loads all chef records for a given season from the database with retry logic for connection errors."""
+    chefs_list = []
+    attempts = 0
+    while attempts <= max_retries:
+        attempts += 1
+        try:
+            with get_db() as db:
+                chefs = db.query(Chef).filter(Chef.season == season_number).order_by(Chef.name).all()
+                chefs_list = [chef.to_dict() for chef in chefs]
+                return chefs_list  # Success, exit loop and return
+        except OperationalError as e:
+            print(f"Warning: Database operational error on attempt {attempts}/{max_retries+1}: {e}", flush=True)
+            if attempts > max_retries:
+                print("Error: Max retries reached for loading chefs by season.", flush=True)
+                raise
+            print(f"Retrying in {delay} second(s)...", flush=True)
+            time.sleep(delay)
+        except Exception as e:
+            print(f"Error loading chefs by season (non-retryable): {e}", flush=True)
+            return []
+    return []
 
 # --- NEW FUNCTION TO ADD COLUMN ---
 def add_column(table_name: str, column_name: str, column_type: str):
@@ -294,3 +289,28 @@ else:
     # Ensure table exists and columns are checked when module is imported
     # Set drop_first=False (or omit) for regular imports to avoid data loss on every import
     create_table_if_not_exists(drop_first=False)
+
+def update_chef(chef_id: int, update_data: dict):
+    """Updates a specific chef record in the database."""
+    updated = False
+    try:
+        with get_db() as db:
+            chef = db.query(Chef).filter(Chef.id == chef_id).first()
+            if chef:
+                for key, value in update_data.items():
+                    # Only update if the key is a valid column and value is different
+                    if hasattr(chef, key) and getattr(chef, key) != value:
+                        setattr(chef, key, value)
+                        updated = True
+                if updated:
+                    db.commit()
+                    print(f"Updated chef record ID: {chef_id}")
+                else:
+                    print(f"No changes detected for chef record ID: {chef_id}")
+            else:
+                print(f"Error: Chef with ID {chef_id} not found for update.")
+                return False # Indicate chef not found
+    except Exception as e:
+        print(f"Error updating chef ID {chef_id}: {e}")
+        return False # Indicate error during update
+    return updated # Return True if commit was successful or no changes needed, False on error

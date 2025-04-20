@@ -9,7 +9,7 @@ from openai import OpenAI, APIError
 # Import all necessary functions from database
 # Added add_column and remove_column imports
 # Removed get_distinct_seasons, get_chefs_by_season from this import as they are deprecated
-from topchef_agent.database import load_database, update_chef, add_column, remove_column # Ensure only valid functions are imported
+from topchef_agent.database import load_database, update_chef, add_column, remove_column, get_chefs_by_season # Ensure only valid functions are imported
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
 from topchef_agent.config import OPENROUTER_API_KEY, PERPLEXITY_API_KEY, YOUR_SITE_URL, YOUR_SITE_NAME, LLM_MODELS_TO_TRY
@@ -343,6 +343,64 @@ def execute_geocode_address(address: str):
         log_to_ui("tool_error", {"name": "geocode_address", "input": tool_input_data, "error": str(e)})
         return error_msg
 
+# --- NEW TOOL EXECUTION FUNCTION for geocoding and updating ---
+def execute_geocode_address_and_update(chef_id: int, address: str):
+    """
+    Safely geocodes an address and updates BOTH latitude and longitude atomically for the chef,
+    ensuring that pins on the map will always have both coordinates or neither.
+    """
+    tool_input_data = {"chef_id": chef_id, "address": address}
+    log_to_ui("tool_start", {"name": "geocode_address_and_update", "input": tool_input_data})
+    print(f"--- Tool: Executing Geocode Address & Atomic Update ---", flush=True)
+    print(f"  Chef ID: {chef_id}, Address: {address}", flush=True)
+
+    if not isinstance(chef_id, int):
+        error_msg = json.dumps({"error": "Invalid type for chef_id, must be an integer."})
+        log_to_ui("tool_error", {"name": "geocode_address_and_update", "error": "Invalid chef_id type."})
+        return error_msg
+    if not isinstance(address, str) or not address:
+        error_msg = json.dumps({"error": "Invalid or empty address provided."})
+        log_to_ui("tool_error", {"name": "geocode_address_and_update", "input": tool_input_data, "error": "Invalid address."})
+        return error_msg
+
+    geolocator = Nominatim(user_agent="topchef_agent_app/1.0")
+    try:
+        location = geolocator.geocode(address, timeout=10, country_codes='FR')
+        if location:
+            coordinates = {"latitude": location.latitude, "longitude": location.longitude}
+            update_data = {"latitude": location.latitude, "longitude": location.longitude}
+            success = update_chef(chef_id, update_data)
+            if success:
+                result_msg = json.dumps({"status": "OK", "message": f"Successfully updated lat/lon for chef ID {chef_id}.", "coordinates": coordinates})
+                print(f"  Geocoding and DB update successful: Lat={location.latitude}, Lon={location.longitude}", flush=True)
+                log_to_ui("tool_result", {"name": "geocode_address_and_update", "input": tool_input_data, "result": coordinates})
+                signal_database_update()
+                return result_msg
+            else:
+                error_msg = json.dumps({"status": "Failed", "error": f"Failed to update coordinates for chef ID {chef_id}. Chef not found or no change needed."})
+                print("  Database update failed (chef not found or no change needed).", flush=True)
+                log_to_ui("tool_error", {"name": "geocode_address_and_update", "input": tool_input_data, "error": "Update failed (not found or no change)." })
+                return error_msg
+        else:
+            error_msg = json.dumps({"error": f"Address not found or could not be geocoded: {address}"})
+            print(f"  Geocoding failed: Address not found.", flush=True)
+            log_to_ui("tool_error", {"name": "geocode_address_and_update", "input": tool_input_data, "error": "Address not found."})
+            return error_msg
+    except GeocoderTimedOut:
+        error_msg = json.dumps({"error": "Geocoding service timed out."})
+        print(f"  Geocoding error: Timeout.", flush=True)
+        log_to_ui("tool_error", {"name": "geocode_address_and_update", "input": tool_input_data, "error": "GeocoderTimedOut."})
+        return error_msg
+    except GeocoderServiceError as e:
+        error_msg = json.dumps({"error": f"Geocoding service error: {e}"})
+        print(f"  Geocoding error: Service error {e}.", flush=True)
+        log_to_ui("tool_error", {"name": "geocode_address_and_update", "input": tool_input_data, "error": f"GeocoderServiceError: {e}"})
+        return error_msg
+    except Exception as e:
+        error_msg = json.dumps({"error": f"Unexpected error during geocoding: {e}"})
+        print(f"  Geocoding error: Unexpected {e}.", flush=True)
+        log_to_ui("tool_error", {"name": "geocode_address_and_update", "input": tool_input_data, "error": str(e)})
+        return error_msg
 
 # --- Journaling Tool Functions ---
 JOURNAL_FILE = "topchef_agent/stephai_journal.json"
@@ -502,7 +560,24 @@ tools_list = [
             }
         }
     },
-    # --- Journaling Tools ---
+    # --- NEW TOOL DEFINITION for getting chefs by season ---
+    {
+        "type": "function",
+        "function": {
+            "name": "get_chefs_for_season",
+            "description": "Returns a list of chefs for a given season.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "season_number": {
+                        "type": "integer",
+                        "description": "The season number to retrieve chefs for."
+                    }
+                },
+                "required": ["season_number"]
+            }
+        }
+    },
     {
         "type": "function",
         "function": {
@@ -635,63 +710,21 @@ tools_list = [
     }
 ]
 
-def execute_geocode_address_and_update(chef_id: int, address: str):
-    """
-    Safely geocodes an address and updates BOTH latitude and longitude atomically for the chef,
-    ensuring that pins on the map will always have both coordinates or neither.
-    """
-    tool_input_data = {"chef_id": chef_id, "address": address}
-    log_to_ui("tool_start", {"name": "geocode_address_and_update", "input": tool_input_data})
-    print(f"--- Tool: Executing Geocode Address & Atomic Update ---", flush=True)
-    print(f"  Chef ID: {chef_id}, Address: {address}", flush=True)
-
-    if not isinstance(chef_id, int):
-        error_msg = json.dumps({"error": "Invalid type for chef_id, must be an integer."})
-        log_to_ui("tool_error", {"name": "geocode_address_and_update", "error": "Invalid chef_id type."})
-        return error_msg
-    if not isinstance(address, str) or not address:
-        error_msg = json.dumps({"error": "Invalid or empty address provided."})
-        log_to_ui("tool_error", {"name": "geocode_address_and_update", "input": tool_input_data, "error": "Invalid address."})
-        return error_msg
-
-    geolocator = Nominatim(user_agent="topchef_agent_app/1.0")
+def execute_get_chefs_for_season(season_number: int):
+    """Returns list of chefs for a given season."""
+    log_to_ui("tool_start", {"name": "get_chefs_for_season", "input": {"season_number": season_number}})
+    print(f"--- Tool: Executing Get Chefs for Season ---", flush=True)
+    print(f"  Season Number: {season_number}", flush=True)
     try:
-        location = geolocator.geocode(address, timeout=10, country_codes='FR')
-        if location:
-            coordinates = {"latitude": location.latitude, "longitude": location.longitude}
-            from topchef_agent.database import update_chef
-            update_data = {"latitude": location.latitude, "longitude": location.longitude}
-            success = update_chef(chef_id, update_data)
-            if success:
-                result_msg = json.dumps({"status": "OK", "message": f"Successfully updated lat/lon for chef ID {chef_id}.", "coordinates": coordinates})
-                print(f"  Geocoding and DB update successful: Lat={location.latitude}, Lon={location.longitude}", flush=True)
-                log_to_ui("tool_result", {"name": "geocode_address_and_update", "input": tool_input_data, "result": coordinates})
-                signal_database_update()
-                return result_msg
-            else:
-                error_msg = json.dumps({"status": "Failed", "error": f"Failed to update coordinates for chef ID {chef_id}. Chef not found or no change needed."})
-                print("  Database update failed (chef not found or no change needed).", flush=True)
-                log_to_ui("tool_error", {"name": "geocode_address_and_update", "input": tool_input_data, "error": "Update failed (not found or no change)." })
-                return error_msg
-        else:
-            error_msg = json.dumps({"error": f"Address not found or could not be geocoded: {address}"})
-            print(f"  Geocoding failed: Address not found.", flush=True)
-            log_to_ui("tool_error", {"name": "geocode_address_and_update", "input": tool_input_data, "error": "Address not found."})
-            return error_msg
-    except GeocoderTimedOut:
-        error_msg = json.dumps({"error": "Geocoding service timed out."})
-        print(f"  Geocoding error: Timeout.", flush=True)
-        log_to_ui("tool_error", {"name": "geocode_address_and_update", "input": tool_input_data, "error": "GeocoderTimedOut."})
-        return error_msg
-    except GeocoderServiceError as e:
-        error_msg = json.dumps({"error": f"Geocoding service error: {e}"})
-        print(f"  Geocoding error: Service error {e}.", flush=True)
-        log_to_ui("tool_error", {"name": "geocode_address_and_update", "input": tool_input_data, "error": f"GeocoderServiceError: {e}"})
-        return error_msg
+        chefs = get_chefs_by_season(season_number)
+        result_msg = json.dumps({"chefs": chefs})
+        log_to_ui("tool_result", {"name": "get_chefs_for_season", "result": f"{len(chefs)} entries found."})
+        print(f"  Chefs found for season {season_number}: {len(chefs)}", flush=True)
+        return result_msg
     except Exception as e:
-        error_msg = json.dumps({"error": f"Unexpected error during geocoding: {e}"})
-        print(f"  Geocoding error: Unexpected {e}.", flush=True)
-        log_to_ui("tool_error", {"name": "geocode_address_and_update", "input": tool_input_data, "error": str(e)})
+        error_msg = json.dumps({"error": f"Failed to get chefs for season {season_number}: {e}"})
+        log_to_ui("tool_error", {"name": "get_chefs_for_season", "error": str(e)})
+        print(f"  Error getting chefs for season {season_number}: {e}", flush=True)
         return error_msg
 
 # Map tool names to their execution functions
@@ -707,8 +740,8 @@ available_functions = {
     "remove_db_column": execute_remove_db_column,
     "geocode_address": execute_geocode_address, # Added geocoding function
     "geocode_address_and_update": execute_geocode_address_and_update, # Added geocoding and updating function
+    "get_chefs_for_season": execute_get_chefs_for_season, # Added get chefs for season function
 }
-
 
 
 # --- LLM Agent Setup ---

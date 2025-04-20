@@ -952,5 +952,41 @@
     "related_season": null,
     "related_chef_id": 1,
     "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "0c2093b4-f807-49a7-b4e3-07563364bdcc",
+    "timestamp": "2025-04-20T19:37:26.905007Z",
+    "type": "Observation",
+    "details": "Chef ID 3 (Pierre Martin) is missing restaurant address and coordinates.",
+    "related_season": null,
+    "related_chef_id": 3,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "868fa9f5-61e8-4e06-8ddd-ba6ddaa022e7",
+    "timestamp": "2025-04-20T19:37:39.693132Z",
+    "type": "Observation",
+    "details": "Web search for Chef Pierre Martin's restaurant address returned no verifiable information. Further investigation may be needed.",
+    "related_season": null,
+    "related_chef_id": 3,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "060528a4-3ac2-43d8-8b70-cf1cf06864bc",
+    "timestamp": "2025-04-20T19:38:39.841075Z",
+    "type": "Observation",
+    "details": "Chef ID 3 (Pierre Martin) is missing both restaurant address and coordinates. No information found in web search.",
+    "related_season": null,
+    "related_chef_id": 3,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "c8d24b2f-44fd-4393-93d2-b72a3fce4588",
+    "timestamp": "2025-04-20T19:39:39.255208Z",
+    "type": "Observation",
+    "details": "Chef ID 3 (Pierre Martin) is missing his restaurant address, latitude, and longitude. No information found in the web search.",
+    "related_season": null,
+    "related_chef_id": 3,
+    "correction_target_entry_id": null
   }
 ]

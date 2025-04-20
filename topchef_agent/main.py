@@ -5,7 +5,7 @@ import queue # For handling log messages between agent and SSE stream
 import threading # To manage the queue safely
 from flask import Flask, render_template, request, Response, jsonify
 from markupsafe import escape # Import escape from markupsafe
-from topchef_agent.database import load_database # No need for save_database here anymore
+from topchef_agent.database import load_database, get_chefs_by_season # No need for save_database here anymore
 from topchef_agent.config import DATABASE_URL # Use database URL for validation maybe
 import datetime
 from topchef_agent.interactive_agent import get_interactive_agent
@@ -164,15 +164,13 @@ def stream_db_updates():
 # --- NEW API Endpoint for Chef Data ---
 @app.route('/api/chefs')
 def get_chefs_data():
-    """Returns all chef data from the database as JSON."""
-    try:
+    """Returns all chef data from the database as JSON, optionally filtered by season."""
+    season = request.args.get('season', default=None, type=int)
+    if season is not None:
+        chefs_data = get_chefs_by_season(season)
+    else:
         chefs_data = load_database()
-        # Convert datetime objects for JSON compatibility if necessary
-        # The Chef.to_dict() method in database.py already handles this
-        return jsonify(chefs_data)
-    except Exception as e:
-        print(f"Error in /api/chefs route: {e}")
-        return jsonify({"error": "Failed to load chef data", "details": str(e)}), 500
+    return jsonify(chefs_data)
 
 @app.route('/interactive_chat', methods=['POST'])
 def interactive_chat():

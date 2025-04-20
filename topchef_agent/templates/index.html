@@ -488,6 +488,25 @@
                 <h2>Chef Database View</h2>
                 <div id="table-placeholder">Loading database content...</div>
                 <!-- Table will be generated here by JavaScript -->
+                <div class="db-table-wrapper">
+                    <table class="db-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Status</th>
+                                <th>Address</th>
+                                <th>Lat</th>
+                                <th>Lon</th>
+                                <th>Bio</th>
+                                <th>Season</th>
+                                <th>Last Updated</th>
+                            </tr>
+                        </thead>
+                        <tbody id="chef-table">
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -818,6 +837,7 @@
                     { key: 'latitude', header: 'Lat' },
                     { key: 'longitude', header: 'Lon' },
                     { key: 'bio', header: 'Bio', className: 'col-bio' },
+                    { key: 'season', header: 'Season' },
                     { key: 'last_updated', header: 'Last Updated' },
                  ];
 
@@ -967,15 +987,16 @@
 
           // Filter chefs by selected season
           function filterChefsBySeason(chefs, season) {
-              if (!season) return chefs;
+              if (!season || season === "") return chefs;
               return chefs.filter(chef => chef.season == season);
           }
 
           // Listen for season filter changes
-          document.getElementById('season-filter').addEventListener('change', function() {
+          document.getElementById('season-filter').addEventListener('change', async function() {
               currentSeason = this.value;
-              refreshTableData();
-              // Optionally, refresh map markers as well if map supports filtering
+              allChefs = await fetchChefs(currentSeason);
+              populateSeasonFilter(allChefs);
+              loadAndDisplayTable();
           });
 
           // Enlarging chat windows logic
@@ -997,8 +1018,22 @@
           if (enlargeAgent) enlargeAgent.addEventListener('click', function() { toggleEnlarge('agent'); });
           if (enlargeBg) enlargeBg.addEventListener('click', function() { toggleEnlarge('bg'); });
           if (enlargeInteractive) enlargeInteractive.addEventListener('click', function() { toggleEnlarge('interactive'); });
-        
 
+          // Fetch chefs from backend with optional season param
+          async function fetchChefs(season = null) {
+              let url = '/api/chefs';
+              if (season) url += `?season=${season}`;
+              const response = await fetch(url);
+              return response.json();
+          }
+
+          // Initial load
+          (async function() {
+              allChefs = await fetchChefs();
+              populateSeasonFilter(allChefs);
+              loadAndDisplayTable();
+          })();
+        
     </script>
     <script src="/static/interactive_chat.js"></script>
 
