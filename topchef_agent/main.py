@@ -84,23 +84,26 @@ def generate_log_stream():
             # Use a timeout to periodically check if the client is still connected
             # (Flask/Werkzeug might handle broken pipes, but this adds robustness)
             try:
-                 log_entry = log_queue.get(timeout=60) # Wait up to 60 seconds
-                 # Format as SSE message: data: <json_string>\n\n
-                 sse_data = f"data: {json.dumps(log_entry)}\n\n"
-                 yield sse_data
-                 log_queue.task_done() # Mark task as done after yielding
+                log_entry = log_queue.get(timeout=60) # Wait up to 60 seconds
+                # Format as SSE message: data: <json_string>\n\n
+                sse_data = f"data: {json.dumps(log_entry)}\n\n"
+                yield sse_data
+                log_queue.task_done() # Mark task as done after yielding
             except queue.Empty:
-                 # No message received in timeout period, send a comment to keep connection alive
-                 yield ": keepalive\n\n"
+                # No message received in timeout period, send a comment to keep connection alive
+                yield ": keepalive\n\n"
+            except SystemExit:
+                print("SystemExit caught in SSE generator loop, likely server shutdown. Breaking loop.")
+                break # Exit the loop gracefully on shutdown signal
             except Exception as e:
-                 print(f"Error in SSE generator loop: {e}")
-                 # Optionally yield an error message to the client
-                 error_data = {"type": "stream_error", "data": {"error": str(e)}}
-                 yield f"data: {json.dumps(error_data)}\n\n"
-                 time.sleep(5) # Avoid tight loop on persistent error
+                print(f"Error in SSE generator loop: {e}")
+                # Optionally yield an error message to the client
+                error_data = {"type": "stream_error", "data": {"error": str(e)}}
+                yield f"data: {json.dumps(error_data)}\n\n"
+                time.sleep(5) # Avoid tight loop on persistent error
 
     except GeneratorExit:
-         print("SSE client disconnected.")
+        print("SSE client disconnected.")
     finally:
          print("SSE stream generator finished.")
 
