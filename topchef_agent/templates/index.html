@@ -3,90 +3,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Top Chef France Database Agent</title>
+    <title>Top Chef France Map & Agent</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossorigin=""/>
+    <!-- Leaflet JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+            crossorigin=""></script>
+
     <style>
-        body {
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
             font-family: sans-serif;
-            margin: 20px;
             background-color: #f4f4f4;
+            display: flex;
+            flex-direction: column; /* Stack elements vertically */
         }
-        h1, h2 {
-            color: #333;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-            background-color: #fff;
-            box-shadow: 0 2px 3px rgba(0,0,0,0.1);
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 10px 12px;
-            text-align: left;
-            vertical-align: top; /* Align content top for consistency */
-        }
-        th {
-            background-color: #e2e2e2;
-            font-weight: bold;
-            text-transform: capitalize; /* Nicer header display */
-        }
-        tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-        .missing-data {
-            color: #b94a48; /* Reddish color for missing data */
-            font-style: italic;
-        }
-        .action-button {
-            display: inline-block;
-            padding: 10px 15px;
-            margin-top: 20px;
-            background-color: #007bff;
+
+        .header {
+            padding: 10px 20px;
+            background-color: #333;
             color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 1em;
-            text-decoration: none; /* If using <a> tag */
+            flex-shrink: 0; /* Prevent header from shrinking */
         }
-        .action-button:hover {
-            background-color: #0056b3;
+
+        .header h1 {
+            margin: 0;
+            font-size: 1.5em;
         }
-        .console-info {
-            margin-top: 15px;
+        .header p {
+            margin: 5px 0 0;
             font-size: 0.9em;
-            color: #555;
+            color: #ccc;
         }
+
+        .main-content {
+            display: flex;
+            flex-grow: 1; /* Allow main content to fill space */
+            overflow: hidden; /* Prevent overflow issues */
+            padding: 10px;
+            gap: 10px; /* Space between map and log */
+        }
+
+        #map {
+            height: 100%; /* Fill vertical space in main-content */
+            width: 65%; /* Take up most of the width */
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .sidebar {
+            height: 100%;
+            width: 35%; /* Remaining width */
+            display: flex;
+            flex-direction: column;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            overflow: hidden; /* Contained scrolling */
+        }
+
+        .sidebar h2 {
+            margin: 0;
+            padding: 15px;
+            background-color: #e2e2e2;
+            font-size: 1.2em;
+            color: #333;
+            border-bottom: 1px solid #ddd;
+            flex-shrink: 0;
+        }
+
         #log-container {
-            margin-top: 30px;
+            flex-grow: 1; /* Allow log to fill sidebar space */
             padding: 15px;
             background-color: #282c34; /* Dark background for logs */
             color: #abb2bf; /* Light text */
-            border-radius: 5px;
-            height: 400px; /* Fixed height */
             overflow-y: scroll; /* Enable scrolling */
             font-family: 'Courier New', Courier, monospace;
             font-size: 0.85em;
             line-height: 1.4;
             white-space: pre-wrap; /* Preserve whitespace and wrap lines */
         }
-        .log-entry {
-            margin-bottom: 8px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid #444;
-        }
-        .log-entry:last-child {
-            border-bottom: none;
-        }
-        .log-timestamp {
-            color: #61afef; /* Blue timestamp */
-            margin-right: 10px;
-        }
-        .log-type {
-            font-weight: bold;
-            margin-right: 10px;
-        }
+
+        /* Log entry styling (same as before) */
+        .log-entry { margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #444; }
+        .log-entry:last-child { border-bottom: none; }
+        .log-timestamp { color: #61afef; margin-right: 10px; }
+        .log-type { font-weight: bold; margin-right: 10px; }
         .log-type-cycle_start, .log-type-cycle_end { color: #e5c07b; } /* Yellow */
         .log-type-llm_request { color: #c678dd; } /* Purple */
         .log-type-llm_response { color: #abb2bf; } /* Default light text */
@@ -95,78 +102,181 @@
         .log-type-tool_result { color: #98c379; } /* Green */
         .log-type-tool_error, .log-type-cycle_error, .log-type-llm_error { color: #e06c75; font-weight: bold; } /* Red */
         .log-type-cycle_info { color: #61afef; } /* Blue */
-        .log-data {
-            display: block; /* Ensure data starts on new line */
-            margin-top: 4px;
-            margin-left: 20px; /* Indent data */
-            white-space: pre-wrap; /* Ensure JSON/multiline data wraps */
+        .log-data { display: block; margin-top: 4px; margin-left: 20px; white-space: pre-wrap; }
+
+        /* Leaflet Popup Styling */
+        .leaflet-popup-content-wrapper {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 3px 14px rgba(0,0,0,0.4);
+        }
+        .leaflet-popup-content {
+            margin: 15px;
+            line-height: 1.5;
+            font-size: 0.95em;
+            max-height: 250px; /* Limit popup height */
+            overflow-y: auto; /* Allow scrolling within popup */
+        }
+        .leaflet-popup-content h3 {
+            margin: 0 0 10px 0;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #eee;
+            font-size: 1.2em;
+            color: #333;
+        }
+        .leaflet-popup-content p {
+            margin: 5px 0;
+        }
+        .leaflet-popup-content strong {
+            color: #555;
+        }
+        .leaflet-popup-tip-container {
+            display: none; /* Optional: hide the small triangle tip */
+        }
+        .popup-image {
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .missing-data {
+            color: #b94a48;
+            font-style: italic;
         }
 
     </style>
 </head>
 <body>
 
-    <h1>Top Chef France Database Keeper: StephAI</h1>
-
-    <p class="console-info">
-        StephAI, an autonomous agent, is running in the background (via `scheduler.py`) to periodically check the database below for missing information and attempt to fill it using web searches. StephAI's thoughts and actions are logged below in real-time. Refresh the page to see database updates reflected in the table.
-    </p>
-
-    <h2>Chef Database</h2>
-    {% if chefs %}
-        <table>
-            <thead>
-                <tr>
-                    {% for header in headers %}
-                        <th>{{ header.replace('_', ' ') }}</th>
-                    {% endfor %}
-                </tr>
-            </thead>
-            <tbody>
-                {% for chef in chefs %}
-                    <tr>
-                        {% for header in headers %}
-                            <td>
-                                {% set value = chef.get(header) %}
-                                {% if value is none or value == "" %}
-                                    <span class="missing-data">Missing</span>
-                                {% else %}
-                                    {{ value }}
-                                {% endif %}
-                            </td>
-                        {% endfor %}
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    {% else %}
-        <p>No chef data found in the database, or database connection failed.</p>
-    {% endif %}
-
-    <h2>StephAI's Activity Log</h2>
-    <div id="log-container">
-        Waiting for StephAI's first check...
+    <div class="header">
+        <h1>Top Chef France Map & StephAI</h1>
+        <p>Explore restaurant locations and follow StephAI's database updates.</p>
     </div>
 
+    <div class="main-content">
+        <div id="map"></div>
+        <div class="sidebar">
+            <h2>StephAI's Activity Log</h2>
+            <div id="log-container">
+                Waiting for StephAI's first check...
+            </div>
+        </div>
+    </div>
+
+    <!-- Embed JSON data safely -->
+    <script id="chefs-data" type="application/json">
+        {{ chefs_json|safe }} {# chefs_json is already a JSON string from backend, |safe prevents HTML escaping #}
+    </script>
+
     <script>
+        // --- Map Initialization ---
+        // Center roughly on France
+        const map = L.map('map').setView([46.603354, 1.888334], 6);
+
+        // Add OpenStreetMap tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+
+        // --- Chef Data Processing ---
+        let chefsData = [];
+        try {
+            // Retrieve the JSON string from the dedicated script tag
+            const jsonDataElement = document.getElementById('chefs-data');
+            if (!jsonDataElement) {
+                throw new Error("Could not find chefs-data script tag.");
+            }
+            const rawJsonData = jsonDataElement.textContent || jsonDataElement.innerText;
+            // Parse the retrieved JSON string
+            chefsData = JSON.parse(rawJsonData);
+            // console.log("Parsed Chefs Data:", chefsData); // Debugging: Check the structure
+
+            if (!Array.isArray(chefsData)) {
+                 // Ensure the parsed data is an array
+                 throw new Error("Parsed data is not a valid array.");
+            }
+        } catch (e) {
+            console.error("Error processing chef JSON data:", e);
+            // Optionally display an error to the user on the page
+            const mapDiv = document.getElementById('map');
+            if (mapDiv) { // Check if map div exists before modifying
+                 mapDiv.innerHTML = '<p style="color: red; padding: 20px;">Error loading chef data for the map.</p>';
+            }
+        }
+
+        // --- Marker Creation ---
+        if (Array.isArray(chefsData)) {
+            chefsData.forEach(chef => {
+                // Check for valid coordinates (already partially validated in backend)
+                const lat = parseFloat(chef.latitude);
+                const lon = parseFloat(chef.longitude);
+
+                if (!isNaN(lat) && !isNaN(lon)) {
+                    // Create marker
+                    const marker = L.marker([lat, lon]).addTo(map);
+
+                    // --- Create Popup Content ---
+                    let popupContent = `<h3>${chef.name || 'Unknown Chef'}</h3>`;
+
+                    // Function to add detail if present
+                    const addDetail = (label, value) => {
+                        // Basic escaping for simple text values to prevent potential XSS in popups
+                        const escapedValue = value !== null && value !== undefined ? String(value).replace(/</g, "<").replace(/>/g, ">") : value;
+
+                        if (escapedValue !== null && escapedValue !== undefined && escapedValue !== "") {
+                            return `<p><strong>${label}:</strong> ${escapedValue}</p>`;
+                        }
+                        return `<p><strong>${label}:</strong> <span class="missing-data">Missing</span></p>`;
+                    };
+
+                    popupContent += addDetail('Status', chef.status);
+                    popupContent += addDetail('Address', chef.restaurant_address);
+                    popupContent += addDetail('Bio', chef.bio);
+                    // Add other relevant fields here...
+                    // popupContent += addDetail('Last Updated', chef.last_updated);
+
+                    // Add image if URL exists (Assume image URLs are safe or validated elsewhere)
+                    if (chef.image_url) {
+                        // Basic check for potentially problematic URL schemes (though not foolproof)
+                        if (String(chef.image_url).startsWith('http:') || String(chef.image_url).startsWith('https:')) {
+                             popupContent += `<img src="${chef.image_url}" alt="${chef.name || 'Chef image'}" class="popup-image">`;
+                        } else {
+                             console.warn(`Skipping potentially unsafe image URL: ${chef.image_url}`);
+                        }
+                    }
+
+                    // Bind popup to marker
+                    marker.bindPopup(popupContent);
+                } else {
+                     // console.log(`Skipping marker for chef ${chef.id || chef.name} due to invalid coordinates.`);
+                }
+            });
+        } else {
+             console.error("Chef data is not an array after processing:", chefsData);
+        }
+
+
+        // --- Log Viewer Logic (same as before) ---
         const logContainer = document.getElementById('log-container');
 
         function formatLogData(data) {
             if (typeof data === 'string') {
-                // Attempt to parse if it looks like JSON, otherwise display as string
                 try {
                     const parsed = JSON.parse(data);
-                    return JSON.stringify(parsed, null, 2); // Pretty print JSON
-                } catch (e) {
-                    return data; // Display as plain string if not valid JSON
-                }
+                    return JSON.stringify(parsed, null, 2);
+                } catch (e) { return data; }
             } else if (typeof data === 'object' && data !== null) {
-                return JSON.stringify(data, null, 2); // Pretty print object
+                return JSON.stringify(data, null, 2);
             }
-            return String(data); // Fallback for other types
+            return String(data);
         }
 
         function addLogEntry(log) {
+             if (logContainer.textContent === "Waiting for StephAI's first check...") {
+                 logContainer.innerHTML = ''; // Clear initial message only on first actual log
+             }
+
             const entryDiv = document.createElement('div');
             entryDiv.classList.add('log-entry');
 
@@ -174,63 +284,57 @@
             timestampSpan.classList.add('log-timestamp');
             timestampSpan.textContent = new Date(log.timestamp * 1000).toLocaleTimeString();
 
-            // Display Role (StephAI, scheduler, tool_executor, system)
             const roleSpan = document.createElement('span');
             roleSpan.style.fontWeight = 'bold';
             roleSpan.style.marginRight = '10px';
-            role_display = log.role || 'system'; // Default role
+            const role_display = log.role || 'system';
             roleSpan.textContent = `${role_display}:`;
-             // Simple role-based coloring (customize as needed)
-            if (role_display === 'StephAI') roleSpan.style.color = '#e5c07b'; // Yellow
-            else if (role_display === 'tool_executor') roleSpan.style.color = '#98c379'; // Green
-            else if (role_display === 'scheduler') roleSpan.style.color = '#61afef'; // Blue
-            else roleSpan.style.color = '#abb2bf'; // Default
+            if (role_display === 'StephAI') roleSpan.style.color = '#e5c07b';
+            else if (role_display === 'tool_executor') roleSpan.style.color = '#98c379';
+            else if (role_display === 'scheduler') roleSpan.style.color = '#61afef';
+            else roleSpan.style.color = '#abb2bf';
 
-
-            // Display Message/Data
             const dataSpan = document.createElement('span');
-            // dataSpan.classList.add('log-data'); // Remove fixed indent for conversational flow
-            dataSpan.textContent = formatLogData(log.data);
+            // Removed log-data class to make it inline for conversational flow
+            dataSpan.textContent = formatLogData(log.data); // Use textContent for safety
 
             entryDiv.appendChild(timestampSpan);
-            entryDiv.appendChild(roleSpan); // Add role span
+            entryDiv.appendChild(roleSpan);
             entryDiv.appendChild(dataSpan);
 
             logContainer.appendChild(entryDiv);
+            formatEntryByType(entryDiv, log, dataSpan); // Pass dataSpan for direct styling
 
-            // Add specific formatting based on log type
-            formatEntryByType(entryDiv, log);
-
-            // Auto-scroll to the bottom
             logContainer.scrollTop = logContainer.scrollHeight;
         }
 
-        function formatEntryByType(entryDiv, log) {
-            // Example: Make errors more prominent
-             const dataSpan = entryDiv.querySelector('.log-data'); // Find the data span we added
-             if (!dataSpan) return;
+         function formatEntryByType(entryDiv, log, dataSpan) {
+             // Apply styling based on log type directly to dataSpan or entryDiv
+             if (!dataSpan) return; // Should not happen if called correctly
 
-            if (log.type.includes('error')) {
-                entryDiv.style.backgroundColor = '#4d3333'; // Dark red background for errors
+            if (log.type && log.type.includes('error')) {
+                entryDiv.style.backgroundColor = 'rgba(224, 108, 117, 0.1)'; // Subtle red background
                 dataSpan.style.color = '#e06c75'; // Lighter red text
                 dataSpan.style.fontWeight = 'bold';
             } else if (log.type === 'llm_response') {
-                 // Maybe style LLM responses slightly differently if needed
                  dataSpan.style.fontStyle = 'italic';
+                 dataSpan.style.color = '#e5c07b'; // Match StephAI role color
             } else if (log.type === 'tool_result' || log.type === 'tool_start') {
                  dataSpan.style.color = '#98c379'; // Green for tool actions/results
             } else if (log.type === 'llm_tool_request') {
                  dataSpan.style.color = '#56b6c2'; // Cyan for tool requests
+            } else if (log.type === 'stream_info' || log.type === 'cycle_info') {
+                 dataSpan.style.color = '#61afef'; // Blue for system/cycle info
             }
         }
 
-
-        // --- SSE Connection ---
+        // --- SSE Connection (same as before) ---
         const eventSource = new EventSource("/stream_logs");
 
         eventSource.onopen = function() {
-            logContainer.innerHTML = ''; // Clear initial message
-            addLogEntry({ type: 'stream_info', data: 'Connected to StephAI\'s log stream.', timestamp: Date.now() / 1000, role: 'system' });
+            // Don't clear immediately, wait for first log in addLogEntry
+            // addLogEntry({ type: 'stream_info', data: 'Connected to StephAI\'s log stream.', timestamp: Date.now() / 1000, role: 'system' });
+            console.log("SSE Connected");
         };
 
         eventSource.onmessage = function(event) {
@@ -239,15 +343,13 @@
                 addLogEntry(logEntry);
             } catch (e) {
                 console.error("Failed to parse SSE data:", event.data, e);
-                // Add raw data if parsing fails
-                addLogEntry({ type: 'stream_error', data: `Failed to parse: ${event.data}`, timestamp: Date.now() / 1000 });
+                addLogEntry({ type: 'stream_error', data: `Failed to parse log: ${event.data}`, timestamp: Date.now() / 1000, role: 'system' });
             }
         };
 
         eventSource.onerror = function(err) {
             console.error("EventSource failed:", err);
-            addLogEntry({ type: 'stream_error', data: 'Log stream connection error. Reconnecting...', timestamp: Date.now() / 1000, role: 'system' });
-            // EventSource attempts reconnection automatically by default
+            addLogEntry({ type: 'stream_error', data: 'Log stream connection error. Check console.', timestamp: Date.now() / 1000, role: 'system' });
         };
 
     </script>

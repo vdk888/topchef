@@ -6,3 +6,4 @@ schedule
 SQLAlchemy>=1.4 # Use a specific enough version
 psycopg2-binary # PostgreSQL driver
 gunicorn # WSGI server for production/deployment
+geopy>=2.4 # Added for geocoding addresses

@@ -4,6 +4,7 @@ import time
 import queue # For handling log messages between agent and SSE stream
 import threading # To manage the queue safely
 from flask import Flask, render_template, request, Response, jsonify
+from markupsafe import escape # Import escape from markupsafe
 from topchef_agent.database import load_database # No need for save_database here anymore
 from topchef_agent.config import DATABASE_URL # Use database URL for validation maybe
 
@@ -18,24 +19,44 @@ log_queue = queue.Queue()
 
 @app.route('/')
 def index():
-    """Displays the main page with the chef database and log viewer."""
+    """Displays the main page with the map and log viewer."""
     try:
-        chefs = load_database()
-        headers = []
-        if chefs:
-            all_keys = set()
-            for chef in chefs:
-                all_keys.update(chef.keys())
-            # Update the preferred order to match the actual database schema
-            preferred_order = ["id", "name", "bio", "image_url", "status", "last_updated", "perplexity_data"]
-            headers = [key for key in preferred_order if key in all_keys]
-            headers.extend(sorted([key for key in all_keys if key not in preferred_order]))
+        chefs_data = load_database()
+        # Filter out chefs without valid coordinates for the map display itself,
+        # but we'll pass all data for potential popups or future use.
+        # Ensure latitude and longitude are floats if they exist
+        valid_chefs_for_map = []
+        for chef in chefs_data:
+            try:
+                lat = float(chef.get('latitude')) if chef.get('latitude') is not None else None
+                lon = float(chef.get('longitude')) if chef.get('longitude') is not None else None
+                if lat is not None and lon is not None:
+                     # Basic validation for France coordinates
+                     if 41.0 < lat < 51.5 and -5.5 < lon < 10.0:
+                         chef['latitude'] = lat
+                         chef['longitude'] = lon
+                         valid_chefs_for_map.append(chef)
+                     else:
+                         print(f"Warning: Chef ID {chef.get('id')} has coordinates outside France: ({lat}, {lon}). Skipping for map marker.")
+                # Keep the original chef data in chefs_data for potential full list display or other features
+            except (ValueError, TypeError) as coord_err:
+                 print(f"Warning: Invalid coordinate format for Chef ID {chef.get('id')}: {coord_err}. Skipping for map marker.")
 
-        return render_template('index.html', chefs=chefs, headers=headers)
+
+        # Convert the list of chef dictionaries to a JSON string safely
+        # Use json.dumps for proper JSON formatting, pass this to the template
+        chefs_json = json.dumps(chefs_data)
+
+        # Pass the JSON string to the template
+        return render_template('index.html', chefs_json=chefs_json)
+
     except Exception as e:
         print(f"Error in index route: {e}")
-        # Return a basic page if there's an error
-        return f"<html><body><h1>Top Chef Agent</h1><p>Error loading data: {e}</p><p><a href='/'>Retry</a></p></body></html>"
+        import traceback
+        traceback.print_exc()
+        # Return a basic error page
+        # Use escape to prevent potential XSS if error message contains HTML/JS
+        return f"<html><body><h1>Top Chef Agent</h1><p>Error loading data: {escape(str(e))}</p><p><a href='/'>Retry</a></p></body></html>"
 
 @app.route('/log_message', methods=['POST'])
 def receive_log():

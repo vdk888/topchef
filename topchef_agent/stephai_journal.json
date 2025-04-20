@@ -61,5 +61,158 @@
     "related_season": 3,
     "related_chef_id": null,
     "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "a153c2a6-82c8-49be-a228-6571f0c38d9c",
+    "timestamp": "2025-04-20T02:37:09.643568Z",
+    "type": "Observation",
+    "details": "Season 3 chefs (Jean Dupont, Marie Dubois, Pierre Martin) are missing restaurant address, latitude, and longitude. Marie Dubois appears to be incorrectly listed in Season 3 and her bio states she won Season 2.",
+    "related_season": 3,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "64a1ba2a-832f-4d33-ad9d-aa93f2433a64",
+    "timestamp": "2025-04-20T02:37:12.843313Z",
+    "type": "Action",
+    "details": "Searching web for Marie Dubois' current restaurant and status to correct her record in Season 3.",
+    "related_season": 3,
+    "related_chef_id": 2,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "d7e1ae88-823d-4f17-a8d1-0d8f7522189d",
+    "timestamp": "2025-04-20T02:37:26.644566Z",
+    "type": "Error",
+    "details": "Web search for Marie Dubois' restaurant and status was unsuccessful.",
+    "related_season": 3,
+    "related_chef_id": 2,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "69d9e015-244f-43b3-853d-162d746475ca",
+    "timestamp": "2025-04-20T02:37:31.238013Z",
+    "type": "Action",
+    "details": "Planning to search the web for the current restaurant addresses of Jean Dupont and Pierre Martin from Season 3.",
+    "related_season": 3,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "c73ef4ad-6e13-472e-84a0-97671e91d373",
+    "timestamp": "2025-04-20T02:37:41.262908Z",
+    "type": "Error",
+    "details": "Web search for Jean Dupont's restaurant address was unsuccessful.",
+    "related_season": 3,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "1a402e30-3775-44c8-b244-2d77911700ca",
+    "timestamp": "2025-04-20T02:37:47.251655Z",
+    "type": "Action",
+    "details": "Attempting web search for Pierre Martin's current restaurant address from Season 3.",
+    "related_season": 3,
+    "related_chef_id": 3,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "22d64c87-93ea-422e-8d18-fb7b686a2ae2",
+    "timestamp": "2025-04-20T02:38:00.979226Z",
+    "type": "Error",
+    "details": "Web search for Pierre Martin's restaurant address was unsuccessful.",
+    "related_season": 3,
+    "related_chef_id": 3,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "887143a7-7a71-4068-b996-ffaa4b75590d",
+    "timestamp": "2025-04-20T02:38:05.645108Z",
+    "type": "Insight",
+    "details": "Finding current restaurant information for chefs from older Top Chef France seasons (like Season 3) through general web searches is difficult. More specialized sources may be needed.",
+    "related_season": 3,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "af0977c8-6ba5-4f14-9853-a31ea87217e8",
+    "timestamp": "2025-04-20T02:38:52.595879Z",
+    "type": "Observation",
+    "details": "Chef ID 1 (Jean Dupont) from Season 3 is missing restaurant_address, latitude, and longitude.",
+    "related_season": 3,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "ec75c6b3-7b43-4c22-bf3f-3b05f088c642",
+    "timestamp": "2025-04-20T02:38:57.272869Z",
+    "type": "Action",
+    "details": "Attempting to search web for restaurant_address for Chef ID 1 (Jean Dupont) from Season 3.",
+    "related_season": 3,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "c1d21e6c-65e3-49e9-af99-96c8b46a569a",
+    "timestamp": "2025-04-20T02:39:08.613237Z",
+    "type": "Error",
+    "details": "Web search for restaurant_address for Chef ID 1 (Jean Dupont) from Season 3 was unsuccessful.",
+    "related_season": 3,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "efb7d4eb-1538-4466-98e2-4c2d6e8d4e09",
+    "timestamp": "2025-04-20T02:39:13.112865Z",
+    "type": "Observation",
+    "details": "Chef ID 3 (Pierre Martin) from Season 3 is missing restaurant_address, latitude, and longitude.",
+    "related_season": 3,
+    "related_chef_id": 3,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "b6fdd909-f455-40f1-a833-9a90e28f4ed4",
+    "timestamp": "2025-04-20T02:39:17.602781Z",
+    "type": "Action",
+    "details": "Attempting to search web for restaurant_address for Chef ID 3 (Pierre Martin) from Season 3.",
+    "related_season": 3,
+    "related_chef_id": 3,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "3f76375e-22d2-4e0e-80f6-466a4e9ca013",
+    "timestamp": "2025-04-20T02:39:30.538316Z",
+    "type": "Error",
+    "details": "Web search for restaurant_address for Chef ID 3 (Pierre Martin) from Season 3 was unsuccessful.",
+    "related_season": 3,
+    "related_chef_id": 3,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "ea290bb2-d7a4-48a4-8651-c07a445b8198",
+    "timestamp": "2025-04-20T02:39:42.352861Z",
+    "type": "Observation",
+    "details": "Chef ID 2 (Marie Dubois) from Season 3 has 'Incorrectly Added' status and no web results confirm her participation in Season 3. Planning to remove her record.",
+    "related_season": 3,
+    "related_chef_id": 2,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "e0aa5e11-e2e0-4216-9a5d-a6d0bf62847c",
+    "timestamp": "2025-04-20T02:39:46.676462Z",
+    "type": "Action",
+    "details": "Attempting to remove record for Chef ID 2 (Marie Dubois) from Season 3.",
+    "related_season": 3,
+    "related_chef_id": 2,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "0fbea580-2b53-412c-ae09-fcc38b9e258d",
+    "timestamp": "2025-04-20T02:39:51.113992Z",
+    "type": "Insight",
+    "details": "Realized there is no tool to remove a chef record by ID. Can only update fields or remove columns.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
   }
 ]

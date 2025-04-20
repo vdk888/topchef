@@ -1,5 +1,5 @@
 import os
-from sqlalchemy import create_engine, Column, Integer, String, Text, JSON, text # Added text
+from sqlalchemy import create_engine, Column, Integer, String, Text, JSON, Float, text # Added Float, text
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.exc import SQLAlchemyError
 from contextlib import contextmanager
@@ -30,11 +30,22 @@ class Chef(Base):
     status = Column(Text, nullable=True)
     last_updated = Column('last_updated', Text, nullable=True)
     perplexity_data = Column('perplexity_data', JSON, nullable=True)
-    restaurant_address = Column(Text, nullable=False)  # NEW mandatory field
+    restaurant_address = Column(Text, nullable=True) # Changed to nullable=True initially
+    latitude = Column(Float, nullable=True) # NEW coordinate field
+    longitude = Column(Float, nullable=True) # NEW coordinate field
+
 
     def to_dict(self):
-        """Converts the Chef object to a dictionary."""
-        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+        """Converts the Chef object to a dictionary, handling potential missing columns."""
+        data = {}
+        for c in self.__table__.columns:
+            # Check if the attribute exists on the instance before accessing
+            # This helps if the DB schema is slightly ahead/behind the model definition during transitions
+            if hasattr(self, c.name):
+                data[c.name] = getattr(self, c.name)
+            else:
+                data[c.name] = None # Or some other default value
+        return data
 
 # --- Database Session Context Manager ---
 @contextmanager
@@ -51,26 +62,67 @@ def get_db():
         db.close()
 
 # --- Database Operations ---
+# Helper to check if a column exists
+def column_exists(engine, table_name, column_name):
+    from sqlalchemy import inspect
+    inspector = inspect(engine)
+    columns = [col['name'] for col in inspector.get_columns(table_name)]
+    return column_name in columns
+
 def create_table_if_not_exists():
-    """Creates the 'chefs' table in the database if it doesn't exist. Adds restaurant_address column if missing."""
+    """Creates the 'chefs' table and adds missing columns (idempotent)."""
     try:
-        print("Checking if 'chefs' table exists and creating if necessary...")
+        print("Checking if 'chefs' table exists and creating/updating if necessary...")
+        # Create table based on the model
         Base.metadata.create_all(bind=engine)
-        print("'chefs' table check complete.")
-        # Add sample data if the table is newly created and empty
+        print("'chefs' table structure check complete.")
+
+        # Manually check and add columns if they don't exist (SQLAlchemy create_all might not add columns to existing tables)
+        # This is a simple migration strategy; Alembic is recommended for complex changes.
+        columns_to_ensure = [
+            ("restaurant_address", "TEXT"),
+            ("latitude", "FLOAT"),
+            ("longitude", "FLOAT")
+        ]
+        with engine.connect() as connection:
+            for col_name, col_type in columns_to_ensure:
+                 if not column_exists(engine, Chef.__tablename__, col_name):
+                     print(f"Column '{col_name}' missing, attempting to add...")
+                     try:
+                         # Use ALTER TABLE to add the column
+                         # Making address nullable initially to avoid breaking existing data
+                         null_constraint = "NULL" if col_name == "restaurant_address" else "NULL"
+                         sql_command = text(f"ALTER TABLE {Chef.__tablename__} ADD COLUMN {col_name} {col_type} {null_constraint}")
+                         with connection.begin():
+                             connection.execute(sql_command)
+                         print(f"Successfully added column '{col_name}'.")
+                     except SQLAlchemyError as alter_err:
+                         # Check if the error is because it *now* exists (race condition?) or other issue
+                         if "already exists" in str(alter_err).lower():
+                             print(f"Column '{col_name}' already exists (detected after check).")
+                         else:
+                             print(f"Error adding column '{col_name}': {alter_err}")
+                             # Decide if this is critical; maybe raise error or just warn
+                             # raise # Uncomment to make failure critical
+
+
+        # Add sample data if the table is empty
         with get_db() as db:
             if db.query(Chef).count() == 0:
                 print("Table is empty. Adding initial sample data...")
                 sample_data = [
-                    Chef(name="Marie Dubois", bio="Winner of Top Chef Season 2", image_url="", status="Winner", perplexity_data={}, restaurant_address=""),
-                    Chef(name="Pierre Martin", bio="Known for modern techniques", image_url="", status="Finalist", perplexity_data={}, restaurant_address="")
+                    Chef(name="Marie Dubois", bio="Winner of Top Chef Season 2", image_url="", status="Winner", perplexity_data={}, restaurant_address="1 Rue de Rivoli, 75001 Paris, France", latitude=48.8566, longitude=2.3522), # Example coords
+                    Chef(name="Pierre Martin", bio="Known for modern techniques", image_url="", status="Finalist", perplexity_data={}, restaurant_address="10 Avenue des Champs-Élysées, 75008 Paris, France", latitude=48.8698, longitude=2.3070) # Example coords
                 ]
                 db.add_all(sample_data)
                 db.commit()
                 print("Sample data added.")
     except Exception as e:
-        print(f"CRITICAL: Failed to create or check table: {e}")
-        raise
+        print(f"CRITICAL: Failed during table creation/update: {e}")
+        import traceback
+        traceback.print_exc() # Print full traceback for debugging
+        # Decide whether to raise or allow the app to continue potentially broken
+        # raise # Uncomment to make failure critical
 
 def load_database():
     """Loads all chef records from the database."""
@@ -197,22 +249,16 @@ def remove_column(table_name: str, column_name: str):
         return False
 
 # --- Initial Setup ---
-# Call this once when the application starts to ensure the table exists
-# In a Flask app, this is often done before the first request or at startup.
-# For simplicity, we can call it here, but be mindful of multiple processes.
-# A better approach might be a separate migration script or startup hook.
-try:
-    add_column("chefs", "restaurant_address", "TEXT NOT NULL DEFAULT ''")
-except Exception as e:
-    print(f"Warning: Could not ensure restaurant_address column exists: {e}")
-
+# Call this once when the application starts to ensure the table exists and has necessary columns.
+# This might run multiple times if multiple processes import it (e.g., Flask dev server, scheduler)
+# The function `create_table_if_not_exists` is designed to be mostly idempotent.
 if __name__ == '__main__':
     print("Running database setup directly...")
     create_table_if_not_exists()
     print("\nLoading initial data:")
-    print(load_database())
+    initial_data = load_database()
+    print(f"Loaded {len(initial_data)} records.")
+    # print(initial_data) # Optionally print the data
 else:
-    # Ensure table exists when module is imported by other parts of the app
-    # This might run multiple times if multiple processes import it (e.g., Flask dev server, scheduler)
-    # create_all is idempotent, so it's safe but might print messages multiple times.
+    # Ensure table exists and columns are checked when module is imported
     create_table_if_not_exists()

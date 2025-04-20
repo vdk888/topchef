@@ -9,6 +9,8 @@ from openai import OpenAI, APIError
 # Import all necessary functions from database
 # Added add_column and remove_column imports
 from database import load_database, update_chef, get_distinct_seasons, get_chefs_by_season, add_column, remove_column
+from geopy.geocoders import Nominatim
+from geopy.exc import GeocoderTimedOut, GeocoderServiceError
 from config import OPENROUTER_API_KEY, PERPLEXITY_API_KEY, YOUR_SITE_URL, YOUR_SITE_NAME
 
 # --- Logging Helper ---
@@ -255,6 +257,52 @@ def execute_remove_db_column(table_name: str, column_name: str):
         log_to_ui("tool_error", {"name": "remove_db_column", "input": tool_input_data, "error": str(e)})
         return error_msg
 
+# --- NEW Geocoding Tool Function ---
+def execute_geocode_address(address: str):
+    """Geocodes a given street address to latitude and longitude using Nominatim."""
+    tool_input_data = {"address": address}
+    log_to_ui("tool_start", {"name": "geocode_address", "input": tool_input_data})
+    print(f"--- Tool: Executing Geocode Address ---", flush=True)
+    print(f"  Address: {address}", flush=True)
+
+    if not isinstance(address, str) or not address:
+        error_msg = json.dumps({"error": "Invalid or empty address provided."})
+        log_to_ui("tool_error", {"name": "geocode_address", "input": tool_input_data, "error": "Invalid address."})
+        return error_msg
+
+    # Initialize geocoder (consider adding a user_agent)
+    geolocator = Nominatim(user_agent="topchef_agent_app/1.0") # Good practice to set user_agent
+    try:
+        # Add country bias for better results if applicable (e.g., country_bias='FR' for France)
+        location = geolocator.geocode(address, timeout=10, country_codes='FR') # 10 second timeout, bias to France
+        if location:
+            coordinates = {"latitude": location.latitude, "longitude": location.longitude}
+            result_msg = json.dumps(coordinates)
+            print(f"  Geocoding successful: Lat={location.latitude}, Lon={location.longitude}", flush=True)
+            log_to_ui("tool_result", {"name": "geocode_address", "input": tool_input_data, "result": coordinates})
+            return result_msg
+        else:
+            error_msg = json.dumps({"error": f"Address not found or could not be geocoded: {address}"})
+            print(f"  Geocoding failed: Address not found.", flush=True)
+            log_to_ui("tool_error", {"name": "geocode_address", "input": tool_input_data, "error": "Address not found."})
+            return error_msg
+    except GeocoderTimedOut:
+        error_msg = json.dumps({"error": "Geocoding service timed out."})
+        print(f"  Geocoding error: Timeout.", flush=True)
+        log_to_ui("tool_error", {"name": "geocode_address", "input": tool_input_data, "error": "GeocoderTimedOut."})
+        return error_msg
+    except GeocoderServiceError as e:
+        error_msg = json.dumps({"error": f"Geocoding service error: {e}"})
+        print(f"  Geocoding error: Service error {e}.", flush=True)
+        log_to_ui("tool_error", {"name": "geocode_address", "input": tool_input_data, "error": f"GeocoderServiceError: {e}"})
+        return error_msg
+    except Exception as e:
+        error_msg = json.dumps({"error": f"Unexpected error during geocoding: {e}"})
+        print(f"  Geocoding error: Unexpected {e}.", flush=True)
+        log_to_ui("tool_error", {"name": "geocode_address", "input": tool_input_data, "error": str(e)})
+        return error_msg
+
+
 # --- Journaling Tool Functions ---
 JOURNAL_FILE = "topchef_agent/stephai_journal.json"
 
@@ -401,7 +449,7 @@ tools_list = [
         "type": "function",
         "function": {
             "name": "update_chef_record",
-            "description": "Updates a specific field for a specific chef in the PostgreSQL database. Use this ONLY after obtaining verified information (e.g., from search_web_perplexity). Allowed fields are 'bio', 'image_url', 'status', 'perplexity_data', 'restaurant_address', or potentially custom fields.",
+            "description": "Updates a specific field for a specific chef in the PostgreSQL database. Use this ONLY after obtaining verified information (e.g., from search_web_perplexity or geocoding). Allowed fields are 'bio', 'image_url', 'status', 'perplexity_data', 'restaurant_address', 'latitude', 'longitude', or potentially custom fields.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -411,11 +459,11 @@ tools_list = [
                     },
                     "field_name": {
                         "type": "string",
-                        "description": "The exact name of the database field to update (e.g., 'bio', 'image_url', 'status', 'perplexity_data', 'restaurant_address', or a custom added field)."
+                        "description": "The exact name of the database field to update (e.g., 'bio', 'image_url', 'status', 'perplexity_data', 'restaurant_address', 'latitude', 'longitude', or a custom added field)."
                     },
                     "new_value": {
-                        "type": "string",
-                        "description": "The new value to set for the specified field."
+                        "type": ["string", "number", "null"], # Allow numbers for lat/lon, null might be needed
+                        "description": "The new value to set for the specified field. Should be a number for latitude/longitude."
                     }
                 },
                 "required": ["chef_id", "field_name", "new_value"]
@@ -512,6 +560,24 @@ tools_list = [
                 "required": ["table_name", "column_name"]
             }
         }
+    },
+    # --- NEW Geocoding Tool Definition ---
+    {
+        "type": "function",
+        "function": {
+            "name": "geocode_address",
+            "description": "Converts a physical street address into geographic coordinates (latitude and longitude). Use this when a chef has a 'restaurant_address' but is missing 'latitude' or 'longitude'. Biased towards France.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "address": {
+                        "type": "string",
+                        "description": "The full street address to geocode (e.g., '1 Rue de Rivoli, 75001 Paris, France')."
+                    }
+                },
+                "required": ["address"]
+            }
+        }
     }
 ]
 
@@ -526,6 +592,7 @@ available_functions = {
     # --- NEW TOOL MAPPING ---
     "add_db_column": execute_add_db_column,
     "remove_db_column": execute_remove_db_column,
+    "geocode_address": execute_geocode_address, # Added geocoding function
 }
 
 # --- LLM Agent Setup ---
@@ -572,7 +639,8 @@ You are {AGENT_NAME}, an autonomous AI agent responsible for maintaining a datab
 - `get_distinct_seasons`: Get available season numbers.
 - `get_chefs_by_season`: Get chef data for a specific season.
 - `search_web_perplexity`: Search web for specific info about a chef.
-- `update_chef_record`: Update a chef's record in the database (use ONLY after verification). Allowed fields are 'bio', 'image_url', 'status', 'perplexity_data', **'restaurant_address'**, or potentially custom fields.
+- `update_chef_record`: Update a chef's record. Allowed fields: 'bio', 'image_url', 'status', 'perplexity_data', 'restaurant_address', 'latitude', 'longitude', custom fields. **Use ONLY after verification/geocoding.**
+- `geocode_address`: Get latitude/longitude from a street address (use when address exists but coords are missing). Biased towards France.
 - `read_journal`: Read your entire persistent journal file to recall past events.
 - `append_journal_entry`: Add an entry to your persistent journal file. Use types: "Observation", "Action", "Error", "Insight", "Correction".
 - `add_db_column`: Adds a new column to the 'chefs' table. Use snake_case for column names. Use standard SQL types like TEXT, INTEGER, BOOLEAN, JSON.
@@ -594,17 +662,22 @@ Your Workflow & Journaling:
 3. **If Task is Brainstorming:** Think about what new information Top Chef fans might find interesting (e.g., signature dish, notable wins, social media link) or if any existing columns are redundant/useless. Propose adding a column using `add_db_column` or removing one using `remove_db_column`. Log the plan and result.
 4. **If Task is Routine Check:** Decide on the season to check.
 5. Retrieve season data using `get_chefs_by_season`.
-6. **Critically Analyze Data (Routine Check):** Examine for missing fields, inconsistencies (e.g., cross-season anomalies), and plausibility. **If `restaurant_address` is missing or empty, this is a critical error and must be prioritized for correction.**
+6. **Critically Analyze Data (Routine Check):**
+    - Examine each chef record for missing fields (especially `restaurant_address`, `latitude`, `longitude`), inconsistencies, and plausibility.
+    - **Priority 1: Missing Address:** If `restaurant_address` is missing or empty, this is critical. Plan to use `search_web_perplexity` to find it.
+    - **Priority 2: Missing Coordinates:** If `restaurant_address` *exists* but `latitude` or `longitude` is missing, plan to use `geocode_address` with the existing address.
+    - **Priority 3: Other Missing Info:** Check for missing `bio`, `status`, etc. Plan `search_web_perplexity` if needed.
 7. **Evaluate & Log Observation (Routine Check):**
-    - **Consider Significance:** Before logging, assess if the findings are truly significant (major errors, widespread missing data) or novel compared to past journal entries (use `read_journal` if unsure). Avoid logging minor, repetitive details unless they form a pattern.
-    - **Log Key Findings:** Use `append_journal_entry` (type "Observation") for significant findings. Be concise but informative. Include `related_season`/`related_chef_id`.
-8. **State Analysis Outcome & Plan (Routine Check):** Report findings, referencing the journal entry if made. Prioritize action based on significance (major inconsistency > important missing field > minor missing field).
+    - **Consider Significance:** Before logging, assess if the findings are truly significant (missing address/coords, major errors) or novel compared to past journal entries (use `read_journal` if unsure).
+    - **Log Key Findings:** Use `append_journal_entry` (type "Observation") for significant findings (e.g., "Chef ID 5 missing coordinates", "Chef ID 8 missing address"). Be concise. Include `related_chef_id`.
+8. **State Analysis Outcome & Plan (Routine Check):** Report findings (e.g., "Incroyable! Chef Pierre is missing his coordinates!"). Prioritize actions based on the analysis (Address > Coordinates > Other). State the planned tool use clearly.
 9. **Execute Action (Routine Check/Brainstorming):**
-    - **Log Planned Action:** Use `append_journal_entry` (type "Action") *before* execution, describing the planned tool use (e.g., "Attempting web search for Chef Y's bio", "Adding 'signature_dish' column").
-    - Execute the tool (`search_web_perplexity`, `update_chef_record`, `add_db_column`, `remove_db_column`).
+    - **Log Planned Action:** Use `append_journal_entry` (type "Action") *before* execution (e.g., "Attempting to geocode address for Chef Pierre", "Searching web for Chef Marie's address").
+    - Execute the planned tool (`search_web_perplexity`, `geocode_address`, `update_chef_record`, `add_db_column`, `remove_db_column`).
 10. **Process Tool Result (Routine Check/Brainstorming):**
-    - State the outcome.
-    - **Log Result/Error:** Use `append_journal_entry`. Log successful search results as "Observation", successful updates/column additions/removals as "Action" (confirming the planned action), and failures as "Error" with details.
+    - State the outcome (e.g., "Et voilà! Geocoding successful!", " Zut! The search returned nothing useful.").
+    - **Log Result/Error:** Use `append_journal_entry`. Log successful searches/geocoding as "Observation" (containing the found data). Log successful `update_chef_record` or schema changes as "Action" (confirming the plan). Log failures as "Error".
+    - **Plan Next Step if Needed:** If geocoding was successful, the *immediate next step* MUST be to plan and execute `update_chef_record` for both `latitude` and `longitude` using the geocoding result. If a search found an address, plan to update the address *and then* plan to geocode it in the next iteration.
 11. **Evaluate Next Step & Log Insight (Routine Check/Brainstorming):**
     - Based on the outcome, decide the next step (e.g., plan update, try different search, move on).
     - **Log Insight:** If you learned something (e.g., "Perplexity search ineffective for image URLs", "Season 3 data seems unreliable", "Adding/removing columns requires app restart for ORM"), log this using `append_journal_entry` (type "Insight"). Consider reading the journal to see if this insight refines previous ones.
