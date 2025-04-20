@@ -1,4 +1,5 @@
 import os
+import datetime # Import datetime
 from sqlalchemy import create_engine, Column, Integer, String, Text, JSON, Float, text # Added Float, text
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.exc import SQLAlchemyError
@@ -42,7 +43,12 @@ class Chef(Base):
             # Check if the attribute exists on the instance before accessing
             # This helps if the DB schema is slightly ahead/behind the model definition during transitions
             if hasattr(self, c.name):
-                data[c.name] = getattr(self, c.name)
+                value = getattr(self, c.name)
+                # Convert datetime objects to ISO format string for JSON serialization
+                if isinstance(value, datetime.datetime):
+                    data[c.name] = value.isoformat()
+                else:
+                    data[c.name] = value
             else:
                 data[c.name] = None # Or some other default value
         return data
@@ -69,13 +75,21 @@ def column_exists(engine, table_name, column_name):
     columns = [col['name'] for col in inspector.get_columns(table_name)]
     return column_name in columns
 
-def create_table_if_not_exists():
-    """Creates the 'chefs' table and adds missing columns (idempotent)."""
+def create_table_if_not_exists(drop_first=False):
+    """Creates the 'chefs' table. Optionally drops it first."""
     try:
         print("Checking if 'chefs' table exists and creating/updating if necessary...")
+        if drop_first:
+            print(f"Dropping table '{Chef.__tablename__}' before creation...")
+            try:
+                Base.metadata.drop_all(bind=engine, tables=[Chef.__table__])
+                print(f"Table '{Chef.__tablename__}' dropped successfully.")
+            except Exception as drop_err:
+                print(f"Warning: Could not drop table '{Chef.__tablename__}' (might not exist): {drop_err}")
+
         # Create table based on the model
         Base.metadata.create_all(bind=engine)
-        print("'chefs' table structure check complete.")
+        print(f"Table '{Chef.__tablename__}' created/ensured.")
 
         # Manually check and add columns if they don't exist (SQLAlchemy create_all might not add columns to existing tables)
         # This is a simple migration strategy; Alembic is recommended for complex changes.
@@ -136,19 +150,7 @@ def load_database():
         # Return empty list on error, allows UI to potentially still load
     return chefs_list
 
-def get_distinct_seasons():
-    """Retrieves a list of distinct season numbers from the database."""
-    # Since we don't have a season column anymore, return a default list
-    print("get_distinct_seasons called, returning default list as season column no longer exists")
-    return [1, 2, 3, 4, 5]  # Return some default seasons
-
-def get_chefs_by_season(season_number: int):
-    """
-    Since season_number no longer exists in our database schema,
-    just return all chefs for any season request
-    """
-    print(f"get_chefs_by_season called with season {season_number}, returning all chefs as season column no longer exists")
-    return load_database()  # Return all chefs since we can't filter by season
+# Removed get_distinct_seasons() and get_chefs_by_season() as they are deprecated
 
 def update_chef(chef_id: int, update_data: dict):
     """Updates a specific chef record in the database."""
@@ -253,12 +255,13 @@ def remove_column(table_name: str, column_name: str):
 # This might run multiple times if multiple processes import it (e.g., Flask dev server, scheduler)
 # The function `create_table_if_not_exists` is designed to be mostly idempotent.
 if __name__ == '__main__':
-    print("Running database setup directly...")
-    create_table_if_not_exists()
+    print("Running database setup directly (dropping table first)...")
+    create_table_if_not_exists(drop_first=True) # Drop the table on direct run
     print("\nLoading initial data:")
     initial_data = load_database()
     print(f"Loaded {len(initial_data)} records.")
     # print(initial_data) # Optionally print the data
 else:
     # Ensure table exists and columns are checked when module is imported
-    create_table_if_not_exists()
+    # Set drop_first=False (or omit) for regular imports to avoid data loss on every import
+    create_table_if_not_exists(drop_first=False)

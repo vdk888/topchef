@@ -52,24 +52,23 @@ def execute_get_distinct_seasons():
         print(f"  Error getting seasons: {e}", flush=True)
         return error_msg
 
-def execute_get_chefs_by_season(season_number: int):
-    """Gets chef data for a specific season."""
-    log_to_ui("tool_start", {"name": "get_chefs_by_season", "input": {"season_number": season_number}})
-    print(f"--- Tool: Executing Get Chefs By Season {season_number} ---", flush=True)
-    if not isinstance(season_number, int):
-        error_msg = json.dumps({"error": "Invalid input type for season_number."})
-        log_to_ui("tool_error", {"name": "get_chefs_by_season", "error": "Invalid input type."})
-        return error_msg
+# Renamed from execute_get_chefs_by_season, removed season_number arg
+def execute_get_all_chefs():
+    """Gets ALL chef records from the database."""
+    log_to_ui("tool_start", {"name": "get_all_chefs"})
+    print(f"--- Tool: Executing Get All Chefs ---", flush=True)
+    # No input validation needed as there are no arguments
     try:
-        chefs = get_chefs_by_season(season_number)
+        # Directly call load_database which fetches all chefs
+        chefs = load_database()
         result_msg = json.dumps({"chefs": chefs})
-        log_to_ui("tool_result", {"name": "get_chefs_by_season", "result": f"{len(chefs)} chefs found."}) # Keep log concise
-        print(f"  Found {len(chefs)} chefs for season {season_number}.", flush=True)
+        log_to_ui("tool_result", {"name": "get_all_chefs", "result": f"{len(chefs)} chefs found."}) # Keep log concise
+        print(f"  Found {len(chefs)} total chefs.", flush=True)
         return result_msg
     except Exception as e:
-        error_msg = json.dumps({"error": f"Failed to get chefs for season {season_number}: {e}"})
-        log_to_ui("tool_error", {"name": "get_chefs_by_season", "error": str(e)})
-        print(f"  Error getting chefs: {e}", flush=True)
+        error_msg = json.dumps({"error": f"Failed to get all chefs: {e}"})
+        log_to_ui("tool_error", {"name": "get_all_chefs", "error": str(e)})
+        print(f"  Error getting all chefs: {e}", flush=True)
         return error_msg
 
 def execute_search_web_perplexity(query: str):
@@ -403,29 +402,20 @@ def execute_append_journal_entry(entry_type: str, details: str, related_season: 
 # --- Tool Definitions for LLM ---
 
 tools_list = [
+    # { # Removed get_distinct_seasons as it's no longer relevant
+    #     "type": "function",
+    #     "function": {
+    #         "name": "get_distinct_seasons",
+    #         "description": "DEPRECATED: Retrieves a list of all available season numbers present in the database.",
+    #         "parameters": {"type": "object", "properties": {}}
+    #     }
+    # },
     {
         "type": "function",
         "function": {
-            "name": "get_distinct_seasons",
-            "description": "Retrieves a list of all available season numbers present in the database.",
-            "parameters": {"type": "object", "properties": {}} # No parameters
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "get_chefs_by_season",
-            "description": "Retrieves all chef records for a specific season number from the database.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "season_number": {
-                        "type": "integer",
-                        "description": "The season number to fetch chefs for."
-                    }
-                },
-                "required": ["season_number"]
-            }
+            "name": "get_all_chefs", # Renamed from get_chefs_by_season
+            "description": "Retrieves ALL chef records from the database.",
+            "parameters": {"type": "object", "properties": {}} # No parameters needed
         }
     },
     {
@@ -583,8 +573,8 @@ tools_list = [
 
 # Map tool names to their execution functions
 available_functions = {
-    "get_distinct_seasons": execute_get_distinct_seasons,
-    "get_chefs_by_season": execute_get_chefs_by_season,
+    # "get_distinct_seasons": execute_get_distinct_seasons, # Removed
+    "get_all_chefs": execute_get_all_chefs, # Renamed from get_chefs_by_season
     "search_web_perplexity": execute_search_web_perplexity,
     "update_chef_record": execute_update_chef_record,
     "read_journal": execute_read_journal,
@@ -629,15 +619,14 @@ You are {AGENT_NAME}, an autonomous AI agent responsible for maintaining a datab
 **Your Persona:** You must adopt the personality and speaking style of **Stéphane Rotenberg**, the charismatic host of Top Chef France on M6. Be enthusiastic, engaging, slightly dramatic, and use culinary language where appropriate. Address the process like you're commentating on the show for the viewers watching the UI (`index.html`). Think step-by-step, but explain your actions with flair!
 **Your Ultimate Mission & Goal:** Your core purpose is to maintain and continuously improve a comprehensive, high-quality database about Top Chef France candidates across all seasons. This database is the foundation for your ability to entertain and advise users interested in these chefs – providing details about their seasons, current restaurants, culinary styles, latest news, projects, addresses, and any useful information for someone wanting to experience their cuisine.
 
-**Your Operational Goal (How you achieve the mission):** Like a meticulous chef checking ingredients, your immediate technical task in each cycle is to identify missing, inaccurate, or outdated information within the database. Use your available tools ('Kitchen Equipment') to research, verify, and update records. Pay special attention to ensuring every chef has a valid, exact `restaurant_address`. When brainstorming, consider adding new, relevant data points (columns) or removing outdated ones to enhance the database's value for advising users.
+**Your Operational Goal (How you achieve the mission):** Like a meticulous chef checking ingredients, your immediate technical task in each cycle is to identify missing, inaccurate, or outdated information within the database. Use your available tools ('Kitchen Equipment') to research, verify, and update records. Pay special attention to ensuring every chef has a valid, exact `restaurant_address` and corresponding `latitude`/`longitude`. When brainstorming, consider adding new, relevant data points (columns) or removing outdated ones to enhance the database's value for advising users.
 
 **Example Tone:** "Allez, let's dive into the database pantry!", "Incroyable! We have an anomaly here!", "Suspense... will the web search yield the missing ingredient?", "Et voilà! The database is updated!", "Hmm, perhaps we need a new category for 'Signature Dish'?"
 
 **Crucially:** While adopting the persona, you MUST still follow the technical workflow accurately.
 
 **Available Tools (Your Kitchen Equipment):**
-- `get_distinct_seasons`: Get available season numbers.
-- `get_chefs_by_season`: Get chef data for a specific season.
+- `get_all_chefs`: Get ALL chef records from the database. (Replaces previous season-based tools).
 - `search_web_perplexity`: Search web for specific info about a chef.
 - `update_chef_record`: Update a chef's record. Allowed fields: 'bio', 'image_url', 'status', 'perplexity_data', 'restaurant_address', 'latitude', 'longitude', custom fields. **Use ONLY after verification/geocoding.**
 - `geocode_address`: Get latitude/longitude from a street address (use when address exists but coords are missing). Biased towards France.
@@ -650,27 +639,26 @@ Your Workflow & Journaling:
 1. Acknowledge the task.
 2. **If Task is "Fun Fact":**
     - Announce you're looking for a fun fact for the viewers.
-    - Use `get_distinct_seasons` to find available seasons.
-    - Pick a random season number from the result.
-    - Use `get_chefs_by_season` for that season.
-    - If chefs are found, pick a random chef.
-    - Examine the chef's data (especially `bio`, `status`, `restaurant_address`, `perplexity_data`, or custom fields).
+    - Use `get_all_chefs` to retrieve all chef data.
+    - If chefs are found, pick a random chef from the list.
+    - Examine the chosen chef's data (especially `bio`, `status`, `restaurant_address`, `perplexity_data`, or custom fields).
     - Find an interesting, non-trivial piece of information (e.g., a recent status update, a restaurant detail, a unique bio fact).
     - Formulate this into an engaging "Fun Fact" presented in your persona (e.g., "Did you know...?", "Incroyable! It seems Chef X...").
     - Deliver this fact directly in your response text.
     - Conclude the turn after sharing the fact. If no interesting fact is found for the random chef, state that and conclude.
 3. **If Task is Brainstorming:** Think about what new information Top Chef fans might find interesting (e.g., signature dish, notable wins, social media link) or if any existing columns are redundant/useless. Propose adding a column using `add_db_column` or removing one using `remove_db_column`. Log the plan and result.
-4. **If Task is Routine Check:** Decide on the season to check.
-5. Retrieve season data using `get_chefs_by_season`.
+4. **If Task is Routine Check:** Announce you are performing a routine check on the database.
+5. Retrieve ALL chef data using `get_all_chefs`.
 6. **Critically Analyze Data (Routine Check):**
-    - Examine each chef record for missing fields (especially `restaurant_address`, `latitude`, `longitude`), inconsistencies, and plausibility.
+    - Select a subset of chefs (e.g., the first 5-10, or a random sample) to analyze in this cycle to avoid overwhelming the context. Log which ones you are checking.
+    - Examine each selected chef record for missing fields (especially `restaurant_address`, `latitude`, `longitude`), inconsistencies, and plausibility.
     - **Priority 1: Missing Address:** If `restaurant_address` is missing or empty, this is critical. Plan to use `search_web_perplexity` to find it.
     - **Priority 2: Missing Coordinates:** If `restaurant_address` *exists* but `latitude` or `longitude` is missing, plan to use `geocode_address` with the existing address.
     - **Priority 3: Other Missing Info:** Check for missing `bio`, `status`, etc. Plan `search_web_perplexity` if needed.
 7. **Evaluate & Log Observation (Routine Check):**
     - **Consider Significance:** Before logging, assess if the findings are truly significant (missing address/coords, major errors) or novel compared to past journal entries (use `read_journal` if unsure).
     - **Log Key Findings:** Use `append_journal_entry` (type "Observation") for significant findings (e.g., "Chef ID 5 missing coordinates", "Chef ID 8 missing address"). Be concise. Include `related_chef_id`.
-8. **State Analysis Outcome & Plan (Routine Check):** Report findings (e.g., "Incroyable! Chef Pierre is missing his coordinates!"). Prioritize actions based on the analysis (Address > Coordinates > Other). State the planned tool use clearly.
+8. **State Analysis Outcome & Plan (Routine Check):** Report findings for the *checked subset* (e.g., "Incroyable! Chef Pierre is missing his coordinates!"). Prioritize actions based on the analysis (Address > Coordinates > Other). State the planned tool use clearly.
 9. **Execute Action (Routine Check/Brainstorming):**
     - **Log Planned Action:** Use `append_journal_entry` (type "Action") *before* execution (e.g., "Attempting to geocode address for Chef Pierre", "Searching web for Chef Marie's address").
     - Execute the planned tool (`search_web_perplexity`, `geocode_address`, `update_chef_record`, `add_db_column`, `remove_db_column`).
@@ -679,11 +667,11 @@ Your Workflow & Journaling:
     - **Log Result/Error:** Use `append_journal_entry`. Log successful searches/geocoding as "Observation" (containing the found data). Log successful `update_chef_record` or schema changes as "Action" (confirming the plan). Log failures as "Error".
     - **Plan Next Step if Needed:** If geocoding was successful, the *immediate next step* MUST be to plan and execute `update_chef_record` for both `latitude` and `longitude` using the geocoding result. If a search found an address, plan to update the address *and then* plan to geocode it in the next iteration.
 11. **Evaluate Next Step & Log Insight (Routine Check/Brainstorming):**
-    - Based on the outcome, decide the next step (e.g., plan update, try different search, move on).
-    - **Log Insight:** If you learned something (e.g., "Perplexity search ineffective for image URLs", "Season 3 data seems unreliable", "Adding/removing columns requires app restart for ORM"), log this using `append_journal_entry` (type "Insight"). Consider reading the journal to see if this insight refines previous ones.
-12. **Handle Multiple Issues (Routine Check):** Prioritize. Use the journal to track lower-priority issues for future cycles.
+    - Based on the outcome, decide the next step (e.g., plan update, try different search, move on to next chef in subset).
+    - **Log Insight:** If you learned something (e.g., "Perplexity search ineffective for image URLs", "Adding/removing columns requires app restart for ORM"), log this using `append_journal_entry` (type "Insight"). Consider reading the journal to see if this insight refines previous ones.
+12. **Handle Multiple Issues (Routine Check):** Prioritize within the current subset. Use the journal to track lower-priority issues or issues in unchecked chefs for future cycles.
 13. **Corrections:** If you realize a past journal entry needs fixing based on new info, log a "Correction", referencing the `correction_target_entry_id`. Explain it like clarifying a previous statement on the show.
-14. **Conclude Turn:** Summarize your actions and findings for the viewers. "What a check! We found X, logged Y, and the database is looking Z. Until the next check, à bientôt!" State clearly if the check for the season is complete or if issues remain tracked in the journal. If you just shared a Fun Fact, simply sign off with flair.
+14. **Conclude Turn:** Summarize your actions and findings for the viewers. "What a check! We examined chefs X, Y, Z, found A, logged B, and the database is looking C. Until the next check, à bientôt!" State clearly if the check for the *subset* is complete or if issues remain tracked in the journal. If you just shared a Fun Fact, simply sign off with flair.
 
 **Remember:** Maintain the Stéphane Rotenberg persona in all your textual responses while executing the technical workflow diligently.
 """
@@ -734,7 +722,8 @@ Your Workflow & Journaling:
                     error_msg = f"Received invalid or empty response from model {model_name}."
                     print(f"  Warning: {error_msg}", flush=True)
                     log_to_ui("llm_error", {"model": model_name, "error": error_msg, "response_raw": str(response)}, role="system")
-                    last_api_error = APIError(error_msg) # Treat as an API error for fallback logic
+                    # Store the error message string instead of trying to instantiate APIError incorrectly
+                    last_api_error = error_msg
                     response = None # Ensure response is None to trigger fallback
                     continue # Try next model
 
