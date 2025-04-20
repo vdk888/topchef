@@ -798,9 +798,6 @@
          }
 
          async function loadAndDisplayTable() {
-             // Removed the tableLoaded check here, refreshTableData handles preventing unnecessary calls if needed
-             // tablePlaceholder is already defined outside
-
             try {
                 const response = await fetch('/api/chefs');
                  if (!response.ok) {
@@ -977,28 +974,9 @@
           // Listen for season filter changes
           document.getElementById('season-filter').addEventListener('change', function() {
               currentSeason = this.value;
-              loadAndDisplayTable();
+              refreshTableData();
               // Optionally, refresh map markers as well if map supports filtering
           });
-
-          // Update loadAndDisplayTable to use filtered chefs
-          function loadAndDisplayTable() {
-              const chefs = filterChefsBySeason(allChefs, currentSeason);
-              // ... existing table rendering code ...
-          }
-
-          // When fetching chef data, update allChefs and populate the filter
-          function refreshTableData() {
-              fetch('/api/chefs')
-                  .then(response => response.json())
-                  .then(data => {
-                      allChefs = data;
-                      populateSeasonFilter(allChefs);
-                      loadAndDisplayTable();
-                  });
-          }
-          // Call refreshTableData on page load
-          refreshTableData();
 
           // Enlarging chat windows logic
           const sidebar = document.querySelector('.sidebar');
