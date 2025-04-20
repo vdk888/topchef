@@ -633,21 +633,6 @@ tools_list = [
     }
 ]
 
-# Map tool names to their execution functions
-available_functions = {
-    # "get_distinct_seasons": execute_get_distinct_seasons, # Removed
-    "get_all_chefs": execute_get_all_chefs, # Renamed from get_chefs_by_season
-    "search_web_perplexity": execute_search_web_perplexity,
-    "update_chef_record": execute_update_chef_record,
-    "read_journal": execute_read_journal,
-    "append_journal_entry": execute_append_journal_entry,
-    # --- NEW TOOL MAPPING ---
-    "add_db_column": execute_add_db_column,
-    "remove_db_column": execute_remove_db_column,
-    "geocode_address": execute_geocode_address, # Added geocoding function
-    "geocode_address_and_update": execute_geocode_address_and_update, # Added geocoding and updating function
-}
-
 def execute_geocode_address_and_update(chef_id: int, address: str):
     """
     Safely geocodes an address and updates BOTH latitude and longitude atomically for the chef,
@@ -706,6 +691,23 @@ def execute_geocode_address_and_update(chef_id: int, address: str):
         print(f"  Geocoding error: Unexpected {e}.", flush=True)
         log_to_ui("tool_error", {"name": "geocode_address_and_update", "input": tool_input_data, "error": str(e)})
         return error_msg
+        
+# Map tool names to their execution functions
+available_functions = {
+    # "get_distinct_seasons": execute_get_distinct_seasons, # Removed
+    "get_all_chefs": execute_get_all_chefs, # Renamed from get_chefs_by_season
+    "search_web_perplexity": execute_search_web_perplexity,
+    "update_chef_record": execute_update_chef_record,
+    "read_journal": execute_read_journal,
+    "append_journal_entry": execute_append_journal_entry,
+    # --- NEW TOOL MAPPING ---
+    "add_db_column": execute_add_db_column,
+    "remove_db_column": execute_remove_db_column,
+    "geocode_address": execute_geocode_address, # Added geocoding function
+    "geocode_address_and_update": execute_geocode_address_and_update, # Added geocoding and updating function
+}
+
+
 
 # --- LLM Agent Setup ---
 # [LLM Client Initialization remains the same]
