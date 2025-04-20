@@ -648,6 +648,65 @@ available_functions = {
     "geocode_address_and_update": execute_geocode_address_and_update, # Added geocoding and updating function
 }
 
+def execute_geocode_address_and_update(chef_id: int, address: str):
+    """
+    Safely geocodes an address and updates BOTH latitude and longitude atomically for the chef,
+    ensuring that pins on the map will always have both coordinates or neither.
+    """
+    tool_input_data = {"chef_id": chef_id, "address": address}
+    log_to_ui("tool_start", {"name": "geocode_address_and_update", "input": tool_input_data})
+    print(f"--- Tool: Executing Geocode Address & Atomic Update ---", flush=True)
+    print(f"  Chef ID: {chef_id}, Address: {address}", flush=True)
+
+    if not isinstance(chef_id, int):
+        error_msg = json.dumps({"error": "Invalid type for chef_id, must be an integer."})
+        log_to_ui("tool_error", {"name": "geocode_address_and_update", "error": "Invalid chef_id type."})
+        return error_msg
+    if not isinstance(address, str) or not address:
+        error_msg = json.dumps({"error": "Invalid or empty address provided."})
+        log_to_ui("tool_error", {"name": "geocode_address_and_update", "input": tool_input_data, "error": "Invalid address."})
+        return error_msg
+
+    geolocator = Nominatim(user_agent="topchef_agent_app/1.0")
+    try:
+        location = geolocator.geocode(address, timeout=10, country_codes='FR')
+        if location:
+            coordinates = {"latitude": location.latitude, "longitude": location.longitude}
+            from database import update_chef
+            update_data = {"latitude": location.latitude, "longitude": location.longitude}
+            success = update_chef(chef_id, update_data)
+            if success:
+                result_msg = json.dumps({"status": "OK", "message": f"Successfully updated lat/lon for chef ID {chef_id}.", "coordinates": coordinates})
+                print(f"  Geocoding and DB update successful: Lat={location.latitude}, Lon={location.longitude}", flush=True)
+                log_to_ui("tool_result", {"name": "geocode_address_and_update", "input": tool_input_data, "result": coordinates})
+                signal_database_update()
+                return result_msg
+            else:
+                error_msg = json.dumps({"status": "Failed", "error": f"Failed to update coordinates for chef ID {chef_id}. Chef not found or no change needed."})
+                print("  Database update failed (chef not found or no change needed).", flush=True)
+                log_to_ui("tool_error", {"name": "geocode_address_and_update", "input": tool_input_data, "error": "Update failed (not found or no change)." })
+                return error_msg
+        else:
+            error_msg = json.dumps({"error": f"Address not found or could not be geocoded: {address}"})
+            print(f"  Geocoding failed: Address not found.", flush=True)
+            log_to_ui("tool_error", {"name": "geocode_address_and_update", "input": tool_input_data, "error": "Address not found."})
+            return error_msg
+    except GeocoderTimedOut:
+        error_msg = json.dumps({"error": "Geocoding service timed out."})
+        print(f"  Geocoding error: Timeout.", flush=True)
+        log_to_ui("tool_error", {"name": "geocode_address_and_update", "input": tool_input_data, "error": "GeocoderTimedOut."})
+        return error_msg
+    except GeocoderServiceError as e:
+        error_msg = json.dumps({"error": f"Geocoding service error: {e}"})
+        print(f"  Geocoding error: Service error {e}.", flush=True)
+        log_to_ui("tool_error", {"name": "geocode_address_and_update", "input": tool_input_data, "error": f"GeocoderServiceError: {e}"})
+        return error_msg
+    except Exception as e:
+        error_msg = json.dumps({"error": f"Unexpected error during geocoding: {e}"})
+        print(f"  Geocoding error: Unexpected {e}.", flush=True)
+        log_to_ui("tool_error", {"name": "geocode_address_and_update", "input": tool_input_data, "error": str(e)})
+        return error_msg
+
 # --- LLM Agent Setup ---
 # [LLM Client Initialization remains the same]
 if not OPENROUTER_API_KEY:
@@ -947,62 +1006,3 @@ if __name__ == '__main__':
     print("Running LLM-driven agent cycle directly for testing...")
     test_prompt = "Time to check the database. Pick a random season and see if any chef info is missing."
     run_llm_driven_agent_cycle(test_prompt)
-
-def execute_geocode_address_and_update(chef_id: int, address: str):
-    """
-    Safely geocodes an address and updates BOTH latitude and longitude atomically for the chef,
-    ensuring that pins on the map will always have both coordinates or neither.
-    """
-    tool_input_data = {"chef_id": chef_id, "address": address}
-    log_to_ui("tool_start", {"name": "geocode_address_and_update", "input": tool_input_data})
-    print(f"--- Tool: Executing Geocode Address & Atomic Update ---", flush=True)
-    print(f"  Chef ID: {chef_id}, Address: {address}", flush=True)
-
-    if not isinstance(chef_id, int):
-        error_msg = json.dumps({"error": "Invalid type for chef_id, must be an integer."})
-        log_to_ui("tool_error", {"name": "geocode_address_and_update", "error": "Invalid chef_id type."})
-        return error_msg
-    if not isinstance(address, str) or not address:
-        error_msg = json.dumps({"error": "Invalid or empty address provided."})
-        log_to_ui("tool_error", {"name": "geocode_address_and_update", "input": tool_input_data, "error": "Invalid address."})
-        return error_msg
-
-    geolocator = Nominatim(user_agent="topchef_agent_app/1.0")
-    try:
-        location = geolocator.geocode(address, timeout=10, country_codes='FR')
-        if location:
-            coordinates = {"latitude": location.latitude, "longitude": location.longitude}
-            from database import update_chef
-            update_data = {"latitude": location.latitude, "longitude": location.longitude}
-            success = update_chef(chef_id, update_data)
-            if success:
-                result_msg = json.dumps({"status": "OK", "message": f"Successfully updated lat/lon for chef ID {chef_id}.", "coordinates": coordinates})
-                print(f"  Geocoding and DB update successful: Lat={location.latitude}, Lon={location.longitude}", flush=True)
-                log_to_ui("tool_result", {"name": "geocode_address_and_update", "input": tool_input_data, "result": coordinates})
-                signal_database_update()
-                return result_msg
-            else:
-                error_msg = json.dumps({"status": "Failed", "error": f"Failed to update coordinates for chef ID {chef_id}. Chef not found or no change needed."})
-                print("  Database update failed (chef not found or no change needed).", flush=True)
-                log_to_ui("tool_error", {"name": "geocode_address_and_update", "input": tool_input_data, "error": "Update failed (not found or no change)." })
-                return error_msg
-        else:
-            error_msg = json.dumps({"error": f"Address not found or could not be geocoded: {address}"})
-            print(f"  Geocoding failed: Address not found.", flush=True)
-            log_to_ui("tool_error", {"name": "geocode_address_and_update", "input": tool_input_data, "error": "Address not found."})
-            return error_msg
-    except GeocoderTimedOut:
-        error_msg = json.dumps({"error": "Geocoding service timed out."})
-        print(f"  Geocoding error: Timeout.", flush=True)
-        log_to_ui("tool_error", {"name": "geocode_address_and_update", "input": tool_input_data, "error": "GeocoderTimedOut."})
-        return error_msg
-    except GeocoderServiceError as e:
-        error_msg = json.dumps({"error": f"Geocoding service error: {e}"})
-        print(f"  Geocoding error: Service error {e}.", flush=True)
-        log_to_ui("tool_error", {"name": "geocode_address_and_update", "input": tool_input_data, "error": f"GeocoderServiceError: {e}"})
-        return error_msg
-    except Exception as e:
-        error_msg = json.dumps({"error": f"Unexpected error during geocoding: {e}"})
-        print(f"  Geocoding error: Unexpected {e}.", flush=True)
-        log_to_ui("tool_error", {"name": "geocode_address_and_update", "input": tool_input_data, "error": str(e)})
-        return error_msg
