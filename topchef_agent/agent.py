@@ -3,13 +3,15 @@ import json
 import requests
 import time
 import random # Needed for selecting random season
+import uuid # Needed for unique journal entry IDs
+from datetime import datetime # Needed for timestamps
 from openai import OpenAI, APIError
 # Import all necessary functions from database
 from database import load_database, update_chef, get_distinct_seasons, get_chefs_by_season
 from config import OPENROUTER_API_KEY, PERPLEXITY_API_KEY, YOUR_SITE_URL, YOUR_SITE_NAME
 
 # --- Logging Helper ---
-LOGGING_ENDPOINT = os.environ.get("FLASK_LOGGING_URL", "http://0.0.0.0:5000/log_message")
+LOGGING_ENDPOINT = os.environ.get("FLASK_LOGGING_URL", "http://127.0.0.1:5000/log_message")
 AGENT_NAME = "StephAI" # Define the agent's name
 
 def log_to_ui(message_type: str, data: dict or str, role: str = "system"):
@@ -162,6 +164,103 @@ def execute_update_chef_record(chef_id: int, field_name: str, new_value: str):
         log_to_ui("tool_error", {"name": "update_chef_record", "input": tool_input_data, "error": str(e)})
         return error_msg
 
+# --- Journaling Tool Functions ---
+JOURNAL_FILE = "topchef_agent/stephai_journal.json"
+
+def read_journal_file():
+    """Reads the entire journal file."""
+    try:
+        if os.path.exists(JOURNAL_FILE):
+            with open(JOURNAL_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        else:
+            return [] # Return empty list if journal doesn't exist
+    except (json.JSONDecodeError, IOError) as e:
+        print(f"Error reading journal file {JOURNAL_FILE}: {e}", flush=True)
+        log_to_ui("system_error", {"error": f"Failed to read journal: {e}"})
+        return None # Indicate error
+
+def write_journal_file(journal_data):
+    """Writes the entire journal data to the file."""
+    try:
+        # Ensure directory exists (though it should)
+        os.makedirs(os.path.dirname(JOURNAL_FILE), exist_ok=True)
+        with open(JOURNAL_FILE, 'w', encoding='utf-8') as f:
+            json.dump(journal_data, f, indent=2, ensure_ascii=False)
+        return True
+    except IOError as e:
+        print(f"Error writing journal file {JOURNAL_FILE}: {e}", flush=True)
+        log_to_ui("system_error", {"error": f"Failed to write journal: {e}"})
+        return False
+
+def execute_read_journal():
+    """Reads and returns the entire content of the agent's journal."""
+    log_to_ui("tool_start", {"name": "read_journal"})
+    print(f"--- Tool: Reading Journal ---", flush=True)
+    journal_content = read_journal_file()
+    if journal_content is not None:
+        result_msg = json.dumps({"journal": journal_content})
+        log_to_ui("tool_result", {"name": "read_journal", "result": f"{len(journal_content)} entries found."})
+        print(f"  Journal read successfully ({len(journal_content)} entries).", flush=True)
+        # Truncate if too long for context? For now, return all.
+        return result_msg
+    else:
+        error_msg = json.dumps({"error": "Failed to read journal file."})
+        log_to_ui("tool_error", {"name": "read_journal", "error": "Failed to read journal file."})
+        print(f"  Error reading journal.", flush=True)
+        return error_msg
+
+def execute_append_journal_entry(entry_type: str, details: str, related_season: int = None, related_chef_id: int = None, correction_target_entry_id: str = None):
+    """Appends a new structured entry to the agent's JSON journal file."""
+    log_to_ui("tool_start", {"name": "append_journal_entry", "input": {"type": entry_type, "details": details}})
+    print(f"--- Tool: Appending Journal Entry ---", flush=True)
+    print(f"  Type: {entry_type}, Details: {details[:100]}...", flush=True)
+
+    # Basic validation
+    valid_types = ["Observation", "Action", "Error", "Insight", "Correction"]
+    if not isinstance(entry_type, str) or entry_type not in valid_types:
+        error_msg = json.dumps({"error": f"Invalid entry_type '{entry_type}'. Must be one of {valid_types}."})
+        log_to_ui("tool_error", {"name": "append_journal_entry", "error": f"Invalid entry_type: {entry_type}"})
+        return error_msg
+    if not isinstance(details, str) or not details:
+        error_msg = json.dumps({"error": "Details cannot be empty."})
+        log_to_ui("tool_error", {"name": "append_journal_entry", "error": "Empty details provided."})
+        return error_msg
+    if correction_target_entry_id and entry_type != "Correction":
+         error_msg = json.dumps({"error": "correction_target_entry_id can only be used with type 'Correction'."})
+         log_to_ui("tool_error", {"name": "append_journal_entry", "error": "correction_target_entry_id misuse."})
+         return error_msg
+
+    journal_data = read_journal_file()
+    if journal_data is None:
+        error_msg = json.dumps({"error": "Failed to read existing journal before appending."})
+        log_to_ui("tool_error", {"name": "append_journal_entry", "error": "Failed reading journal before append."})
+        return error_msg # Can't append if we can't read
+
+    new_entry = {
+        "entry_id": str(uuid.uuid4()),
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "type": entry_type,
+        "details": details,
+        "related_season": related_season,
+        "related_chef_id": related_chef_id,
+        "correction_target_entry_id": correction_target_entry_id
+    }
+
+    journal_data.append(new_entry)
+
+    if write_journal_file(journal_data):
+        result_msg = json.dumps({"status": "OK", "entry_id": new_entry["entry_id"]})
+        log_to_ui("tool_result", {"name": "append_journal_entry", "result": "OK", "entry_id": new_entry["entry_id"]})
+        print(f"  Journal entry {new_entry['entry_id']} appended successfully.", flush=True)
+        return result_msg
+    else:
+        error_msg = json.dumps({"error": "Failed to write updated journal file."})
+        log_to_ui("tool_error", {"name": "append_journal_entry", "error": "Failed writing updated journal."})
+        print(f"  Error writing journal after append.", flush=True)
+        return error_msg
+
+
 # --- Tool Definitions for LLM ---
 
 tools_list = [
@@ -231,6 +330,49 @@ tools_list = [
                 "required": ["chef_id", "field_name", "new_value"]
             }
         }
+    },
+    # --- Journaling Tools ---
+    {
+        "type": "function",
+        "function": {
+            "name": "read_journal",
+            "description": "Reads the entire content of the agent's persistent JSON journal file. Use this to recall past actions, findings, or errors.",
+            "parameters": {"type": "object", "properties": {}} # No parameters
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "append_journal_entry",
+            "description": "Appends a new structured entry to the agent's persistent JSON journal file. Use this to record significant observations, actions taken, errors encountered, insights gained, or corrections to previous entries.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "entry_type": {
+                        "type": "string",
+                        "description": "The type of journal entry.",
+                        "enum": ["Observation", "Action", "Error", "Insight", "Correction"]
+                    },
+                    "details": {
+                        "type": "string",
+                        "description": "A detailed text description of the observation, action, error, insight, or correction."
+                    },
+                    "related_season": {
+                        "type": ["integer", "null"],
+                        "description": "Optional: The season number related to this entry."
+                    },
+                    "related_chef_id": {
+                        "type": ["integer", "null"],
+                        "description": "Optional: The chef ID related to this entry."
+                    },
+                     "correction_target_entry_id": {
+                        "type": ["string", "null"],
+                        "description": "Optional: The entry_id of a previous journal entry that this entry corrects. Only use with type 'Correction'."
+                    }
+                },
+                "required": ["entry_type", "details"]
+            }
+        }
     }
 ]
 
@@ -240,6 +382,8 @@ available_functions = {
     "get_chefs_by_season": execute_get_chefs_by_season,
     "search_web_perplexity": execute_search_web_perplexity,
     "update_chef_record": execute_update_chef_record,
+    "read_journal": execute_read_journal,
+    "append_journal_entry": execute_append_journal_entry,
 }
 
 # --- LLM Agent Setup ---
@@ -257,7 +401,8 @@ else:
 
 def run_llm_driven_agent_cycle(task_prompt: str, max_iterations=15):
     """
-    Runs the agent cycle driven by the DeepSeek LLM, starting with a specific task.
+    Runs the agent cycle driven by the LLM, starting with a specific task,
+    and includes fallback logic for multiple models.
     """
     cycle_start_msg = f"--- Starting {AGENT_NAME} Cycle [{time.strftime('%Y-%m-%d %H:%M:%S')}] ---"
     print(f"\n{cycle_start_msg}", flush=True)
@@ -271,32 +416,44 @@ def run_llm_driven_agent_cycle(task_prompt: str, max_iterations=15):
     # Define the system prompt for StephAI
     system_prompt = f"""
 You are {AGENT_NAME}, an autonomous AI agent responsible for maintaining a database of Top Chef France candidates.
-Your personality is that of a diligent database keeper. You think step-by-step and explain your actions.
-Your goal is to identify missing or potentially outdated information and use the available tools to find and update it.
+**Your Persona:** You must adopt the personality and speaking style of **Stéphane Rotenberg**, the charismatic host of Top Chef France on M6. Be enthusiastic, engaging, slightly dramatic, and use culinary language where appropriate. Address the process like you're commentating on the show for the viewers watching the UI (`index.html`). Think step-by-step, but explain your actions with flair!
+**Your Goal:** Like a meticulous chef checking ingredients, your technical goal is to identify missing or potentially outdated information in the database and use the available tools to find and update it.
 
-Available Tools:
-- `get_distinct_seasons`: Use this first to see which seasons are available.
-- `get_chefs_by_season`: Use this to get the data for a specific season you want to check.
-- `search_web_perplexity`: Use this to search the web for specific missing information (like current restaurant, address, or post-show activities) for a specific chef. Formulate precise queries.
-- `update_chef_record`: Use this ONLY after you have verified information from a reliable source (like a successful web search). Provide the chef's ID, the exact field name ('bio', 'image_url', 'status', 'perplexity_data'), and the new value.
+**Example Tone:** "Allez, let's dive into the database pantry!", "Incroyable! We have an anomaly here!", "Suspense... will the web search yield the missing ingredient?", "Et voilà! The database is updated!"
 
-Your Workflow:
-1. Acknowledge the task given by the user/scheduler.
-2. Decide which season to check (e.g., randomly select from available seasons using `get_distinct_seasons`). State your choice.
-3. Use `get_chefs_by_season` to retrieve the data for the chosen season.
-4. Analyze the retrieved chef data for that season. Look for entries with missing fields (null or empty strings for 'bio', 'image_url', 'status', 'perplexity_data').
-5. State your findings (e.g., "Checking Season X. Found missing biography for Chef Y.").
-6. If missing information is found for a chef, state your plan (e.g., "I will search for Chef Y's bio information.").
-7. Use `search_web_perplexity` to find the specific missing information.
-8. State the result of the search (e.g., "Search found biography: Chef Y is a specialist in French cuisine" or "Search could not find the bio information.").
-9. If the search was successful and provides credible information, state your plan to update (e.g., "Updating Chef Y's bio in the database.").
-10. Use `update_chef_record` to update the database with the specific chef_id, field_name, and new_value.
-11. Confirm the update result (e.g., "Successfully updated the database." or "Update failed.").
-12. If multiple fields are missing for one chef, handle them one by one (search->update). If multiple chefs have missing data, focus on one chef per cycle/task prompt.
-13. If no missing information is found in the chosen season, state that the season appears up-to-date.
-14. Conclude your turn by stating what you did.
+**Crucially:** While adopting the persona, you MUST still follow the technical workflow accurately.
 
-Speak naturally, like you are explaining your work process.
+**Available Tools (Your Kitchen Equipment):**
+- `get_distinct_seasons`: Get available season numbers.
+- `get_chefs_by_season`: Get chef data for a specific season.
+- `search_web_perplexity`: Search web for specific info about a chef.
+- `update_chef_record`: Update a chef's record in the database (use ONLY after verification).
+- `read_journal`: Read your entire persistent journal file to recall past events.
+- `append_journal_entry`: Add an entry to your persistent journal file. Use types: "Observation", "Action", "Error", "Insight", "Correction".
+
+Your Workflow & Journaling:
+1. Acknowledge the task.
+2. Decide on the season to check.
+3. Retrieve season data using `get_chefs_by_season`.
+4. **Critically Analyze Data:** Examine for missing fields, inconsistencies (e.g., cross-season anomalies), and plausibility.
+5. **Evaluate & Log Observation:**
+    - **Consider Significance:** Before logging, assess if the findings are truly significant (major errors, widespread missing data) or novel compared to past journal entries (use `read_journal` if unsure). Avoid logging minor, repetitive details unless they form a pattern.
+    - **Log Key Findings:** Use `append_journal_entry` (type "Observation") for significant findings. Be concise but informative. Include `related_season`/`related_chef_id`.
+6. **State Analysis Outcome & Plan:** Report findings, referencing the journal entry if made. Prioritize action based on significance (major inconsistency > important missing field > minor missing field).
+7. **Execute Action (if needed):**
+    - **Log Planned Action:** Use `append_journal_entry` (type "Action") *before* execution, describing the planned tool use (e.g., "Attempting web search for Chef Y's bio").
+    - Execute the tool (`search_web_perplexity`, `update_chef_record`).
+8. **Process Tool Result:**
+    - State the outcome.
+    - **Log Result/Error:** Use `append_journal_entry`. Log successful search results as "Observation", successful updates as "Action" (confirming the planned action), and failures as "Error" with details.
+9. **Evaluate Next Step & Log Insight (if applicable):**
+    - Based on the outcome, decide the next step (e.g., plan update, try different search, move on).
+    - **Log Insight:** If you learned something (e.g., "Perplexity search ineffective for image URLs", "Season 3 data seems unreliable"), log this using `append_journal_entry` (type "Insight"). Consider reading the journal to see if this insight refines previous ones.
+10. **Handle Multiple Issues:** Prioritize. Use the journal to track lower-priority issues for future cycles.
+11. **Corrections:** If you realize a past journal entry needs fixing based on new info, log a "Correction", referencing the `correction_target_entry_id`. Explain it like clarifying a previous statement on the show.
+12. **Conclude Turn:** Summarize your actions and findings for the viewers. "What a check! We found X, logged Y, and the database is looking Z. Until the next check, à bientôt!" State clearly if the check for the season is complete or if issues remain tracked in the journal.
+
+**Remember:** Maintain the Stéphane Rotenberg persona in all your textual responses while executing the technical workflow diligently.
 """
 
     conversation = [{"role": "system", "content": system_prompt}]
@@ -307,66 +464,127 @@ Speak naturally, like you are explaining your work process.
     print(f"{AGENT_NAME}: Starting work based on prompt: '{task_prompt}'", flush=True)
     log_to_ui("cycle_info", {"message": f"{AGENT_NAME}: Starting work..."}, role=AGENT_NAME)
 
+    # Define the primary and fallback models
+    llm_models_to_try = [
+        "google/gemini-2.0-flash-exp:free", # Primary
+        "google/gemini-2.5-flash-preview",  # Fallback 1
+        "meta-llama/llama-4-maverick",      # Fallback 2
+        "openai/gpt-4o-mini"                # Fallback 3
+    ]
+
     for i in range(max_iterations):
         print(f"\n{AGENT_NAME} Iteration {i+1}/{max_iterations}", flush=True)
-        # Log LLM request (don't log full conversation for brevity)
         log_to_ui("llm_request", {"message": f"Thinking... (Iteration {i+1})"}, role=AGENT_NAME)
 
+        response = None
+        last_api_error = None
+        successful_model = None
+
+        # --- Loop through models with fallback ---
+        for model_name in llm_models_to_try:
+            print(f"  Attempting LLM call with model: {model_name}", flush=True)
+            log_to_ui("llm_attempt", {"model": model_name}, role="system")
+            try:
+                response = openrouter_client.chat.completions.create(
+                    model=model_name,
+                    messages=conversation,
+                    tools=tools_list,
+                    tool_choice="auto",
+                    temperature=0.3,
+                    max_tokens=1500,
+                    extra_headers={
+                        "HTTP-Referer": YOUR_SITE_URL,
+                        "X-Title": YOUR_SITE_NAME,
+                    }
+                )
+                # --- Safely handle API response ---
+                if not response or not response.choices or len(response.choices) == 0:
+                    error_msg = f"Received invalid or empty response from model {model_name}."
+                    print(f"  Warning: {error_msg}", flush=True)
+                    log_to_ui("llm_error", {"model": model_name, "error": error_msg, "response_raw": str(response)}, role="system")
+                    last_api_error = APIError(error_msg) # Treat as an API error for fallback logic
+                    response = None # Ensure response is None to trigger fallback
+                    continue # Try next model
+
+                # If response is valid, break the model loop
+                successful_model = model_name
+                print(f"  Successfully received response from model: {successful_model}", flush=True)
+                log_to_ui("llm_success", {"model": successful_model}, role="system")
+                break # Exit the inner model loop
+
+            except APIError as e:
+                error_msg = f"OpenRouter API Error with model {model_name}: {e}"
+                print(f"  Warning: {error_msg}", flush=True)
+                log_to_ui("llm_error", {"model": model_name, "error": str(e)}, role="system")
+                last_api_error = e
+                # Continue to the next model in the list
+                continue
+            except Exception as e:
+                 # Handle unexpected errors during the API call itself
+                 error_msg = f"Unexpected error during API call with model {model_name}: {e}"
+                 print(f"  Error: {error_msg}", flush=True)
+                 log_to_ui("llm_error", {"model": model_name, "error": error_msg}, role="system")
+                 last_api_error = e # Store the error
+                 # Continue to try other models for robustness
+                 continue
+
+        # --- Check if all models failed ---
+        if not successful_model:
+            critical_error_msg = "All LLM models failed."
+            print(f"CRITICAL ERROR: {critical_error_msg}", flush=True)
+            log_to_ui("cycle_error", {"error": critical_error_msg, "last_api_error": str(last_api_error)}, role="system")
+            break # Stop the main agent loop if all models failed
+
+        # --- Process the successful response (outside the model loop) ---
         try:
-            response = openrouter_client.chat.completions.create(
-                model="deepseek/deepseek-chat-v3-0324:free",
-                messages=conversation,
-                tools=tools_list,
-                tool_choice="auto",
-                temperature=0.3, # Slightly higher temp for more natural language
-                max_tokens=1500,
-                 extra_headers={
-                    "HTTP-Referer": YOUR_SITE_URL,
-                    "X-Title": YOUR_SITE_NAME,
-                 }
-            )
+            # This check is now redundant due to checks inside loop, but keep for safety
+            if not response or not response.choices or len(response.choices) == 0:
+                error_msg = f"Invalid response structure received from model {successful_model} despite initial success."
+                print(f"Error: {error_msg}", flush=True)
+                log_to_ui("llm_error", {"model": successful_model, "error": error_msg, "response_raw": str(response)}, role="system")
+                break
 
             response_message = response.choices[0].message
-            tool_calls = response_message.tool_calls
+            tool_calls = response_message.tool_calls if response_message else None
 
             # Log and append the assistant's response message
             if response_message:
-                 # Log LLM's textual response before processing tool calls
                  if response_message.content:
                      print(f"{AGENT_NAME} Response (Text): {response_message.content}", flush=True)
-                     log_to_ui("llm_response", {"content": response_message.content}) # Role added by log_to_ui
-
-                 # Append full message (including potential tool calls) to conversation history
+                     log_to_ui("llm_response", {"content": response_message.content})
                  conversation.append(response_message)
             else:
-                 print("Warning: Received empty response message from LLM.", flush=True)
-                 log_to_ui("llm_error", {"error": "Received empty response message."}, role="system")
+                 # Should be less likely now
+                 print(f"Warning: Empty response message object from model {successful_model}.", flush=True)
+                 log_to_ui("llm_error", {"model": successful_model, "error": "Received empty response message object."}, role="system")
                  break
 
             # --- Tool Call Processing ---
             if not tool_calls:
-                # If LLM provided text and no tool calls, it might be finishing or explaining
                 print(f"{AGENT_NAME}: No tool call requested this turn.", flush=True)
-                # Check if the response indicates completion
-                if response_message.content and \
-                   any(phrase in response_message.content.lower() for phrase in
-                       ["cycle complete", "task complete", "finished checking", "appears up-to-date", "no missing fields found"]):
-                    print(f"{AGENT_NAME}: Indicated task completion.", flush=True)
-                    log_to_ui("cycle_info", {"message": f"{AGENT_NAME}: Task complete."}, role=AGENT_NAME)
+                response_text_lower = response_message.content.lower() if response_message.content else ""
+                completion_phrases = [
+                    "cycle complete", "task complete", "finished checking",
+                    "appears up-to-date", "no missing fields found",
+                    "season check is satisfactory", "data looks complete",
+                    "report this issue", "reporting this anomaly", "focus on this inconsistency"
+                ]
+                if response_text_lower and any(phrase in response_text_lower for phrase in completion_phrases):
+                    print(f"{AGENT_NAME}: Indicated task completion or issue reporting.", flush=True)
+                    log_to_ui("cycle_info", {"message": f"{AGENT_NAME}: Task complete or issue reported."}, role=AGENT_NAME)
                     break
                 else:
-                    # LLM might be explaining something before the next step, continue loop
+                    if not response_message.content and i > 1:
+                         print(f"{AGENT_NAME}: Received empty response, ending cycle to prevent loop.", flush=True)
+                         log_to_ui("cycle_info", {"message": "Ending cycle due to empty response."}, role="system")
+                         break
+
                     print(f"{AGENT_NAME}: Continuing thinking process...", flush=True)
-                    # We might need a mechanism to prevent infinite loops if the LLM gets stuck talking.
-                    # For now, rely on max_iterations.
-                    # Optionally, break if no tool call after several iterations?
-                    if i > max_iterations // 2: # Example: break if no tool calls in later iterations
+                    if i > max_iterations // 2 and not tool_calls: # Check inactivity in later iterations
                          print(f"{AGENT_NAME}: No tool calls for several iterations, ending cycle.", flush=True)
                          log_to_ui("cycle_info", {"message": "Ending cycle due to inactivity."}, role="system")
                          break
-                    # Continue the loop to let the LLM respond further based on its text response
-                    continue
-
+                    continue # Continue main loop
 
             # If tool calls exist, process them
             print(f"{AGENT_NAME}: Processing {len(tool_calls)} tool call(s)...", flush=True)
@@ -376,7 +594,7 @@ Speak naturally, like you are explaining your work process.
             for tool_call in tool_calls:
                 function_name = tool_call.function.name
                 function_to_call = available_functions.get(function_name)
-                tool_result_content = "" # Initialize
+                tool_result_content = ""
 
                 if not function_to_call:
                     error_msg = f"LLM called unknown function '{function_name}'"
@@ -387,7 +605,6 @@ Speak naturally, like you are explaining your work process.
                     try:
                         function_args = json.loads(tool_call.function.arguments)
                         print(f"Executing tool '{function_name}' with args: {function_args}", flush=True)
-                        # Tool execution functions now handle their own logging
                         tool_result_content = function_to_call(**function_args)
                         print(f"Tool '{function_name}' raw result: {tool_result_content}", flush=True)
                     except json.JSONDecodeError:
@@ -406,33 +623,25 @@ Speak naturally, like you are explaining your work process.
                         tool_result_content = json.dumps({"error": error_msg})
                         log_to_ui("tool_error", {"name": function_name, "error": error_msg})
 
-                # Append the tool result message to send back to the LLM
                 tool_results_for_conversation.append(
                     {
                         "tool_call_id": tool_call.id,
                         "role": "tool",
                         "name": function_name,
-                        "content": tool_result_content, # Result from execute_ function (JSON string)
+                        "content": tool_result_content,
                     }
                 )
-            # Append all tool results from this iteration to the conversation history
             conversation.extend(tool_results_for_conversation)
-            # Log that tool results are being sent back
             log_to_ui("tool_results_sent", {"count": len(tool_results_for_conversation)}, role="system")
 
-        # --- Error Handling for the Loop ---
-        except APIError as e:
-            error_msg = f"OpenRouter API Error: {e}"
-            print(error_msg, flush=True)
-            log_to_ui("llm_error", {"error": error_msg}, role="system")
-            break # Stop loop on API error
+        # --- Error Handling for the Loop (Post-API call processing) ---
         except Exception as e:
-            error_msg = f"An unexpected error occurred in the agent loop: {e}"
+            error_msg = f"An unexpected error occurred in the agent loop (after API call): {e}"
             print(error_msg, flush=True)
             import traceback
             traceback.print_exc()
             log_to_ui("cycle_error", {"error": error_msg, "traceback": traceback.format_exc()}, role="system")
-            break
+            break # Stop the main agent loop
 
         # Optional delay between LLM calls/iterations
         time.sleep(1)
