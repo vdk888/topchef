@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Top Chef France Map & Agent</title>
+    <title>Top Chef France – Chef Explorer</title>
+    <link rel="icon" type="image/png" href="/static/favicon.png">
+    <meta name="description" content="Discover France's top chefs by location, season, and status. Explore culinary excellence with Top Chef France.">
+    <meta name="theme-color" content="#111111"> <!-- Updated theme color -->
+    <link href="https://fonts.googleapis.com/css?family=Montserrat:700&display=swap" rel="stylesheet"> <!-- Only Montserrat Bold -->
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
           integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
@@ -14,436 +18,434 @@
             crossorigin=""></script>
 
     <style>
+        :root {
+            /* M6 Top Chef Inspired Palette */
+            --m6-bg: #111111; /* Dark background */
+            --m6-bg-secondary: #222222; /* Slightly lighter bg for elements */
+            --m6-border: #444444; /* Borders */
+            --m6-text-primary: #e0e0e0; /* Primary light text */
+            --m6-text-secondary: #a0a0a0; /* Secondary light text */
+            --m6-text-dark: #111111; /* Dark text for light backgrounds */
+            --tcf-yellow: #ffc72c; /* Accent yellow */
+            --m6-white: #ffffff;
+            --m6-shadow: none; /* Flatten design */
+            --m6-shadow-light: none; /* Flatten design */
+        }
         html, body {
             height: 100%;
             margin: 0;
             padding: 0;
-            font-family: sans-serif;
-            background-color: #f4f4f4;
+            font-family: Arial, Helvetica, sans-serif; /* Standard sans-serif */
+            background-color: var(--m6-bg);
+            color: var(--m6-text-primary);
             display: flex;
-            flex-direction: column; /* Stack elements vertically */
+            flex-direction: column;
+            font-size: 14px; /* Base font size */
         }
 
         .header {
-            padding: 10px 20px;
-            background-color: #333;
-            color: white;
+            padding: 15px 30px; /* Reduced padding */
+            background-color: var(--m6-bg-secondary); /* Use secondary bg */
+            color: var(--m6-text-primary);
+            box-shadow: var(--m6-shadow); /* Removed shadow */
+            border-bottom: 3px solid var(--m6-border); /* Thinner, darker border */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             flex-shrink: 0; /* Prevent header from shrinking */
-            display: flex; /* Use flexbox for alignment */
-            justify-content: space-between; /* Space out title and button */
-            align-items: center; /* Vertically align items */
         }
-
-        .header .title-group h1 { /* Target h1 within a group */
-             margin: 0;
-            font-size: 1.5em;
+        .header .title-group h1 {
+            font-family: 'Montserrat', sans-serif; /* Keep Montserrat for main title */
+            font-weight: 700;
+            font-size: 1.8em; /* Reduced size */
+            margin: 0;
+            letter-spacing: 1px;
+            color: var(--tcf-yellow); /* Keep yellow accent */
+            text-shadow: none; /* Remove text shadow */
         }
-        .header .title-group p { /* Target p within a group */
-             margin: 5px 0 0;
-             font-size: 0.9em;
-             color: #ccc;
+        .header .title-group p {
+            margin: 2px 0 0 1px; /* Adjusted margin */
+            font-size: 1em; /* Reduced size */
+            color: var(--m6-text-secondary); /* Use secondary text color */
+            font-family: Arial, Helvetica, sans-serif; /* Standard sans-serif */
+            font-style: normal; /* Remove italic */
+            letter-spacing: 0.5px;
         }
-
-        /* Toggle Button Style */
         #view-toggle-button {
-            padding: 8px 15px;
-            font-size: 0.9em;
+            padding: 8px 18px; /* Adjusted padding */
+            font-size: 0.9em; /* Adjusted size */
+            font-family: Arial, Helvetica, sans-serif; /* Standard font */
             cursor: pointer;
-            background-color: #555;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            transition: background-color 0.2s;
+            background-color: var(--m6-bg-secondary); /* Match header bg */
+            color: var(--m6-text-primary); /* Light text */
+            border: 1px solid var(--m6-border); /* Use theme border */
+            border-radius: 3px; /* Sharper corners */
+            box-shadow: var(--m6-shadow-light); /* Removed shadow */
+            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
         }
         #view-toggle-button:hover {
-            background-color: #777;
+            background-color: var(--m6-border); /* Darker bg on hover */
+            border-color: var(--tcf-yellow); /* Yellow border on hover */
+            color: var(--tcf-yellow); /* Yellow text on hover */
+            transform: none; /* Remove lift */
+        }
+
+        /* Style for the Season Filter Select */
+        #season-filter {
+            padding: 7px 25px 7px 10px; /* Adjusted padding */
+            font-size: 0.9em; /* Adjusted size */
+            font-family: Arial, Helvetica, sans-serif; /* Standard font */
+            cursor: pointer;
+            background-color: var(--m6-bg-secondary); /* Match header bg */
+            color: var(--m6-text-primary); /* Light text */
+            border: 1px solid var(--m6-border); /* Use theme border */
+            border-radius: 3px; /* Sharper corners */
+            margin-right: 15px;
+            box-shadow: var(--m6-shadow-light); /* Removed shadow */
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            /* Simple arrow using SVG */
+            background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2010%205%22%3E%3Cpath%20fill%3D%22%23a0a0a0%22%20d%3D%22M0%200l5%205%205-5z%22%2F%3E%3C%2Fsvg%3E');
+            background-repeat: no-repeat;
+            background-position: right 8px top 50%;
+            background-size: 10px auto;
+            transition: border-color 0.2s;
+        }
+        #season-filter:hover {
+            border-color: var(--tcf-yellow); /* Yellow border on hover */
+        }
+        #season-filter:focus {
+            outline: none;
+            border-color: var(--tcf-yellow);
+            box-shadow: 0 0 0 2px rgba(255, 199, 44, 0.4); /* Subtle yellow focus ring */
+        }
+        /* Label for the filter */
+        label[for="season-filter"] {
+            color: var(--m6-text-secondary); /* Use secondary text color */
+            margin-right: 8px;
+            font-family: Arial, Helvetica, sans-serif; /* Standard font */
+            font-size: 0.9em; /* Adjusted size */
         }
 
 
         .main-content {
             display: flex;
-            flex-grow: 1; /* Allow main content to fill space */
-            overflow: hidden; /* Prevent overflow issues */
-            padding: 10px;
-            gap: 10px; /* Space between primary view and log */
+            flex-grow: 1;
+            overflow: hidden; /* Prevent content overflow */
+            padding: 15px; /* Increased padding */
+            gap: 15px; /* Increased gap */
+            min-height: 0; /* Allow flex items to shrink properly */
         }
 
-        /* Container for the switchable view (Map or Table) */
         .primary-view-container {
-            height: 100%;
-            width: 65%; /* Take up the main area */
-            position: relative; /* Needed for absolute positioning of children if required, or just structure */
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            background-color: #fff; /* Background for the container */
-            overflow: hidden; /* Hide overflow from children */
+            flex-basis: 65%; /* Use flex-basis */
+            min-width: 0; /* Allow shrinking */
+            position: relative;
+            border-radius: 3px; /* Sharper corners */
+            box-shadow: var(--m6-shadow); /* Removed shadow */
+            background-color: var(--m6-white); /* Keep white for map/table bg */
+            overflow: hidden;
+            border: 1px solid var(--m6-border); /* Add border */
+            display: flex; /* Ensure map/table fills container */
+            flex-direction: column;
         }
 
         #map {
             height: 100%;
-            width: 100%; /* Fill the primary container */
-            /* Removed border-radius and shadow as they are on the container now */
+            width: 100%;
+            flex-grow: 1; /* Allow map to fill space */
         }
 
         .sidebar {
-            height: 100%;
-            width: 35%; /* Remaining width for the log */
+            flex-basis: 35%; /* Use flex-basis */
+            min-width: 0; /* Allow shrinking */
             display: flex;
             flex-direction: column;
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            overflow: hidden; /* Prevent scrollbar on the main sidebar div */
+            background: var(--m6-bg-secondary); /* Use secondary bg */
+            border-radius: 3px; /* Sharper corners */
+            border: 1px solid var(--m6-border); /* Use theme border */
+            box-shadow: var(--m6-shadow); /* Removed shadow */
+            overflow: hidden; /* Prevents content spill */
         }
 
-        /* Styling for the two log sections */
-        #main-chat-container, #background-work-container {
+        /* Simplified Sidebar Headers */
+        .sidebar h2, .background-header span, #interactive-chat-header span {
+            font-family: Arial, Helvetica, sans-serif; /* Standard font */
+            font-size: 1em; /* Adjusted size */
+            font-weight: bold;
+            color: var(--m6-text-primary); /* Light text */
+            letter-spacing: 0.5px;
+            margin: 0; /* Reset margin */
+        }
+        .header-row, #background-header, #interactive-chat-header {
+            background: none; /* Remove gradient/color */
+            padding: 10px 15px; /* Adjusted padding */
+            box-shadow: none; /* Remove shadow */
+            border-radius: 0; /* Remove rounding */
+            border-bottom: 1px solid var(--m6-border); /* Add bottom border */
             display: flex;
-            flex-direction: column;
-            overflow: hidden; /* Prevent inner containers from overflowing sidebar */
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0; /* Prevent headers from shrinking */
         }
-
         #main-chat-container {
-            flex-basis: 60%; /* Adjust initial height ratio as needed */
-            border-bottom: 2px solid #ccc; /* Separator */
+            flex-basis: 60%;
+            border-bottom: none; /* Remove yellow border */
+            background: transparent;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* Contain children */
+            min-height: 0; /* Allow shrinking */
         }
-
         #background-work-container {
             flex-basis: 40%;
+            background: transparent;
+            display: flex;
+            flex-direction: column;
+            border-top: 1px solid var(--m6-border); /* Add separator */
+            overflow: hidden; /* Contain children */
+            min-height: 0; /* Allow shrinking */
+        }
+        #interactive-chat-container {
+            background: transparent;
+            border-top: 1px solid var(--m6-border); /* Use standard border */
+            flex-basis: 35%; /* Keep ratio */
+            min-height: 180px; /* Keep min height for usability */
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* Contain children */
+        }
+        #chat-log-area, #background-log-area, #interactive-chat-log-area {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 10px;
+            background: transparent; /* Remove subtle background */
+            min-height: 0; /* Allow shrinking */
+        }
+        #chat-log-area { color: var(--m6-text-primary); }
+        #background-log-area { color: var(--m6-text-secondary); } /* Keep secondary for background */
+        #interactive-chat-log-area { color: var(--m6-text-primary); }
+
+        /* Adjust chat bubble styles for new background */
+        #chat-log-area .log-entry.log-entry-stephai,
+        #interactive-chat-log-area .ai-msg {
+            background: var(--m6-bg-secondary); /* Use secondary bg */
+            color: var(--m6-text-primary); /* Light text */
+            border: 1px solid var(--m6-border);
+            box-shadow: none;
+            border-radius: 6px; /* Slightly rounded */
+            padding: 10px 15px;
+            margin: 8px 40px 8px 8px; /* Adjust margins */
+            text-align: left;
+        }
+        #chat-log-area .log-entry.log-entry-scheduler,
+        #interactive-chat-log-area .user-msg {
+            background: #333; /* Slightly different dark bg for user/scheduler */
+            color: var(--m6-text-primary); /* Light text */
+            border: 1px solid var(--m6-border);
+            box-shadow: none;
+            border-radius: 6px;
+            padding: 10px 15px;
+            margin: 8px 8px 8px 40px; /* Adjust margins */
+            text-align: right;
         }
 
-        /* Headers for both sections */
-        .sidebar h2, .background-header {
-            margin: 0;
-            padding: 10px 15px; /* Slightly reduced padding */
-            background-color: #e2e2e2;
-            font-size: 1.1em; /* Slightly smaller */
-            color: #333;
-            border-bottom: 1px solid #ddd;
-            flex-shrink: 0;
-            display: flex; /* Use flex for alignment */
-            justify-content: space-between; /* Space out title and icons */
-            align-items: center;
-        }
-
-        .background-header {
-            cursor: pointer; /* Indicate clickable */
-            user-select: none; /* Prevent text selection */
-        }
-        .background-header:hover {
-            background-color: #d8d8d8;
-        }
-
-        /* Simple CSS Spinner */
-        .spinner {
-            border: 3px solid #f3f3f3; /* Light grey */
-            border-top: 3px solid #555; /* Dark grey */
-            border-radius: 50%;
-            width: 16px; /* Size */
-            height: 16px;
-            animation: spin 1s linear infinite;
-            display: none; /* Hidden by default */
-            margin-left: 10px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Toggle icon (simple +/-) */
-        .toggle-icon {
-            font-weight: bold;
-            margin-left: 10px;
-        }
-
-        /* Log container styling */
-        #chat-log-area, #background-log-area {
-            flex-grow: 1; /* Allow log areas to fill their container */
-            padding: 10px; /* Reduced padding */
-            background-color: #282c34; /* Dark background */
-            color: #abb2bf; /* Light text */
-            overflow-y: scroll; /* Enable scrolling */
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 0.8em; /* Slightly smaller font */
-            line-height: 1.3;
-            white-space: pre-wrap; /* Preserve whitespace and wrap lines */
-        }
-
-        /* Hide background log area when collapsed */
-        #background-work-container.collapsed #background-log-area {
-            display: none;
-            /* Alternative: max-height transition
-            max-height: 0;
-            padding-top: 0;
-            padding-bottom: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease-out, padding 0.3s ease-out;
-            */
-        }
-        /* Style when expanded (for transition alternative)
-        #background-work-container #background-log-area {
-             max-height: 500px; // Or a large enough value
-             transition: max-height 0.3s ease-in, padding 0.3s ease-in;
-        }
-        */
-
-        .sidebar h2 {
-            margin: 0;
-            padding: 15px;
-            background-color: #e2e2e2;
-            font-size: 1.2em;
-            color: #333;
-            border-bottom: 1px solid #ddd;
-        }
-
-        /* Specific log area styling */
-        #chat-log-area {
-             background-color: #f8f9fa; /* Lighter background for chat */
-             color: #333; /* Darker text for chat */
-             font-family: sans-serif; /* More readable font for chat */
-             font-size: 0.9em;
-        }
-
-        #background-log-area {
-             background-color: #282c34; /* Dark background for technical logs */
-            color: #abb2bf; /* Light text for technical logs */
-            /* Inherits font, size, line-height from shared rule */
-        }
-
-
-        /* Log entry styling */
         .log-entry {
-            margin-bottom: 6px; /* Reduced margin */
-            padding-bottom: 6px;
-            border-bottom: 1px solid #444; /* Default border for dark theme */
+            margin-bottom: 8px; /* Reduced margin */
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--m6-border); /* Use theme border */
         }
         .log-entry:last-child { border-bottom: none; }
 
-        /* Specific border for light chat area */
-        #chat-log-area .log-entry {
-            border-bottom: 1px solid #eee;
+        #background-log-area .log-entry {
+            background: none; /* Remove specific background */
+            color: var(--m6-text-secondary); /* Use secondary text */
+            border-radius: 0;
+            padding: 4px 0; /* Minimal padding */
+            margin-bottom: 4px;
+            border: none; /* Remove border */
+            font-size: 0.85em; /* Smaller font */
         }
 
-        .log-timestamp { color: #61afef; margin-right: 8px; font-size: 0.9em; }
-        #chat-log-area .log-timestamp { color: #6c757d; } /* Grey timestamp in chat */
-
-        .log-role { font-weight: bold; margin-right: 8px; }
-        /* Role-based coloring (can be applied in JS) */
-        .role-StephAI { color: #d19a66; } /* Orange/Brown for StephAI */
-        .role-scheduler { color: #61afef; } /* Blue for scheduler/user */
-        .role-tool_executor { color: #98c379; } /* Green for tools */
-        .role-system { color: #c678dd; } /* Purple for system */
-
-        .log-data { display: block; margin-top: 3px; margin-left: 15px; white-space: pre-wrap; }
-
-        /* Specific styling for chat messages */
-         #chat-log-area .log-entry .log-data {
-             margin-left: 0; /* No indent for main chat data */
-         }
-         #chat-log-area .log-entry.log-entry-stephai { /* Style agent messages */
-             background-color: #e9ecef;
-             padding: 8px;
-             border-radius: 5px;
-             margin-left: 20px; /* Indent agent messages */
-             border-bottom: none;
-         }
-         #chat-log-area .log-entry.log-entry-scheduler { /* Style user/scheduler messages */
-             background-color: #d1e7dd;
-             padding: 8px;
-             border-radius: 5px;
-             margin-right: 20px; /* Align user messages to the right (or keep left) */
-             border-bottom: none;
+        .log-timestamp {
+            color: var(--m6-text-secondary); /* Use secondary text */
+            margin-right: 8px;
+            font-size: 0.85em; /* Match background log */
+            opacity: 0.7;
+            font-family: Arial, Helvetica, sans-serif; /* Standard font */
+        }
+        /* Timestamp inside chat bubbles */
+        #chat-log-area .log-entry .log-timestamp,
+        #interactive-chat-log-area .log-entry .log-timestamp {
+             color: var(--m6-text-secondary);
+             opacity: 0.7;
+        }
+        .log-role {
+            font-weight: bold;
+            margin-right: 5px;
+            font-family: Arial, Helvetica, sans-serif; /* Standard font */
+            color: var(--m6-text-secondary); /* Use secondary text color */
+        }
+        /* Highlight StephAI role slightly */
+         #background-log-area .role-StephAI .log-role {
+            color: var(--m6-text-primary);
          }
 
 
-        /* Type-based coloring (mostly for background log) */
-        .log-type-error { color: #e06c75; font-weight: bold; } /* Red for errors */
-        #background-log-area .log-entry.log-type-error { background-color: rgba(224, 108, 117, 0.1); }
-
-        .log-type-tool_result, .log-type-tool_start { color: #98c379; } /* Green */
-        .log-type-llm_tool_request { color: #56b6c2; } /* Cyan */
-        .log-type-llm_request { color: #c678dd; } /* Purple */
-        .log-type-cycle_info { color: #61afef; } /* Blue */
-        .log-type-cycle_start, .log-type-cycle_end { color: #e5c07b; } /* Yellow */
-
-        /* Leaflet Popup Styling */
-        .leaflet-popup-content-wrapper {
-            background: #fff;
-            border-radius: 8px;
-            box-shadow: 0 3px 14px rgba(0,0,0,0.4);
-        }
-        .leaflet-popup-content {
-            margin: 15px;
-            line-height: 1.5;
-            font-size: 0.95em;
-            max-height: 250px; /* Limit popup height */
-            overflow-y: auto; /* Allow scrolling within popup */
-        }
-        .leaflet-popup-content h3 {
-            margin: 0 0 10px 0;
-            padding-bottom: 5px;
-            border-bottom: 1px solid #eee;
-            font-size: 1.2em;
-            color: #333;
-        }
-        .leaflet-popup-content p {
-            margin: 5px 0;
-        }
-        .leaflet-popup-content strong {
-            color: #555;
-        }
-        .leaflet-popup-tip-container {
-            display: none; /* Optional: hide the small triangle tip */
-        }
-        .popup-image {
-            max-width: 100%;
-            height: auto;
-            border-radius: 4px;
-            margin-top: 10px;
-        }
-        .missing-data {
-            color: #b94a48;
-            font-style: italic;
-        }
-
-
-        /* --- Table Styling (no changes needed here) --- */
         #database-table-container {
-            height: 100%; /* Fill the primary container */
+            height: 100%;
             width: 100%;
-            padding: 15px;
-            overflow: auto; /* Allow scrolling within the container */
-            display: none; /* Initially hidden */
-            box-sizing: border-box; /* Include padding in height/width */
-            flex-direction: column; /* Stack h2 and table wrapper */
+            padding: 20px; /* Adjusted padding */
+            overflow: auto;
+            display: none;
+            box-sizing: border-box;
+            flex-direction: column;
+            border-radius: 0; /* Remove rounding */
+            background: var(--m6-white);
+            box-shadow: none;
+            color: var(--m6-text-dark);
         }
+
         #database-table-container h2 {
-             margin: 0 0 15px 0;
-             padding-bottom: 10px;
-             border-bottom: 1px solid #ddd;
-             font-size: 1.3em;
-             color: #333;
-             flex-shrink: 0; /* Prevent shrinking when content overflows */
+            margin: 0 0 15px 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--tcf-yellow); /* Keep yellow accent border */
+            font-size: 1.3em; /* Adjusted size */
+            color: var(--m6-text-dark); /* Dark text */
+            font-family: Arial, Helvetica, sans-serif; /* Standard font */
+            font-weight: bold;
         }
-        #table-placeholder {
-             padding: 20px;
-             text-align: center;
-             color: #666;
-             flex-grow: 1; /* Allow placeholder to fill space if table wrapper is empty */
-        }
-        .db-table-wrapper {
-             overflow-y: auto; /* Enable vertical scroll for the table content */
-             flex-grow: 1; /* Allow wrapper to fill remaining space */
-        }
+
         .db-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 0.9em;
-        }
-        .db-table th, .db-table td {
-            border: 1px solid #ddd;
-            padding: 8px 12px;
-            text-align: left;
-            vertical-align: top; /* Align content to the top */
-            white-space: normal; /* Allow text wrapping */
-            word-break: break-word; /* Break long words if necessary */
-        }
-        .db-table th {
-            background-color: #e9e9e9;
-            font-weight: bold;
-            position: sticky; /* Make header sticky */
-            top: 0; /* Stick to the top */
-            z-index: 1; /* Ensure header is above scrolling content */
-        }
-        .db-table tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-        .db-table tr:hover {
-            background-color: #f1f1f1;
-        }
-        .db-table .col-bio, .db-table .col-perplexity {
-             max-width: 300px; /* Example max width */
-             overflow: hidden;
-             text-overflow: ellipsis; /* Add ellipsis for overflow */
+            font-size: 0.9em; /* Adjusted size */
+            font-family: Arial, Helvetica, sans-serif; /* Standard font */
         }
 
-        /* --- INTERACTIVE CHAT STYLES --- */
-        #interactive-chat-container {
-            display: flex;
-            flex-direction: column;
-            border-top: 2px solid #ccc;
-            background: #f6f7fa;
-            flex-basis: 35%;
-            min-height: 180px;
+        .db-table th, .db-table td {
+            border: 1px solid #ddd; /* Lighter border for table */
+            padding: 8px 12px; /* Adjusted padding */
+            text-align: left;
+            vertical-align: top;
+            white-space: normal;
+            word-break: break-word;
         }
-        #interactive-chat-header {
-            background: #e2e2e2;
-            color: #333;
-            padding: 12px 15px;
-            font-size: 1.1em;
-            border-bottom: 1px solid #ddd;
+
+        .db-table th {
+            background-color: #f0f0f0; /* Light grey header */
+            color: var(--m6-text-dark); /* Dark text */
+            font-family: Arial, Helvetica, sans-serif; /* Standard font */
             font-weight: bold;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            border-bottom: 2px solid #ccc; /* Darker grey bottom border */
         }
-        #interactive-chat-log-area {
-            flex: 1;
-            padding: 10px;
-            background: #21242b;
-            color: #e7e7e7;
-            overflow-y: auto;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 0.9em;
+
+        .db-table tr:nth-child(even) {
+            background-color: #f9f9f9; /* Very light grey for zebra */
         }
+
+        .db-table tr:hover {
+            background-color: #f0f0f0; /* Slightly darker hover */
+        }
+
+        .db-table .col-bio {
+            max-width: 300px; /* Adjusted width */
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+
         #interactive-chat-input-row {
             display: flex;
-            padding: 8px;
-            background: #e2e2e2;
-        }
-        #interactive-chat-input {
-            flex: 1;
-            padding: 6px 10px;
-            font-size: 1em;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            margin-right: 8px;
-        }
-        #interactive-chat-send {
-            padding: 6px 16px;
-            font-size: 1em;
-            background: #333;
-            color: #fff;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        #interactive-chat-send:disabled {
-            background: #888;
-            cursor: not-allowed;
-        }
-        .user-msg {
-            text-align: right;
-            margin-bottom: 6px;
-            color: #b7e4c7;
-        }
-        .ai-msg {
-            text-align: left;
-            margin-bottom: 6px;
-            color: #f9dc5c;
+            padding: 10px;
+            background: var(--m6-bg-secondary); /* Match sidebar bg */
+            border-top: 1px solid var(--m6-border); /* Standard border */
+            flex-shrink: 0; /* Prevent input row from shrinking */
         }
 
-        /* --- ENLARGE/RESTORE BUTTON --- */
+        #interactive-chat-input {
+            flex: 1;
+            padding: 8px 10px;
+            font-size: 0.9em;
+            border: 1px solid var(--m6-border);
+            border-radius: 3px; /* Sharper corners */
+            margin-right: 10px;
+            background-color: var(--m6-bg); /* Dark input bg */
+            color: var(--m6-text-primary); /* Light text */
+        }
+        #interactive-chat-input:focus {
+             outline: none;
+             border-color: var(--tcf-yellow);
+             box-shadow: 0 0 0 2px rgba(255, 199, 44, 0.4); /* Subtle yellow focus */
+        }
+
+        #interactive-chat-send {
+            padding: 8px 15px;
+            font-size: 0.9em;
+            font-family: Arial, Helvetica, sans-serif; /* Standard font */
+            background: var(--m6-border); /* Use border color for button */
+            color: var(--m6-text-primary); /* Light text */
+            border: none;
+            border-radius: 3px; /* Sharper corners */
+            cursor: pointer;
+            transition: background-color 0.2s, color 0.2s;
+        }
+        #interactive-chat-send:hover {
+            background: var(--tcf-yellow); /* Yellow bg on hover */
+            color: var(--m6-text-dark); /* Dark text on hover */
+            transform: none; /* Remove lift */
+        }
+
+        #interactive-chat-send:disabled {
+            background: #333; /* Darker disabled bg */
+            color: var(--m6-text-secondary); /* Dim text */
+            cursor: not-allowed;
+            transform: none;
+        }
+
+
+        /* Cleaner Enlarge/Collapse Icons */
+        .enlarge-btn, .toggle-icon {
+            font-family: sans-serif; /* Use generic for icons */
+            font-weight: bold;
+            font-size: 1.2em;
+            line-height: 1;
+        }
         .enlarge-btn {
             background: none;
             border: none;
-            font-size: 1.2em;
             cursor: pointer;
-            margin-left: 8px;
-            color: #555;
+            margin-left: 10px;
+            color: var(--m6-text-secondary); /* Secondary text color */
+            transition: color 0.2s;
+            padding: 0;
         }
-        .enlarge-btn:focus {
-            outline: none;
+        .enlarge-btn:hover {
+            color: var(--tcf-yellow); /* Yellow on hover */
         }
-        /* Enlarged window styles */
+        .enlarge-btn:focus { outline: none; }
+
+        /* Use +/- for toggle */
+        .toggle-icon {
+             color: var(--m6-text-secondary);
+             margin-left: 5px;
+             cursor: pointer; /* Make icon clickable */
+        }
+        .toggle-icon:hover { color: var(--tcf-yellow); }
+
+        /* Adjust spinner */
+        #background-header .spinner {
+            /* Add spinner styles if needed, e.g., border color */
+            border-top-color: var(--tcf-yellow);
+            width: 14px; height: 14px; /* Smaller */
+            margin-right: 8px;
+        }
+
+
         .sidebar.enlarged-agent #main-chat-container,
         .sidebar.enlarged-bg #background-work-container,
         .sidebar.enlarged-interactive #interactive-chat-container {
@@ -451,6 +453,7 @@
             height: 100%;
             display: flex;
         }
+
         .sidebar.enlarged-agent #background-work-container,
         .sidebar.enlarged-agent #interactive-chat-container,
         .sidebar.enlarged-bg #main-chat-container,
@@ -459,23 +462,67 @@
         .sidebar.enlarged-interactive #background-work-container {
             display: none !important;
         }
+
+        /* Styles for Map Popups */
+        .leaflet-popup-content-wrapper {
+            background: var(--m6-bg-secondary); /* Dark popup bg */
+            color: var(--m6-text-primary); /* Light text */
+            border-radius: 4px; /* Sharper corners */
+            box-shadow: none; /* Remove shadow */
+            border: 1px solid var(--m6-border);
+        }
+        .leaflet-popup-content {
+            margin: 12px 18px; /* Adjusted padding */
+            font-family: Arial, Helvetica, sans-serif; /* Standard font */
+            line-height: 1.5;
+            font-size: 0.9em;
+        }
+        .leaflet-popup-content h3 {
+            font-family: 'Montserrat', sans-serif; /* Keep Montserrat */
+            color: var(--tcf-yellow); /* Yellow title */
+            margin: 0 0 8px 0;
+            padding-bottom: 4px;
+            border-bottom: 1px solid var(--m6-border); /* Theme border */
+            font-size: 1.1em;
+        }
+        .leaflet-popup-content p {
+            margin: 4px 0;
+        }
+        .leaflet-popup-content strong {
+            color: var(--m6-text-primary); /* Primary light text for strong */
+            font-weight: bold;
+        }
+        .popup-image {
+            max-width: 100%;
+            height: auto;
+            margin-top: 8px;
+            border-radius: 3px;
+            border: 1px solid var(--m6-border);
+        }
+        .missing-data {
+            color: var(--m6-text-secondary); /* Secondary text for missing */
+            font-style: italic;
+            font-size: 0.9em;
+        }
+        .leaflet-popup-tip {
+            background: var(--m6-bg-secondary); /* Match popup bg */
+        }
+
     </style>
 </head>
 <body>
 
     <div class="header">
         <div class="title-group">
-            <h1>Top Chef France Map & Agent</h1>
-            <p>Discover chefs by location, status, and season</p>
+            <h1>Top Chef France</h1>
+            <p>Chef Explorer</p>
         </div>
         <div>
-            <!-- Add a dropdown for filtering by season -->
-            <label for="season-filter" style="color:white; margin-right:8px;">Season:</label>
+            <label for="season-filter">Season:</label>
             <select id="season-filter">
-                <option value="">All</option>
-                <!-- JS will populate additional options -->
+                <option value="">All Seasons</option>
             </select>
-            <button id="view-toggle-button">Toggle View</button>
+            <button id="view-toggle-button">Show Table</button>
         </div>
     </div>
 
@@ -485,28 +532,28 @@
             <div id="map"></div>
             <!-- Database Table Section (initially hidden) -->
             <div id="database-table-container">
-                <h2>Chef Database View</h2>
+                <h2>Chef Database</h2> <!-- Simplified Title -->
                 <div id="table-placeholder">Loading database content...</div>
-                <!-- Table will be generated here by JavaScript -->
-                <div class="db-table-wrapper">
-                    <table class="db-table">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Name</th>
-                                <th>Status</th>
-                                <th>Address</th>
-                                <th>Lat</th>
-                                <th>Lon</th>
-                                <th>Bio</th>
-                                <th>Season</th>
-                                <th>Last Updated</th>
-                            </tr>
-                        </thead>
-                        <tbody id="chef-table">
-                        </tbody>
-                    </table>
-                </div>
+                <!-- Table structure remains the same, styling handled by CSS -->
+                <div class="db-table-wrapper"> <!-- Added wrapper for potential future scrollbars -->
+                     <table class="db-table">
+                         <thead>
+                             <tr>
+                                 <th>ID</th>
+                                 <th>Name</th>
+                                 <th>Status</th>
+                                 <th>Address</th>
+                                 <th>Lat</th>
+                                 <th>Lon</th>
+                                 <th>Bio</th>
+                                 <th>Season</th>
+                                 <th>Last Updated</th>
+                             </tr>
+                         </thead>
+                         <tbody id="chef-table">
+                         </tbody>
+                     </table>
+                 </div>
             </div>
         </div>
 
@@ -514,43 +561,40 @@
         <div class="sidebar">
             <!-- Main Chat Area -->
             <div id="main-chat-container">
-                <div class="header-row">
-                    <h2>Agent Chat (legacy, not interactive)</h2>
-                    <button class="enlarge-btn" id="enlarge-agent" title="Enlarge">&#128269;</button>
+                <div class="header-row"> <!-- Use class for consistent styling -->
+                    <h2>Chef Agent Chat</h2>
+                    <button class="enlarge-btn" id="enlarge-agent" title="Enlarge">&#x2922;</button> <!-- Expand icon -->
                 </div>
                 <div id="chat-log-area">
-                    Waiting for StephAI...
+                    <!-- Initial message can be cleared by JS -->
                 </div>
             </div>
-            <!-- Background Activity Area (Collapsible) -->
+            <!-- Background Activity Area -->
             <div id="background-work-container" class="collapsed">
-                 <div class="background-header" id="background-header">
-                     <span>See stephAI work (Background Activity)</span>
-                     <div> <!-- Container for spinner and toggle icon -->
-                         <div class="spinner" id="loading-spinner"></div>
-                         <span class="toggle-icon">+</span>
-                     </div>
-                     <button class="enlarge-btn" id="enlarge-bg" title="Enlarge">&#128269;</button>
-                 </div>
-                 <div id="background-log-area">
-                     <!-- Background logs will appear here -->
-                 </div>
+                <div class="background-header" id="background-header"> <!-- Use ID for JS, class for styling -->
+                    <span>Background Activity</span> <!-- Simplified -->
+                    <div>
+                        <div class="spinner" id="loading-spinner" style="display: none;"></div> <!-- Hide initially -->
+                        <span class="toggle-icon">+</span>
+                    </div>
+                    <button class="enlarge-btn" id="enlarge-bg" title="Enlarge">&#x2922;</button> <!-- Expand icon -->
+                </div>
+                <div id="background-log-area"></div>
             </div>
             <!-- Interactive Chat Area -->
             <div id="interactive-chat-container">
-                <div id="interactive-chat-header">
-                    Talk to StephAI (Interactive)
-                    <button class="enlarge-btn" id="enlarge-interactive" title="Enlarge">&#128269;</button>
+                <div id="interactive-chat-header"> <!-- Use ID for JS, class for styling -->
+                    <span>Ask Chef Agent</span> <!-- Simplified -->
+                    <button class="enlarge-btn" id="enlarge-interactive" title="Enlarge">&#x2922;</button> <!-- Expand icon -->
                 </div>
                 <div id="interactive-chat-log-area"></div>
                 <div id="interactive-chat-input-row">
-                    <input type="text" id="interactive-chat-input" placeholder="Type your question..." autocomplete="off" />
+                    <input type="text" id="interactive-chat-input" placeholder="Ask about chefs, seasons, locations..." autocomplete="off" />
                     <button id="interactive-chat-send">Send</button>
                 </div>
             </div>
         </div>
     </div>
-
 
     <!-- Embed JSON data safely -->
     <script id="chefs-data" type="application/json">
@@ -581,13 +625,13 @@
             chefsData = JSON.parse(rawJsonData);
 
             if (!Array.isArray(chefsData)) {
-                 throw new Error("Parsed data is not a valid array.");
+                throw new Error("Parsed data is not a valid array.");
             }
         } catch (e) {
             console.error("Error processing chef JSON data:", e);
             const mapDiv = document.getElementById('map');
             if (mapDiv) {
-                 mapDiv.innerHTML = '<p style="color: red; padding: 20px;">Error loading chef data for the map.</p>';
+                mapDiv.innerHTML = '<p style="color: red; padding: 20px;">Error loading chef data for the map.</p>';
             }
         }
 
@@ -618,18 +662,17 @@
 
                     if (chef.image_url) {
                         if (String(chef.image_url).startsWith('http:') || String(chef.image_url).startsWith('https:')) {
-                             popupContent += `<img src="${chef.image_url}" alt="${chef.name || 'Chef image'}" class="popup-image">`;
+                            popupContent += `<img src="${chef.image_url}" alt="${chef.name || 'Chef image'}" class="popup-image">`;
                         } else {
-                             console.warn(`Skipping potentially unsafe image URL: ${chef.image_url}`);
+                            console.warn(`Skipping potentially unsafe image URL: ${chef.image_url}`);
                         }
                     }
                     marker.bindPopup(popupContent);
                 }
             });
         } else {
-             console.error("Chef data is not an array after processing:", chefsData);
+            console.error("Chef data is not an array after processing:", chefsData);
         }
-
 
         // --- Log Viewer Logic ---
         const chatLogArea = document.getElementById('chat-log-area');
@@ -639,120 +682,118 @@
 
         // Accepts the full log object passed to it
         function formatLogData(logObject) {
-             // Add a safety check for the passed object
-             if (!logObject) {
-                 console.error("formatLogData received undefined logObject");
-                 return "[Error: Invalid log object received]";
-             }
+            // Add a safety check for the passed object
+            if (!logObject) {
+                console.error("formatLogData received undefined logObject");
+                return "[Error: Invalid log object received]";
+            }
             const data = logObject.data; // Extract data from the passed log object
 
             // Keep sensitive formatting for background logs
             if (typeof data === 'string') {
-                 try {
-                     // Attempt to parse JSON only if it looks like JSON
-                     if (data.trim().startsWith('{') || data.trim().startsWith('[')) {
-                         const parsed = JSON.parse(data);
-                         return JSON.stringify(parsed, null, 2); // Pretty print for background
-                     }
-                 } catch (e) { /* Ignore parsing error, return original string */ }
-                 return data; // Return original string if not JSON or parsing failed
-             } else if (typeof data === 'object' && data !== null) {
-                 // Handle specific object structures for chat if needed, otherwise stringify for background
-                 // Use the passed logObject here
-                 if (logObject.role === 'StephAI' && logObject.type === 'llm_response' && data.content) {
-                     return data.content; // Extract just the text content for chat
-                 }
-                 return JSON.stringify(data, null, 2); // Pretty print object for background
-             }
-             return String(data); // Fallback for other types
-         }
+                try {
+                    // Attempt to parse JSON only if it looks like JSON
+                    if (data.trim().startsWith('{') || data.trim().startsWith('[')) {
+                        const parsed = JSON.parse(data);
+                        return JSON.stringify(parsed, null, 2); // Pretty print for background
+                    }
+                } catch (e) { /* Ignore parsing error, return original string */ }
+                return data; // Return original string if not JSON or parsing failed
+            } else if (typeof data === 'object' && data !== null) {
+                // Handle specific object structures for chat if needed, otherwise stringify for background
+                // Use the passed logObject here
+                if (logObject.role === 'StephAI' && logObject.type === 'llm_response' && data.content) {
+                    return data.content; // Extract just the text content for chat
+                }
+                return JSON.stringify(data, null, 2); // Pretty print object for background
+            }
+            return String(data); // Fallback for other types
+        }
 
-         function updateSpinner() {
-             if (backgroundTaskCount > 0) {
-                 loadingSpinner.style.display = 'inline-block';
-             } else {
-                 loadingSpinner.style.display = 'none';
-             }
-         }
+        function updateSpinner() {
+            if (backgroundTaskCount > 0) {
+                loadingSpinner.style.display = 'inline-block';
+            } else {
+                loadingSpinner.style.display = 'none';
+            }
+        }
 
-         function addLogEntry(log) {
-             let targetContainer;
-             let isBackgroundTask = true;
-             // Pass the full log object (named 'log' in this scope) to formatLogData
-             let formattedData = formatLogData(log);
+        function addLogEntry(log) {
+            let targetContainer;
+            let isBackgroundTask = true;
+            // Pass the full log object (named 'log' in this scope) to formatLogData
+            let formattedData = formatLogData(log);
 
-             // Determine target container and if it's a background task
-             if (log.role === 'StephAI' && log.type === 'llm_response') {
-                 targetContainer = chatLogArea;
-                 isBackgroundTask = false;
-                 // Use the extracted content if available
-                 formattedData = (typeof log.data === 'object' && log.data !== null && log.data.content) ? log.data.content : formattedData;
-             } else if (log.role === 'scheduler') { // User/Scheduler messages also in chat
-                 targetContainer = chatLogArea;
-                 isBackgroundTask = false;
-                 formattedData = (typeof log.data === 'object' && log.data !== null && log.data.content) ? log.data.content : formattedData;
-             } else {
-                 targetContainer = backgroundLogArea;
-                 isBackgroundTask = true;
-             }
+            // Determine target container and if it's a background task
+            if (log.role === 'StephAI' && log.type === 'llm_response') {
+                targetContainer = chatLogArea;
+                isBackgroundTask = false;
+                // Use the extracted content if available
+                formattedData = (typeof log.data === 'object' && log.data !== null && log.data.content) ? log.data.content : formattedData;
+            } else if (log.role === 'scheduler') { // User/Scheduler messages also in chat
+                targetContainer = chatLogArea;
+                isBackgroundTask = false;
+                formattedData = (typeof log.data === 'object' && log.data !== null && log.data.content) ? log.data.content : formattedData;
+            } else {
+                targetContainer = backgroundLogArea;
+                isBackgroundTask = true;
+            }
 
-             // Clear initial message
-             if (targetContainer.textContent.includes("Waiting for StephAI...") || targetContainer.textContent.includes("Waiting for StephAI's first check...")) {
-                 targetContainer.innerHTML = '';
-             }
+            // Clear initial message
+            if (targetContainer.textContent.includes("Waiting for StephAI...") || targetContainer.textContent.includes("Waiting for StephAI's first check...")) {
+                targetContainer.innerHTML = '';
+            }
 
-             // Create log entry elements
-             const entryDiv = document.createElement('div');
-             entryDiv.classList.add('log-entry');
-             if (log.role) entryDiv.classList.add(`role-${log.role}`); // Add role class
-             if (log.type) entryDiv.classList.add(`log-type-${log.type.split('_')[0]}`); // Add general type class (e.g., log-type-tool)
-             if (log.type && log.type.includes('error')) entryDiv.classList.add('log-type-error'); // Specific error class
+            // Create log entry elements
+            const entryDiv = document.createElement('div');
+            entryDiv.classList.add('log-entry');
+            if (log.role) entryDiv.classList.add(`role-${log.role}`); // Add role class
+            if (log.type) entryDiv.classList.add(`log-type-${log.type.split('_')[0]}`); // Add general type class (e.g., log-type-tool)
+            if (log.type && log.type.includes('error')) entryDiv.classList.add('log-type-error'); // Specific error class
 
-             // Add specific classes for chat styling
-             if (targetContainer === chatLogArea) {
-                 if (log.role === 'StephAI') entryDiv.classList.add('log-entry-stephai');
-                 else if (log.role === 'scheduler') entryDiv.classList.add('log-entry-scheduler');
-             }
+            // Add specific classes for chat styling
+            if (targetContainer === chatLogArea) {
+                if (log.role === 'StephAI') entryDiv.classList.add('log-entry-stephai');
+                else if (log.role === 'scheduler') entryDiv.classList.add('log-entry-scheduler');
+            }
 
+            const timestampSpan = document.createElement('span');
+            timestampSpan.classList.add('log-timestamp');
+            timestampSpan.textContent = new Date(log.timestamp * 1000).toLocaleTimeString();
 
-             const timestampSpan = document.createElement('span');
-             timestampSpan.classList.add('log-timestamp');
-             timestampSpan.textContent = new Date(log.timestamp * 1000).toLocaleTimeString();
+            const roleSpan = document.createElement('span');
+            roleSpan.classList.add('log-role');
+            roleSpan.textContent = `${log.role || 'system'}:`;
 
-             const roleSpan = document.createElement('span');
-             roleSpan.classList.add('log-role');
-             roleSpan.textContent = `${log.role || 'system'}:`;
+            const dataSpan = document.createElement('span');
+            dataSpan.classList.add('log-data');
+            dataSpan.textContent = formattedData; // Use pre-formatted data
 
-             const dataSpan = document.createElement('span');
-             dataSpan.classList.add('log-data');
-             dataSpan.textContent = formattedData; // Use pre-formatted data
+            // Assemble entry
+            entryDiv.appendChild(timestampSpan);
+            // Only show role in background log for cleaner chat
+            if (targetContainer === backgroundLogArea) {
+                entryDiv.appendChild(roleSpan);
+            }
+            entryDiv.appendChild(dataSpan);
 
-             // Assemble entry
-             entryDiv.appendChild(timestampSpan);
-             // Only show role in background log for cleaner chat
-             if (targetContainer === backgroundLogArea) {
-                 entryDiv.appendChild(roleSpan);
-             }
-             entryDiv.appendChild(dataSpan);
+            // Append to the correct container
+            targetContainer.appendChild(entryDiv);
 
-             // Append to the correct container
-             targetContainer.appendChild(entryDiv);
+            // Scroll to bottom
+            targetContainer.scrollTop = targetContainer.scrollHeight;
 
-             // Scroll to bottom
-             targetContainer.scrollTop = targetContainer.scrollHeight;
-
-             // Update spinner logic
-             if (isBackgroundTask) {
-                 // Increment counter for starting tasks, decrement for ending tasks
-                 if (log.type === 'tool_start' || log.type === 'llm_request') {
-                     backgroundTaskCount++;
-                 } else if (log.type === 'tool_result' || log.type === 'tool_error' || log.type === 'llm_response' || log.type === 'llm_error' || log.type === 'llm_tool_request') {
-                     backgroundTaskCount = Math.max(0, backgroundTaskCount - 1); // Decrement, but not below 0
-                 }
-                 updateSpinner();
-             }
-         }
-
+            // Update spinner logic
+            if (isBackgroundTask) {
+                // Increment counter for starting tasks, decrement for ending tasks
+                if (log.type === 'tool_start' || log.type === 'llm_request') {
+                    backgroundTaskCount++;
+                } else if (log.type === 'tool_result' || log.type === 'tool_error' || log.type === 'llm_response' || log.type === 'llm_error' || log.type === 'llm_tool_request') {
+                    backgroundTaskCount = Math.max(0, backgroundTaskCount - 1); // Decrement, but not below 0
+                }
+                updateSpinner();
+            }
+        }
 
         // --- SSE Connection ---
         const eventSource = new EventSource("/stream_logs");
@@ -762,72 +803,72 @@
         };
 
         eventSource.onmessage = function(event) {
-             try {
-                 const logEntry = JSON.parse(event.data);
-                 addLogEntry(logEntry);
-             } catch (e) {
-                 console.error("Failed to parse SSE data:", event.data, e);
-                 // Log parsing errors to the background log
-                 addLogEntry({ type: 'stream_error', data: `Failed to parse log: ${event.data}`, timestamp: Date.now() / 1000, role: 'system' });
-             }
-         };
+            try {
+                const logEntry = JSON.parse(event.data);
+                addLogEntry(logEntry);
+            } catch (e) {
+                console.error("Failed to parse SSE data:", event.data, e);
+                // Log parsing errors to the background log
+                addLogEntry({ type: 'stream_error', data: `Failed to parse log: ${event.data}`, timestamp: Date.now() / 1000, role: 'system' });
+            }
+        };
 
-         eventSource.onerror = function(err) {
-             console.error("EventSource failed:", err);
-             // Log connection errors to the background log
-             addLogEntry({ type: 'stream_error', data: 'Log stream connection error. Check console.', timestamp: Date.now() / 1000, role: 'system' });
-             backgroundTaskCount = 0; // Reset counter on error
-             updateSpinner();
-         };
+        eventSource.onerror = function(err) {
+            console.error("EventSource failed:", err);
+            // Log connection errors to the background log
+            addLogEntry({ type: 'stream_error', data: 'Log stream connection error. Check console.', timestamp: Date.now() / 1000, role: 'system' });
+            backgroundTaskCount = 0; // Reset counter on error
+            updateSpinner();
+        };
 
-         // --- Background Log Collapse/Expand Logic ---
-         const backgroundHeader = document.getElementById('background-header');
-         const backgroundContainer = document.getElementById('background-work-container');
-         const toggleIcon = backgroundHeader.querySelector('.toggle-icon');
+        // --- Background Log Collapse/Expand Logic ---
+        const backgroundHeader = document.getElementById('background-header');
+        const backgroundContainer = document.getElementById('background-work-container');
+        const toggleIcon = backgroundHeader.querySelector('.toggle-icon');
 
-         backgroundHeader.addEventListener('click', () => {
-             backgroundContainer.classList.toggle('collapsed');
-             if (backgroundContainer.classList.contains('collapsed')) {
-                 toggleIcon.textContent = '+';
-             } else {
-                 toggleIcon.textContent = '-';
-                 // Scroll to bottom when expanding
-                 backgroundLogArea.scrollTop = backgroundLogArea.scrollHeight;
-             }
-         });
+        backgroundHeader.addEventListener('click', () => {
+            backgroundContainer.classList.toggle('collapsed');
+            if (backgroundContainer.classList.contains('collapsed')) {
+                toggleIcon.textContent = '+';
+            } else {
+                toggleIcon.textContent = '-';
+                // Scroll to bottom when expanding
+                backgroundLogArea.scrollTop = backgroundLogArea.scrollHeight;
+            }
+        });
 
-         // --- Database Table Loading & Refreshing Logic ---
-         let tableLoaded = false; // Tracks initial load
-         const tablePlaceholder = document.getElementById('table-placeholder');
-         const tableContainer = document.getElementById('database-table-container'); // Get container reference
+        // --- Database Table Loading & Refreshing Logic ---
+        let tableLoaded = false; // Tracks initial load
+        const tablePlaceholder = document.getElementById('table-placeholder');
+        const tableContainer = document.getElementById('database-table-container'); // Get container reference
 
-         async function refreshTableData() {
-             console.log("Refreshing table data...");
-             tablePlaceholder.textContent = 'Refreshing database content...'; // Update placeholder text
-             tablePlaceholder.style.color = '#666'; // Reset color
-             tableLoaded = false; // Reset flag to allow reload display logic
+        async function refreshTableData() {
+            console.log("Refreshing table data...");
+            tablePlaceholder.textContent = 'Refreshing database content...'; // Update placeholder text
+            tablePlaceholder.style.color = '#666'; // Reset color
+            tableLoaded = false; // Reset flag to allow reload display logic
 
-             // Clear existing table if it exists within the wrapper
-             const existingWrapper = tablePlaceholder.querySelector('.db-table-wrapper');
-             if (existingWrapper) {
-                 tablePlaceholder.removeChild(existingWrapper);
-             }
+            // Clear existing table if it exists within the wrapper
+            const existingWrapper = tablePlaceholder.querySelector('.db-table-wrapper');
+            if (existingWrapper) {
+                tablePlaceholder.removeChild(existingWrapper);
+            }
 
-             await loadAndDisplayTable(); // Call the main loading function
-         }
+            await loadAndDisplayTable(); // Call the main loading function
+        }
 
-         async function loadAndDisplayTable() {
+        async function loadAndDisplayTable() {
             try {
                 const response = await fetch('/api/chefs');
-                 if (!response.ok) {
-                     throw new Error(`HTTP error! status: ${response.status}`);
-                 }
-                 const chefs = await response.json();
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const chefs = await response.json();
 
-                 if (!Array.isArray(chefs) || chefs.length === 0) {
-                     tablePlaceholder.textContent = 'No chef data found in the database.';
-                     return;
-                 }
+                if (!Array.isArray(chefs) || chefs.length === 0) {
+                    tablePlaceholder.textContent = 'No chef data found in the database.';
+                    return;
+                }
 
                 const columns = [
                     { key: 'id', header: 'ID' },
@@ -839,15 +880,15 @@
                     { key: 'bio', header: 'Bio', className: 'col-bio' },
                     { key: 'season', header: 'Season' },
                     { key: 'last_updated', header: 'Last Updated' },
-                 ];
+                ];
 
-                 const tableWrapper = document.createElement('div');
-                 tableWrapper.classList.add('db-table-wrapper');
-                 const table = document.createElement('table');
-                 table.classList.add('db-table');
-                 const thead = document.createElement('thead');
-                 const tbody = document.createElement('tbody');
-                 const headerRow = document.createElement('tr');
+                const tableWrapper = document.createElement('div');
+                tableWrapper.classList.add('db-table-wrapper');
+                const table = document.createElement('table');
+                table.classList.add('db-table');
+                const thead = document.createElement('thead');
+                const tbody = document.createElement('tbody');
+                const headerRow = document.createElement('tr');
 
                 columns.forEach(col => {
                     const th = document.createElement('th');
@@ -857,185 +898,184 @@
                     }
                     headerRow.appendChild(th);
                 });
-                 thead.appendChild(headerRow);
+                thead.appendChild(headerRow);
 
-                 chefs.forEach(chef => {
-                     const row = document.createElement('tr');
-                     columns.forEach(col => {
-                         const td = document.createElement('td');
-                         let value = chef[col.key];
+                chefs.forEach(chef => {
+                    const row = document.createElement('tr');
+                    columns.forEach(col => {
+                        const td = document.createElement('td');
+                        let value = chef[col.key];
 
-                         // Handle potentially complex data like JSON
-                         if (col.key === 'perplexity_data' && typeof value === 'object' && value !== null) {
-                             value = '[JSON Data]';
-                         }
+                        // Handle potentially complex data like JSON
+                        if (col.key === 'perplexity_data' && typeof value === 'object' && value !== null) {
+                            value = '[JSON Data]';
+                        }
 
-                         // Use textContent for safety - this avoids the need for manual HTML escaping
-                         td.textContent = (value === null || typeof value === 'undefined') ? '' : String(value);
+                        // Use textContent for safety - this avoids the need for manual HTML escaping
+                        td.textContent = (value === null || typeof value === 'undefined') ? '' : String(value);
 
-                         if (col.className) {
-                             td.classList.add(col.className);
-                             // Add title attribute for potentially truncated columns
-                             if (col.className === 'col-bio' || col.className === 'col-perplexity') {
-                                 // Still set title attribute for hover text
-                                 td.setAttribute('title', (value === null || typeof value === 'undefined') ? '' : String(value));
-                             }
-                         }
-                         row.appendChild(td);
-                     });
-                     tbody.appendChild(row);
-                 });
+                        if (col.className) {
+                            td.classList.add(col.className);
+                            // Add title attribute for potentially truncated columns
+                            if (col.className === 'col-bio' || col.className === 'col-perplexity') {
+                                // Still set title attribute for hover text
+                                td.setAttribute('title', (value === null || typeof value === 'undefined') ? '' : String(value));
+                            }
+                        }
+                        row.appendChild(td);
+                    });
+                    tbody.appendChild(row);
+                });
 
-                 table.appendChild(thead);
-                 table.appendChild(tbody);
-                 tableWrapper.appendChild(table);
+                table.appendChild(thead);
+                table.appendChild(tbody);
+                tableWrapper.appendChild(table);
 
-                 tablePlaceholder.innerHTML = ''; // Clear placeholder text/spinner
-                 tablePlaceholder.appendChild(tableWrapper);
-                 tableLoaded = true; // Mark as loaded after successful display
+                tablePlaceholder.innerHTML = ''; // Clear placeholder text/spinner
+                tablePlaceholder.appendChild(tableWrapper);
+                tableLoaded = true; // Mark as loaded after successful display
 
-             } catch (error) {
-                 console.error('Error loading or displaying database table:', error);
-                 tablePlaceholder.textContent = `Error loading table data: ${error.message}. Check console for details.`;
-                 tablePlaceholder.style.color = 'red';
-             }
-         }
+            } catch (error) {
+                console.error('Error loading or displaying database table:', error);
+                tablePlaceholder.textContent = `Error loading table data: ${error.message}. Check console for details.`;
+                tablePlaceholder.style.color = 'red';
+            }
+        }
 
-         // --- View Toggle Logic ---
-         const toggleButton = document.getElementById('view-toggle-button');
-         const mapContainer = document.getElementById('map');
-         // tableContainer is already defined above
-         let currentView = 'map';
+        // --- View Toggle Logic ---
+        const toggleButton = document.getElementById('view-toggle-button');
+        const mapContainer = document.getElementById('map');
+        // tableContainer is already defined above
+        let currentView = 'map';
 
-         toggleButton.addEventListener('click', () => {
-             if (currentView === 'map') {
-                 // Switch to Table View
-                 mapContainer.style.display = 'none';
-                 tableContainer.style.display = 'flex'; // Use flex now
-                 toggleButton.textContent = 'Show Map';
-                 currentView = 'table';
-                 if (!tableLoaded) { // Only load initially if not already loaded
+        toggleButton.addEventListener('click', () => {
+            if (currentView === 'map') {
+                // Switch to Table View
+                mapContainer.style.display = 'none';
+                tableContainer.style.display = 'flex'; // Use flex now
+                toggleButton.textContent = 'Show Map';
+                currentView = 'table';
+                if (!tableLoaded) { // Only load initially if not already loaded
                     loadAndDisplayTable();
-                 }
-             } else {
-                 // Switch to Map View
-                 tableContainer.style.display = 'none';
-                 mapContainer.style.display = 'block';
-                 toggleButton.textContent = 'Show Table';
-                 currentView = 'map';
-                 setTimeout(() => {
-                     map.invalidateSize();
-                 }, 10);
-             }
-         });
+                }
+            } else {
+                // Switch to Map View
+                tableContainer.style.display = 'none';
+                mapContainer.style.display = 'block';
+                toggleButton.textContent = 'Show Table';
+                currentView = 'map';
+                setTimeout(() => {
+                    map.invalidateSize();
+                }, 10);
+            }
+        });
 
-         // --- Initial Load Calls ---
-         document.addEventListener('DOMContentLoaded', () => {
-              // Map/Log setup happens via inline script execution order
-              // Table is loaded on demand by the toggle button click
+        // --- Initial Load Calls ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Map/Log setup happens via inline script execution order
+            // Table is loaded on demand by the toggle button click
 
-              // --- SSE Connection for Database Updates ---
-              const dbUpdateEventSource = new EventSource("/stream_db_updates");
+            // --- SSE Connection for Database Updates ---
+            const dbUpdateEventSource = new EventSource("/stream_db_updates");
 
-              dbUpdateEventSource.onopen = function() {
-                  console.log("DB Update SSE Connected");
-              };
+            dbUpdateEventSource.onopen = function() {
+                console.log("DB Update SSE Connected");
+            };
 
-              dbUpdateEventSource.onmessage = function(event) {
-                  try {
-                      const updateSignal = JSON.parse(event.data);
-                      console.log("Received DB update signal:", updateSignal);
-                      if (updateSignal.event === "update" && currentView === 'table') {
-                          // If the table is currently visible, refresh its data
-                          refreshTableData();
-                      }
-                  } catch (e) {
-                      console.error("Failed to parse DB Update SSE data:", event.data, e);
-                      // Optionally log this to the background log area too
-                      addLogEntry({ type: 'db_stream_error', data: `Failed to parse DB update signal: ${event.data}`, timestamp: Date.now() / 1000, role: 'system' });
-                  }
-              };
+            dbUpdateEventSource.onmessage = function(event) {
+                try {
+                    const updateSignal = JSON.parse(event.data);
+                    console.log("Received DB update signal:", updateSignal);
+                    if (updateSignal.event === "update" && currentView === 'table') {
+                        // If the table is currently visible, refresh its data
+                        refreshTableData();
+                    }
+                } catch (e) {
+                    console.error("Failed to parse DB Update SSE data:", event.data, e);
+                    // Optionally log this to the background log area too
+                    addLogEntry({ type: 'db_stream_error', data: `Failed to parse DB update signal: ${event.data}`, timestamp: Date.now() / 1000, role: 'system' });
+                }
+            };
 
-              dbUpdateEventSource.onerror = function(err) {
-                  console.error("DB Update EventSource failed:", err);
-                  addLogEntry({ type: 'db_stream_error', data: 'DB Update stream connection error. Check console.', timestamp: Date.now() / 1000, role: 'system' });
-              };
-          });
+            dbUpdateEventSource.onerror = function(err) {
+                console.error("DB Update EventSource failed:", err);
+                addLogEntry({ type: 'db_stream_error', data: 'DB Update stream connection error. Check console.', timestamp: Date.now() / 1000, role: 'system' });
+            };
+        });
 
-          // Table and Map Data Loading
-          let allChefs = [];
-          let currentSeason = '';
+        // Table and Map Data Loading
+        let allChefs = [];
+        let currentSeason = '';
 
-          // Populate the season filter dropdown based on chef data
-          function populateSeasonFilter(chefs) {
-              const seasonSet = new Set();
-              chefs.forEach(chef => {
-                  if (chef.season !== undefined && chef.season !== null) {
-                      seasonSet.add(chef.season);
-                  }
-              });
-              const seasonFilter = document.getElementById('season-filter');
-              // Remove old options except 'All'
-              seasonFilter.querySelectorAll('option:not([value=""])').forEach(opt => opt.remove());
-              Array.from(seasonSet).sort((a, b) => a - b).forEach(season => {
-                  const opt = document.createElement('option');
-                  opt.value = season;
-                  opt.textContent = `Season ${season}`;
-                  seasonFilter.appendChild(opt);
-              });
-          }
+        // Populate the season filter dropdown based on chef data
+        function populateSeasonFilter(chefs) {
+            const seasonSet = new Set();
+            chefs.forEach(chef => {
+                if (chef.season !== undefined && chef.season !== null) {
+                    seasonSet.add(chef.season);
+                }
+            });
+            const seasonFilter = document.getElementById('season-filter');
+            // Remove old options except 'All'
+            seasonFilter.querySelectorAll('option:not([value=""])').forEach(opt => opt.remove());
+            Array.from(seasonSet).sort((a, b) => a - b).forEach(season => {
+                const opt = document.createElement('option');
+                opt.value = season;
+                opt.textContent = `Season ${season}`;
+                seasonFilter.appendChild(opt);
+            });
+        }
 
-          // Filter chefs by selected season
-          function filterChefsBySeason(chefs, season) {
-              if (!season || season === "") return chefs;
-              return chefs.filter(chef => chef.season == season);
-          }
+        // Filter chefs by selected season
+        function filterChefsBySeason(chefs, season) {
+            if (!season || season === "") return chefs;
+            return chefs.filter(chef => chef.season == season);
+        }
 
-          // Listen for season filter changes
-          document.getElementById('season-filter').addEventListener('change', async function() {
-              currentSeason = this.value;
-              allChefs = await fetchChefs(currentSeason);
-              populateSeasonFilter(allChefs);
-              loadAndDisplayTable();
-          });
+        // Listen for season filter changes
+        document.getElementById('season-filter').addEventListener('change', async function() {
+            currentSeason = this.value;
+            allChefs = await fetchChefs(currentSeason);
+            populateSeasonFilter(allChefs);
+            loadAndDisplayTable();
+        });
 
-          // Enlarging chat windows logic
-          const sidebar = document.querySelector('.sidebar');
-          const enlargeAgent = document.getElementById('enlarge-agent');
-          const enlargeBg = document.getElementById('enlarge-bg');
-          const enlargeInteractive = document.getElementById('enlarge-interactive');
-          let enlarged = '';
-          function toggleEnlarge(which) {
-              if (enlarged === which) {
-                  sidebar.classList.remove('enlarged-' + which);
-                  enlarged = '';
-              } else {
-                  sidebar.classList.remove('enlarged-agent', 'enlarged-bg', 'enlarged-interactive');
-                  sidebar.classList.add('enlarged-' + which);
-                  enlarged = which;
-              }
-          }
-          if (enlargeAgent) enlargeAgent.addEventListener('click', function() { toggleEnlarge('agent'); });
-          if (enlargeBg) enlargeBg.addEventListener('click', function() { toggleEnlarge('bg'); });
-          if (enlargeInteractive) enlargeInteractive.addEventListener('click', function() { toggleEnlarge('interactive'); });
+        // Enlarging chat windows logic
+        const sidebar = document.querySelector('.sidebar');
+        const enlargeAgent = document.getElementById('enlarge-agent');
+        const enlargeBg = document.getElementById('enlarge-bg');
+        const enlargeInteractive = document.getElementById('enlarge-interactive');
+        let enlarged = '';
+        function toggleEnlarge(which) {
+            if (enlarged === which) {
+                sidebar.classList.remove('enlarged-' + which);
+                enlarged = '';
+            } else {
+                sidebar.classList.remove('enlarged-agent', 'enlarged-bg', 'enlarged-interactive');
+                sidebar.classList.add('enlarged-' + which);
+                enlarged = which;
+            }
+        }
+        if (enlargeAgent) enlargeAgent.addEventListener('click', function() { toggleEnlarge('agent'); });
+        if (enlargeBg) enlargeBg.addEventListener('click', function() { toggleEnlarge('bg'); });
+        if (enlargeInteractive) enlargeInteractive.addEventListener('click', function() { toggleEnlarge('interactive'); });
 
-          // Fetch chefs from backend with optional season param
-          async function fetchChefs(season = null) {
-              let url = '/api/chefs';
-              if (season) url += `?season=${season}`;
-              const response = await fetch(url);
-              return response.json();
-          }
+        // Fetch chefs from backend with optional season param
+        async function fetchChefs(season = null) {
+            let url = '/api/chefs';
+            if (season) url += `?season=${season}`;
+            const response = await fetch(url);
+            return response.json();
+        }
 
-          // Initial load
-          (async function() {
-              allChefs = await fetchChefs();
-              populateSeasonFilter(allChefs);
-              loadAndDisplayTable();
-          })();
-        
+        // Initial load
+        (async function() {
+            allChefs = await fetchChefs();
+            populateSeasonFilter(allChefs);
+            loadAndDisplayTable();
+        })();
     </script>
     <script src="/static/interactive_chat.js"></script>
 
- </body>
- </html>
+</body>
+</html>
