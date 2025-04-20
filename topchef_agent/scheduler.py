@@ -11,7 +11,7 @@ job_counter = 0
 
 # --- Configuration ---
 # How often to run the check (in seconds)
-CHECK_INTERVAL_SECONDS = 600 # 10 minutes
+CHECK_INTERVAL_SECONDS = 20 # 10 minutes
 
 def job():
     """The job to be scheduled: run the LLM-driven agent cycle with the initial thought prompt."""
