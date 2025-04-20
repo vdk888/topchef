@@ -2,7 +2,7 @@ import schedule
 import time
 import sys
 # Import the new LLM-driven agent cycle function
-from agent import run_llm_driven_agent_cycle
+from topchef_agent.agent import run_llm_driven_agent_cycle
 
 import random # Needed for the prompt
 
