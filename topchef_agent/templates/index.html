@@ -226,7 +226,7 @@
 
 
         // --- SSE Connection ---
-        const eventSource = new EventSource("{{ url_for('stream_logs') }}");
+        const eventSource = new EventSource("/stream_logs");
 
         eventSource.onopen = function() {
             logContainer.innerHTML = ''; // Clear initial message

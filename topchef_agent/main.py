@@ -19,18 +19,23 @@ log_queue = queue.Queue()
 @app.route('/')
 def index():
     """Displays the main page with the chef database and log viewer."""
-    chefs = load_database()
-    headers = []
-    if chefs:
-        all_keys = set()
-        for chef in chefs:
-            all_keys.update(chef.keys())
-        # Update the preferred order to match the actual database schema
-        preferred_order = ["id", "name", "bio", "image_url", "status", "last_updated", "perplexity_data"]
-        headers = [key for key in preferred_order if key in all_keys]
-        headers.extend(sorted([key for key in all_keys if key not in preferred_order]))
+    try:
+        chefs = load_database()
+        headers = []
+        if chefs:
+            all_keys = set()
+            for chef in chefs:
+                all_keys.update(chef.keys())
+            # Update the preferred order to match the actual database schema
+            preferred_order = ["id", "name", "bio", "image_url", "status", "last_updated", "perplexity_data"]
+            headers = [key for key in preferred_order if key in all_keys]
+            headers.extend(sorted([key for key in all_keys if key not in preferred_order]))
 
-    return render_template('index.html', chefs=chefs, headers=headers)
+        return render_template('index.html', chefs=chefs, headers=headers)
+    except Exception as e:
+        print(f"Error in index route: {e}")
+        # Return a basic page if there's an error
+        return f"<html><body><h1>Top Chef Agent</h1><p>Error loading data: {e}</p><p><a href='/'>Retry</a></p></body></html>"
 
 @app.route('/log_message', methods=['POST'])
 def receive_log():

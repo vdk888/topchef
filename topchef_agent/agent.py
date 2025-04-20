@@ -9,7 +9,7 @@ from database import load_database, update_chef, get_distinct_seasons, get_chefs
 from config import OPENROUTER_API_KEY, PERPLEXITY_API_KEY, YOUR_SITE_URL, YOUR_SITE_NAME
 
 # --- Logging Helper ---
-LOGGING_ENDPOINT = os.environ.get("FLASK_LOGGING_URL", "http://127.0.0.1:5000/log_message")
+LOGGING_ENDPOINT = os.environ.get("FLASK_LOGGING_URL", "http://0.0.0.0:5000/log_message")
 AGENT_NAME = "StephAI" # Define the agent's name
 
 def log_to_ui(message_type: str, data: dict or str, role: str = "system"):
@@ -24,7 +24,7 @@ def log_to_ui(message_type: str, data: dict or str, role: str = "system"):
 
     try:
         print(f"Logging to UI ({payload['role']}): {message_type}", flush=True)
-        requests.post(LOGGING_ENDPOINT, json=payload, timeout=2)
+        requests.post(LOGGING_ENDPOINT, json=payload, timeout=5)
     except requests.exceptions.RequestException as e:
         print(f"Warning: Failed to send log to UI endpoint {LOGGING_ENDPOINT}: {e}", flush=True)
 
@@ -314,7 +314,7 @@ Speak naturally, like you are explaining your work process.
 
         try:
             response = openrouter_client.chat.completions.create(
-                model="deepseek/deepseek-chat-v3-0324:free",
+                model="gpt-3.5-turbo",
                 messages=conversation,
                 tools=tools_list,
                 tool_choice="auto",

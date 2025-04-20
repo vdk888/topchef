@@ -1,0 +1,61 @@
+Handling signal: winch
+[2025-04-20 00:26:23 +0000] [17315] [INFO] Handling signal: winch
+[2025-04-20 00:26:23 +0000] [17315] [INFO] Handling signal: winch
+[2025-04-20 00:26:23 +0000] [17315] [INFO] Handling signal: winch
+'chefs' table check complete.
+[2025-04-20 00:26:23 +0000] [17315] [INFO] Handling signal: winch
+[2025-04-20 00:26:23 +0000] [17315] [INFO] Handling signal: winch
+Scheduling StephAI's check to run every 30 seconds.
+Scheduler started. StephAI will perform its first check shortly...
+Entering scheduling loop (press Ctrl+C to stop)...
+[2025-04-20 00:26:53 +0000] [17315] [CRITICAL] WORKER TIMEOUT (pid:17326)
+SSE stream generator finished.
+[2025-04-20 00:26:53 +0000] [17326] [ERROR] Error handling request /stream_logs
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/gunicorn/workers/sync.py", line 134, in handle
+    self.handle_request(listener, req, client, addr)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/gunicorn/workers/sync.py", line 182, in handle_request
+    for item in respiter:
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/wsgi.py", line 256, in __next__
+    return self._next()
+           ^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/wrappers/response.py", line 32, in _iter_encoded
+    for item in iterable:
+  File "/home/runner/workspace/topchef_agent/main.py", line 60, in generate_log_stream
+    log_entry = log_queue.get(timeout=60) # Wait up to 60 seconds
+                ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/lib/python3.11/queue.py", line 180, in get
+    self.not_empty.wait(remaining)
+  File "/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/lib/python3.11/threading.py", line 331, in wait
+    gotit = waiter.acquire(True, timeout)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/gunicorn/workers/base.py", line 204, in handle_abort
+    sys.exit(1)
+SystemExit: 1
+[2025-04-20 00:26:53 +0000] [17326] [INFO] Worker exiting (pid: 17326)
+Scheduler triggered job for StephAI at 2025-04-20 00:26:53
+
+--- Starting StephAI Cycle [2025-04-20 00:26:53] ---
+Logging to UI (StephAI): cycle_start
+[2025-04-20 00:26:53 +0000] [17463] [INFO] Booting worker with pid: 17463
+Warning: .env file not found in project root or parent directory.
+Checking if 'chefs' table exists and creating if necessary...
+'chefs' table check complete.
+SSE client connected.
+Logging to UI (scheduler): user_message
+Warning: Failed to send log to UI endpoint http://127.0.0.1:5000/log_message: HTTPConnectionPool(host='127.0.0.1', port=5000): Read timed out. (read timeout=2)
+StephAI: Starting work based on prompt: 'Okay StephAI, time for your routine check. Ask yourself: did you check the Top Chef database recently? You should check a random season for missing data.'
+Logging to UI (StephAI): cycle_info
+Warning: Failed to send log to UI endpoint http://127.0.0.1:5000/log_message: HTTPConnectionPool(host='127.0.0.1', port=5000): Read timed out. (read timeout=2)
+
+StephAI Iteration 1/15
+Logging to UI (StephAI): llm_request
+Warning: Failed to send log to UI endpoint http://127.0.0.1:5000/log_message: HTTPConnectionPool(host='127.0.0.1', port=5000): Read timed out. (read timeout=2)
+OpenRouter API Error: Error code: 404 - {'error': {'message': 'No endpoints found that support tool use. To learn more about provider routing, visit: https://openrouter.ai/docs/provider-routing', 'code': 404}}
+Logging to UI (system): llm_error
+Warning: Failed to send log to UI endpoint http://127.0.0.1:5000/log_message: HTTPConnectionPool(host='127.0.0.1', port=5000): Read timed out. (read timeout=2)
+
+--- StephAI Cycle Finished ---
+Logging to UI (StephAI): cycle_end
+Warning: Failed to send log to UI endpoint http://127.0.0.1:5000/log_message: HTTPConnectionPool(host='127.0.0.1', port=5000): Read timed out. (read timeout=2)
+[2025-04-20 00:27:25 +0000] [17315] [CRITICAL] WORKER TIMEOUT (pid:17463)
