@@ -20,10 +20,11 @@ def job():
     print(f"Scheduler triggered job #{job_counter} for StephAI at {time.strftime('%Y-%m-%d %H:%M:%S')}", flush=True)
 
     # Define the initial prompt based on the counter
-    if job_counter % 10 == 0:
-        initial_prompt = "Well, what interesting data point can we add to our knowledge base, that will interest our user, top chef fans? Let's explore some ideas."
-        print("  Using special brainstorming prompt this time.", flush=True)
-    else:
+    if job_counter % 5 == 0: # Trigger fun fact every 5 cycles
+        initial_prompt = "Allez StephAI! It's time to share a little something with our viewers! Dig into the database, find an interesting tidbit about a random chef or season, and present it with your signature flair! Make it fun, make it engaging!"
+        print("  Using special 'Fun Fact' prompt this time.", flush=True)
+    # Optional: Add back brainstorming or other prompts with different modulo checks if needed, e.g., elif job_counter % 15 == 0: ...
+    else: # Default routine check
         initial_prompt = "Okay StephAI, time for your routine check. Ask yourself: did you check the Top Chef database recently? You should check a random season for missing data."
 
     try:
