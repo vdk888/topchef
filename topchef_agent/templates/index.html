@@ -664,13 +664,29 @@
              }
          });
 
-        // --- Database Table Loading Logic ---
-        let tableLoaded = false;
-        async function loadAndDisplayTable() {
-            if (tableLoaded) return;
+         // --- Database Table Loading & Refreshing Logic ---
+         let tableLoaded = false; // Tracks initial load
+         const tablePlaceholder = document.getElementById('table-placeholder');
+         const tableContainer = document.getElementById('database-table-container'); // Get container reference
 
-            const tablePlaceholder = document.getElementById('table-placeholder');
-            tablePlaceholder.textContent = 'Loading database content...';
+         async function refreshTableData() {
+             console.log("Refreshing table data...");
+             tablePlaceholder.textContent = 'Refreshing database content...'; // Update placeholder text
+             tablePlaceholder.style.color = '#666'; // Reset color
+             tableLoaded = false; // Reset flag to allow reload display logic
+
+             // Clear existing table if it exists within the wrapper
+             const existingWrapper = tablePlaceholder.querySelector('.db-table-wrapper');
+             if (existingWrapper) {
+                 tablePlaceholder.removeChild(existingWrapper);
+             }
+
+             await loadAndDisplayTable(); // Call the main loading function
+         }
+
+         async function loadAndDisplayTable() {
+             // Removed the tableLoaded check here, refreshTableData handles preventing unnecessary calls if needed
+             // tablePlaceholder is already defined outside
 
             try {
                 const response = await fetch('/api/chefs');
@@ -744,9 +760,9 @@
                  table.appendChild(tbody);
                  tableWrapper.appendChild(table);
 
-                 tablePlaceholder.innerHTML = '';
+                 tablePlaceholder.innerHTML = ''; // Clear placeholder text/spinner
                  tablePlaceholder.appendChild(tableWrapper);
-                 tableLoaded = true;
+                 tableLoaded = true; // Mark as loaded after successful display
 
              } catch (error) {
                  console.error('Error loading or displaying database table:', error);
@@ -758,7 +774,7 @@
          // --- View Toggle Logic ---
          const toggleButton = document.getElementById('view-toggle-button');
          const mapContainer = document.getElementById('map');
-         const tableContainer = document.getElementById('database-table-container');
+         // tableContainer is already defined above
          let currentView = 'map';
 
          toggleButton.addEventListener('click', () => {
@@ -768,7 +784,9 @@
                  tableContainer.style.display = 'flex'; // Use flex now
                  toggleButton.textContent = 'Show Map';
                  currentView = 'table';
-                 loadAndDisplayTable(); // Load if not already loaded
+                 if (!tableLoaded) { // Only load initially if not already loaded
+                    loadAndDisplayTable();
+                 }
              } else {
                  // Switch to Map View
                  tableContainer.style.display = 'none';
@@ -785,10 +803,37 @@
          document.addEventListener('DOMContentLoaded', () => {
               // Map/Log setup happens via inline script execution order
               // Table is loaded on demand by the toggle button click
-         });
+
+              // --- SSE Connection for Database Updates ---
+              const dbUpdateEventSource = new EventSource("/stream_db_updates");
+
+              dbUpdateEventSource.onopen = function() {
+                  console.log("DB Update SSE Connected");
+              };
+
+              dbUpdateEventSource.onmessage = function(event) {
+                  try {
+                      const updateSignal = JSON.parse(event.data);
+                      console.log("Received DB update signal:", updateSignal);
+                      if (updateSignal.event === "update" && currentView === 'table') {
+                          // If the table is currently visible, refresh its data
+                          refreshTableData();
+                      }
+                  } catch (e) {
+                      console.error("Failed to parse DB Update SSE data:", event.data, e);
+                      // Optionally log this to the background log area too
+                      addLogEntry({ type: 'db_stream_error', data: `Failed to parse DB update signal: ${event.data}`, timestamp: Date.now() / 1000, role: 'system' });
+                  }
+              };
+
+              dbUpdateEventSource.onerror = function(err) {
+                  console.error("DB Update EventSource failed:", err);
+                  addLogEntry({ type: 'db_stream_error', data: 'DB Update stream connection error. Check console.', timestamp: Date.now() / 1000, role: 'system' });
+              };
+          });
 
 
-     </script>
+      </script>
 
  </body>
  </html>

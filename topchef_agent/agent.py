@@ -14,8 +14,10 @@ from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
 from config import OPENROUTER_API_KEY, PERPLEXITY_API_KEY, YOUR_SITE_URL, YOUR_SITE_NAME
 
-# --- Logging Helper ---
-LOGGING_ENDPOINT = os.environ.get("FLASK_LOGGING_URL", "http://127.0.0.1:5000/log_message")
+# --- Logging & Signaling Helpers ---
+FLASK_BASE_URL = os.environ.get("FLASK_BASE_URL", "http://127.0.0.1:5000")
+LOGGING_ENDPOINT = f"{FLASK_BASE_URL}/log_message"
+DB_UPDATE_SIGNAL_ENDPOINT = f"{FLASK_BASE_URL}/signal_db_update" # New endpoint URL
 AGENT_NAME = "StephAI" # Define the agent's name
 
 def log_to_ui(message_type: str, data: dict or str, role: str = "system"):
@@ -33,6 +35,14 @@ def log_to_ui(message_type: str, data: dict or str, role: str = "system"):
         requests.post(LOGGING_ENDPOINT, json=payload, timeout=5)
     except requests.exceptions.RequestException as e:
         print(f"Warning: Failed to send log to UI endpoint {LOGGING_ENDPOINT}: {e}", flush=True)
+
+def signal_database_update():
+    """Sends a signal to the Flask backend that the database has been updated."""
+    try:
+        print(f"Signaling database update to {DB_UPDATE_SIGNAL_ENDPOINT}", flush=True)
+        requests.post(DB_UPDATE_SIGNAL_ENDPOINT, timeout=3) # Simple POST, no payload needed
+    except requests.exceptions.RequestException as e:
+        print(f"Warning: Failed to send database update signal to {DB_UPDATE_SIGNAL_ENDPOINT}: {e}", flush=True)
 
 
 # --- Tool Execution Functions ---
@@ -184,6 +194,7 @@ def execute_update_chef_record(chef_id: int, field_name: str, new_value: any):
             result_msg = json.dumps({"status": "OK", "message": f"Successfully updated {field_name} for chef ID {chef_id}."})
             print("  Database update successful.", flush=True)
             log_to_ui("tool_result", {"name": "update_chef_record", "input": tool_input_data, "result": "OK"})
+            signal_database_update() # Signal the UI about the change
             return result_msg
         else:
              error_msg = json.dumps({"status": "Failed", "error": f"Failed to update {field_name} for chef ID {chef_id}. Chef not found or no change needed."})
@@ -233,6 +244,7 @@ def execute_add_db_column(table_name: str, column_name: str, column_type: str):
             # This is complex to do dynamically. For now, the tool works at the SQL level.
             # Consider adding a note about restarting the app or dynamically updating the model if needed.
             result_msg = json.dumps({"status": "OK", "message": f"Successfully added column '{column_name}' to table '{table_name}' (or it already existed). NOTE: App restart might be needed for ORM features to see the new column." })
+            signal_database_update() # Signal the UI about the change
             return result_msg
         else:
             error_msg = json.dumps({"status": "Failed", "error": f"Failed to add column '{column_name}' to table '{table_name}'. Check logs or database state."})
@@ -271,6 +283,7 @@ def execute_remove_db_column(table_name: str, column_name: str):
             log_to_ui("tool_result", {"name": "remove_db_column", "input": tool_input_data, "result": "OK"})
             # NOTE: Similar to adding, ORM might need app restart to fully reflect the change.
             result_msg = json.dumps({"status": "OK", "message": f"Successfully removed column '{column_name}' from table '{table_name}' (or it didn't exist). NOTE: App restart might be needed for ORM features to reflect this change." })
+            signal_database_update() # Signal the UI about the change
             return result_msg
         else:
             error_msg = json.dumps({"status": "Failed", "error": f"Failed to remove column '{column_name}' from table '{table_name}'. It might be protected or another issue occurred."})
@@ -466,7 +479,7 @@ tools_list = [
         "type": "function",
         "function": {
             "name": "update_chef_record",
-            "description": "Updates a specific field for a specific chef in the PostgreSQL database. Use this ONLY after obtaining verified information (e.g., from search_web_perplexity or geocoding). Allowed fields are 'bio', 'image_url', 'status', 'perplexity_data', 'restaurant_address', 'latitude', 'longitude', or potentially custom fields.",
+            "description": "Updates **one specific field** for a specific chef in the PostgreSQL database. Use this ONLY after obtaining verified information (e.g., from search_web_perplexity or geocoding). Call this tool multiple times if you need to update multiple fields. Allowed fields are 'bio', 'image_url', 'status', 'perplexity_data', 'restaurant_address', 'latitude', 'longitude', or potentially custom fields.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -595,6 +608,28 @@ tools_list = [
                 "required": ["address"]
             }
         }
+    },
+    # --- NEW TOOL DEFINITION for geocoding and updating ---
+    {
+        "type": "function",
+        "function": {
+            "name": "geocode_address_and_update",
+            "description": "Geocodes an address and atomically updates BOTH latitude and longitude for a chef, ensuring that pins on the map will always have both coordinates or neither.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "chef_id": {
+                        "type": "integer",
+                        "description": "The unique ID of the chef to update."
+                    },
+                    "address": {
+                        "type": "string",
+                        "description": "The full street address to geocode (e.g., '1 Rue de Rivoli, 75001 Paris, France')."
+                    }
+                },
+                "required": ["chef_id", "address"]
+            }
+        }
     }
 ]
 
@@ -610,6 +645,7 @@ available_functions = {
     "add_db_column": execute_add_db_column,
     "remove_db_column": execute_remove_db_column,
     "geocode_address": execute_geocode_address, # Added geocoding function
+    "geocode_address_and_update": execute_geocode_address_and_update, # Added geocoding and updating function
 }
 
 # --- LLM Agent Setup ---
@@ -661,6 +697,7 @@ You are {AGENT_NAME}, an autonomous AI agent responsible for maintaining a datab
 - `append_journal_entry`: Add an entry to your persistent journal file. Use types: "Observation", "Action", "Error", "Insight", "Correction".
 - `add_db_column`: Adds a new column to the 'chefs' table. Use snake_case for column names. Use standard SQL types like TEXT, INTEGER, BOOLEAN, JSON.
 - `remove_db_column`: Removes a column from the 'chefs' table. Use with caution, cannot remove 'id' or 'name'.
+- `geocode_address_and_update`: Geocodes an address and atomically updates BOTH latitude and longitude for a chef.
 
 Your Workflow & Journaling:
 1. Acknowledge the task.
@@ -688,7 +725,7 @@ Your Workflow & Journaling:
 8. **State Analysis Outcome & Plan (Routine Check):** Report findings for the *checked subset* (e.g., "Incroyable! Chef Pierre is missing his coordinates!"). Prioritize actions based on the analysis (Address > Coordinates > Other). State the planned tool use clearly.
 9. **Execute Action (Routine Check/Brainstorming):**
     - **Log Planned Action:** Use `append_journal_entry` (type "Action") *before* execution (e.g., "Attempting to geocode address for Chef Pierre", "Searching web for Chef Marie's address").
-    - Execute the planned tool (`search_web_perplexity`, `geocode_address`, `update_chef_record`, `add_db_column`, `remove_db_column`).
+    - Execute the planned tool (`search_web_perplexity`, `geocode_address`, `update_chef_record`, `add_db_column`, `remove_db_column`, `geocode_address_and_update`).
 10. **Process Tool Result (Routine Check/Brainstorming):**
     - State the outcome (e.g., "Et voilà! Geocoding successful!", " Zut! The search returned nothing useful.").
     - **Log Result/Error:** Use `append_journal_entry`. Log successful searches/geocoding as "Observation" (containing the found data). Log successful `update_chef_record` or schema changes as "Action" (confirming the plan). Log failures as "Error".
@@ -910,3 +947,62 @@ if __name__ == '__main__':
     print("Running LLM-driven agent cycle directly for testing...")
     test_prompt = "Time to check the database. Pick a random season and see if any chef info is missing."
     run_llm_driven_agent_cycle(test_prompt)
+
+def execute_geocode_address_and_update(chef_id: int, address: str):
+    """
+    Safely geocodes an address and updates BOTH latitude and longitude atomically for the chef,
+    ensuring that pins on the map will always have both coordinates or neither.
+    """
+    tool_input_data = {"chef_id": chef_id, "address": address}
+    log_to_ui("tool_start", {"name": "geocode_address_and_update", "input": tool_input_data})
+    print(f"--- Tool: Executing Geocode Address & Atomic Update ---", flush=True)
+    print(f"  Chef ID: {chef_id}, Address: {address}", flush=True)
+
+    if not isinstance(chef_id, int):
+        error_msg = json.dumps({"error": "Invalid type for chef_id, must be an integer."})
+        log_to_ui("tool_error", {"name": "geocode_address_and_update", "error": "Invalid chef_id type."})
+        return error_msg
+    if not isinstance(address, str) or not address:
+        error_msg = json.dumps({"error": "Invalid or empty address provided."})
+        log_to_ui("tool_error", {"name": "geocode_address_and_update", "input": tool_input_data, "error": "Invalid address."})
+        return error_msg
+
+    geolocator = Nominatim(user_agent="topchef_agent_app/1.0")
+    try:
+        location = geolocator.geocode(address, timeout=10, country_codes='FR')
+        if location:
+            coordinates = {"latitude": location.latitude, "longitude": location.longitude}
+            from database import update_chef
+            update_data = {"latitude": location.latitude, "longitude": location.longitude}
+            success = update_chef(chef_id, update_data)
+            if success:
+                result_msg = json.dumps({"status": "OK", "message": f"Successfully updated lat/lon for chef ID {chef_id}.", "coordinates": coordinates})
+                print(f"  Geocoding and DB update successful: Lat={location.latitude}, Lon={location.longitude}", flush=True)
+                log_to_ui("tool_result", {"name": "geocode_address_and_update", "input": tool_input_data, "result": coordinates})
+                signal_database_update()
+                return result_msg
+            else:
+                error_msg = json.dumps({"status": "Failed", "error": f"Failed to update coordinates for chef ID {chef_id}. Chef not found or no change needed."})
+                print("  Database update failed (chef not found or no change needed).", flush=True)
+                log_to_ui("tool_error", {"name": "geocode_address_and_update", "input": tool_input_data, "error": "Update failed (not found or no change)." })
+                return error_msg
+        else:
+            error_msg = json.dumps({"error": f"Address not found or could not be geocoded: {address}"})
+            print(f"  Geocoding failed: Address not found.", flush=True)
+            log_to_ui("tool_error", {"name": "geocode_address_and_update", "input": tool_input_data, "error": "Address not found."})
+            return error_msg
+    except GeocoderTimedOut:
+        error_msg = json.dumps({"error": "Geocoding service timed out."})
+        print(f"  Geocoding error: Timeout.", flush=True)
+        log_to_ui("tool_error", {"name": "geocode_address_and_update", "input": tool_input_data, "error": "GeocoderTimedOut."})
+        return error_msg
+    except GeocoderServiceError as e:
+        error_msg = json.dumps({"error": f"Geocoding service error: {e}"})
+        print(f"  Geocoding error: Service error {e}.", flush=True)
+        log_to_ui("tool_error", {"name": "geocode_address_and_update", "input": tool_input_data, "error": f"GeocoderServiceError: {e}"})
+        return error_msg
+    except Exception as e:
+        error_msg = json.dumps({"error": f"Unexpected error during geocoding: {e}"})
+        print(f"  Geocoding error: Unexpected {e}.", flush=True)
+        log_to_ui("tool_error", {"name": "geocode_address_and_update", "input": tool_input_data, "error": str(e)})
+        return error_msg

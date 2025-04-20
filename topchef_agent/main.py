@@ -16,6 +16,9 @@ log_queue = queue.Queue()
 # Optional: Add a lock if queue access becomes complex, but Queue is thread-safe
 # log_lock = threading.Lock()
 
+# --- Database Update Queue Setup ---
+db_update_queue = queue.Queue()
+
 # --- Flask Routes ---
 
 @app.route('/')
@@ -113,6 +116,49 @@ def stream_logs():
     """Endpoint for Server-Sent Events (SSE) log stream."""
     # 'text/event-stream' mimetype is crucial for SSE
     return Response(generate_log_stream(), mimetype='text/event-stream')
+
+# --- NEW Endpoint for Agent to Signal DB Updates ---
+@app.route('/signal_db_update', methods=['POST'])
+def signal_db_update():
+    """Receives a signal from the agent that the database was updated."""
+    # We don't strictly need data, just the signal, but can check for payload
+    print("Received signal: Database updated.")
+    db_update_queue.put({"event": "update"}) # Put a simple message on the queue
+    return jsonify({"status": "success"}), 200
+
+# --- NEW SSE Stream for Database Updates ---
+def generate_db_update_stream():
+    """Generator function for the database update SSE stream."""
+    print("DB Update SSE client connected.")
+    try:
+        while True:
+            # Wait for an update signal from the queue
+            try:
+                update_signal = db_update_queue.get(timeout=60) # Wait up to 60 seconds
+                sse_data = f"data: {json.dumps(update_signal)}\n\n"
+                yield sse_data
+                db_update_queue.task_done()
+            except queue.Empty:
+                # Send a comment to keep connection alive if no update signal
+                yield ": keepalive-db\n\n"
+            except SystemExit:
+                print("SystemExit caught in DB Update SSE generator loop. Breaking.")
+                break
+            except Exception as e:
+                print(f"Error in DB Update SSE generator loop: {e}")
+                error_data = {"type": "db_stream_error", "data": {"error": str(e)}}
+                yield f"data: {json.dumps(error_data)}\n\n"
+                time.sleep(5)
+    except GeneratorExit:
+        print("DB Update SSE client disconnected.")
+    finally:
+        print("DB Update SSE stream generator finished.")
+
+@app.route('/stream_db_updates')
+def stream_db_updates():
+    """Endpoint for Server-Sent Events (SSE) database update stream."""
+    return Response(generate_db_update_stream(), mimetype='text/event-stream')
+
 
 # --- NEW API Endpoint for Chef Data ---
 @app.route('/api/chefs')

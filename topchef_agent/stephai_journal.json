@@ -790,5 +790,167 @@
     "related_season": null,
     "related_chef_id": 3,
     "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "c7e39248-928d-42d0-ae0c-b149d8688091",
+    "timestamp": "2025-04-20T04:05:32.487166Z",
+    "type": "Observation",
+    "details": "Examining chefs 1, 2, and 3. Chefs 1, 2, and 3 are missing restaurant_address, latitude, and longitude. Chef 2 has status 'Incorrectly Added'.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "4698a7b6-486c-44e5-8c0f-52b15eede1c7",
+    "timestamp": "2025-04-20T04:05:35.067635Z",
+    "type": "Action",
+    "details": "Searching web for Jean Dupont's restaurant address.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "d8bc7f87-baed-4073-96d9-233ae86d234c",
+    "timestamp": "2025-04-20T04:10:33.940237Z",
+    "type": "Observation",
+    "details": "Chef ID 1 (Jean Dupont) is missing restaurant_address, latitude, and longitude.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "7d13bd27-8e0d-4873-81a4-20c2d3f55510",
+    "timestamp": "2025-04-20T04:10:45.992133Z",
+    "type": "Observation",
+    "details": "Found potential restaurant address for Chef ID 1 (Jean Dupont): \"Chez Dupont\" in Bordeaux.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "9457bcc8-f444-4ee9-bef3-565b9c046596",
+    "timestamp": "2025-04-20T04:10:54.852124Z",
+    "type": "Observation",
+    "details": "Geocoded address for Chef ID 1 (Jean Dupont). Latitude: 44.8509637, Longitude: -0.5719199.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "1bcf4ce3-ff0d-4706-80c9-bd206128d2f6",
+    "timestamp": "2025-04-20T04:11:04.276936Z",
+    "type": "Error",
+    "details": "Attempted to update Chef ID 1 (Jean Dupont) but used 'name' argument instead of chef ID. Error received: 'Incorrect arguments provided for tool update_chef_record: execute_update_chef_record() got an unexpected keyword argument \\'name\\''",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "6f05fa46-c8e8-4572-896a-5149e3b02409",
+    "timestamp": "2025-04-20T04:11:14.087755Z",
+    "type": "Error",
+    "details": "Attempted to update Chef ID 1 (Jean Dupont) with latitude, longitude, and restaurant_address simultaneously. Error received: 'Incorrect arguments provided for tool update_chef_record: execute_update_chef_record() got an unexpected keyword argument \\'latitude\\''",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "8c1048ce-266a-481f-a778-0148cd921b90",
+    "timestamp": "2025-04-20T04:13:28.211893Z",
+    "type": "Observation",
+    "details": "Chef ID 1 (Jean Dupont) is missing restaurant_address, latitude, and longitude.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "5a016495-7833-4eec-b32e-b2157dd101b7",
+    "timestamp": "2025-04-20T04:13:31.983737Z",
+    "type": "Action",
+    "details": "Attempting to find restaurant address for Chef Jean Dupont (ID 1) using web search.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "9c6c4eb3-7e14-484e-b0c5-71bd8c7e2410",
+    "timestamp": "2025-04-20T04:13:42.122205Z",
+    "type": "Observation",
+    "details": "Found restaurant address for Jean Dupont: Chez Dupont, Bordeaux, France.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "a4735082-fc65-4a76-9315-51dc33bb036b",
+    "timestamp": "2025-04-20T04:13:46.505807Z",
+    "type": "Action",
+    "details": "Attempting to geocode the address 'Chez Dupont, Bordeaux, France' for Chef Jean Dupont (ID 1).",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "82640ced-b33d-4dca-83a3-3f07bc1057ca",
+    "timestamp": "2025-04-20T04:13:54.227009Z",
+    "type": "Observation",
+    "details": "Successfully geocoded address for Jean Dupont. Latitude: 44.8509637, Longitude: -0.5719199.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "a357d042-55e2-4ded-a344-219cb5df8fbc",
+    "timestamp": "2025-04-20T04:13:58.530591Z",
+    "type": "Action",
+    "details": "Updating restaurant_address for Chef Jean Dupont (ID 1) to 'Chez Dupont, Bordeaux, France'.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "e38f5eae-11bf-4544-83f8-cf51b3e44d3d",
+    "timestamp": "2025-04-20T04:14:07.235481Z",
+    "type": "Correction",
+    "details": "Correcting previous attempt to update chef record. Missing chef_id, field_name, and new_value.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": "a357d042-55e2-4ded-a344-219cb5df8fbc"
+  },
+  {
+    "entry_id": "2d44f0c3-a743-49f5-84f0-162a4b274207",
+    "timestamp": "2025-04-20T04:14:15.712194Z",
+    "type": "Action",
+    "details": "Updating latitude for Chef Jean Dupont (ID 1) to 44.8509637.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "19a658b5-df13-4a0f-9e35-f5fe02752f9a",
+    "timestamp": "2025-04-20T04:14:22.853496Z",
+    "type": "Action",
+    "details": "Updating longitude for Chef Jean Dupont (ID 1) to -0.5719199.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "da03d740-0ec9-4f87-b613-0e760ccbf87f",
+    "timestamp": "2025-04-20T04:14:51.308950Z",
+    "type": "Observation",
+    "details": "Chef ID 1 (Jean Dupont) is missing longitude despite having a restaurant address.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "f2f3d7ee-a8e5-424e-b8b7-88f72e34e8e0",
+    "timestamp": "2025-04-20T04:14:59.653630Z",
+    "type": "Action",
+    "details": "Updating Chef ID 1 (Jean Dupont) with geocoded longitude.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
   }
 ]
