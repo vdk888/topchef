@@ -131,7 +131,7 @@ def execute_update_chef_record(chef_id: int, field_name: str, new_value: str):
     log_to_ui("tool_start", {"name": "update_chef_record", "input": tool_input_data})
     print(f"--- Tool: Executing Database Update ---", flush=True)
     print(f"  Chef ID: {chef_id}, Field: {field_name}, New Value: {new_value}", flush=True)
-    allowed_fields = ["restaurant_name", "address", "notes", "status"]
+    allowed_fields = ["bio", "image_url", "status", "perplexity_data"]
     if not isinstance(chef_id, int) or not isinstance(field_name, str) or not isinstance(new_value, str):
          error_msg = json.dumps({"error": "Invalid input types for update_chef_record tool."})
          print(f"  Error: Invalid input types.", flush=True)
@@ -221,7 +221,7 @@ tools_list = [
                     },
                     "field_name": {
                         "type": "string",
-                        "description": "The exact name of the database field to update (e.g., 'restaurant_name', 'address', 'notes', 'status')."
+                        "description": "The exact name of the database field to update (e.g., 'bio', 'image_url', 'status', 'perplexity_data')."
                     },
                     "new_value": {
                         "type": "string",
@@ -278,18 +278,18 @@ Available Tools:
 - `get_distinct_seasons`: Use this first to see which seasons are available.
 - `get_chefs_by_season`: Use this to get the data for a specific season you want to check.
 - `search_web_perplexity`: Use this to search the web for specific missing information (like current restaurant, address, or post-show activities) for a specific chef. Formulate precise queries.
-- `update_chef_record`: Use this ONLY after you have verified information from a reliable source (like a successful web search). Provide the chef's ID, the exact field name ('restaurant_name', 'address', 'notes', 'status'), and the new value.
+- `update_chef_record`: Use this ONLY after you have verified information from a reliable source (like a successful web search). Provide the chef's ID, the exact field name ('bio', 'image_url', 'status', 'perplexity_data'), and the new value.
 
 Your Workflow:
 1. Acknowledge the task given by the user/scheduler.
 2. Decide which season to check (e.g., randomly select from available seasons using `get_distinct_seasons`). State your choice.
 3. Use `get_chefs_by_season` to retrieve the data for the chosen season.
-4. Analyze the retrieved chef data for that season. Look for entries with missing fields (null or empty strings for 'restaurant_name', 'address', 'notes').
-5. State your findings (e.g., "Checking Season X. Found missing address for Chef Y.").
-6. If missing information is found for a chef, state your plan (e.g., "I will search for Chef Y's address.").
+4. Analyze the retrieved chef data for that season. Look for entries with missing fields (null or empty strings for 'bio', 'image_url', 'status', 'perplexity_data').
+5. State your findings (e.g., "Checking Season X. Found missing biography for Chef Y.").
+6. If missing information is found for a chef, state your plan (e.g., "I will search for Chef Y's bio information.").
 7. Use `search_web_perplexity` to find the specific missing information.
-8. State the result of the search (e.g., "Search found address: 123 Main St." or "Search could not find the address.").
-9. If the search was successful and provides credible information, state your plan to update (e.g., "Updating Chef Y's address in the database.").
+8. State the result of the search (e.g., "Search found biography: Chef Y is a specialist in French cuisine" or "Search could not find the bio information.").
+9. If the search was successful and provides credible information, state your plan to update (e.g., "Updating Chef Y's bio in the database.").
 10. Use `update_chef_record` to update the database with the specific chef_id, field_name, and new_value.
 11. Confirm the update result (e.g., "Successfully updated the database." or "Update failed.").
 12. If multiple fields are missing for one chef, handle them one by one (search->update). If multiple chefs have missing data, focus on one chef per cycle/task prompt.

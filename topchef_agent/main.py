@@ -25,7 +25,8 @@ def index():
         all_keys = set()
         for chef in chefs:
             all_keys.update(chef.keys())
-        preferred_order = ["id", "name", "restaurant_name", "address", "season", "status", "notes"]
+        # Update the preferred order to match the actual database schema
+        preferred_order = ["id", "name", "bio", "image_url", "status", "last_updated", "perplexity_data"]
         headers = [key for key in preferred_order if key in all_keys]
         headers.extend(sorted([key for key in all_keys if key not in preferred_order]))
 
