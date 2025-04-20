@@ -12,6 +12,12 @@ from topchef_agent.config import LLM_MODELS_TO_TRY
 _conversation_contexts = {}
 _context_lock = threading.Lock()
 
+# Rate limiting data
+_message_timestamps = {}
+_timestamps_lock = threading.Lock()
+RATE_LIMIT_COUNT = 10
+RATE_LIMIT_WINDOW = 3600 # 1 hour in seconds
+
 class InteractiveStephAI:
     def __init__(self, session_id: str):
         self.session_id = session_id
@@ -43,6 +49,25 @@ class InteractiveStephAI:
     def ask(self, user_message: str):
         if self.busy:
             return {"status": "busy", "message": "StephAI Botenberg est actuellement en train de traiter une autre requête. Veuillez patienter."}
+
+        # --- RATE LIMITING START ---
+        current_time = time.time()
+        with _timestamps_lock:
+            session_timestamps = _message_timestamps.get(self.session_id, [])
+            # Filter timestamps older than the window
+            valid_timestamps = [ts for ts in session_timestamps if current_time - ts < RATE_LIMIT_WINDOW]
+            if len(valid_timestamps) >= RATE_LIMIT_COUNT:
+                log_to_ui("rate_limit_exceeded", {"session_id": self.session_id, "count": len(valid_timestamps)}, role="system")
+                rate_limit_message = f"Limite de {RATE_LIMIT_COUNT} messages par heure atteinte. Veuillez réessayer dans environ une heure."
+                # Return the error in a format consistent with other checks
+                self.response_queue.put({"status": "error", "error": rate_limit_message})
+                # Need to return something immediately for the ask() caller
+                return {"status": "error", "message": rate_limit_message}
+            # Add current timestamp and update the stored list
+            valid_timestamps.append(current_time)
+            _message_timestamps[self.session_id] = valid_timestamps
+        # --- RATE LIMITING END ---
+
         self.busy = True
         self.append_to_context("user", user_message)
         self.thread = threading.Thread(target=self._run_agent, args=(user_message,))
