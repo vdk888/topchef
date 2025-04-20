@@ -4,8 +4,8 @@ import time
 import queue # For handling log messages between agent and SSE stream
 import threading # To manage the queue safely
 from flask import Flask, render_template, request, Response, jsonify
-from database import load_database # No need for save_database here anymore
-from config import DATABASE_URL # Use database URL for validation maybe
+from topchef_agent.database import load_database # No need for save_database here anymore
+from topchef_agent.config import DATABASE_URL # Use database URL for validation maybe
 
 app = Flask(__name__)
 
