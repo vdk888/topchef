@@ -7,6 +7,7 @@ from flask import Flask, render_template, request, Response, jsonify
 from markupsafe import escape # Import escape from markupsafe
 from topchef_agent.database import load_database # No need for save_database here anymore
 from topchef_agent.config import DATABASE_URL # Use database URL for validation maybe
+import datetime
 
 app = Flask(__name__)
 
@@ -45,7 +46,7 @@ def index():
 
         # Convert the list of chef dictionaries to a JSON string safely
         # Use json.dumps for proper JSON formatting, pass this to the template
-        chefs_json = json.dumps(chefs_data)
+        chefs_json = json.dumps(chefs_data, default=lambda o: o.isoformat() if isinstance(o, datetime.datetime) else str(o))
 
         # Pass the JSON string to the template
         return render_template('index.html', chefs_json=chefs_json)
