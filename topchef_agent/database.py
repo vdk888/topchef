@@ -4,7 +4,7 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.exc import SQLAlchemyError
 from contextlib import contextmanager
 
-from config import DATABASE_URL
+from topchef_agent.config import DATABASE_URL
 
 if not DATABASE_URL:
     raise ValueError("CRITICAL: DATABASE_URL is not set. Cannot initialize database module.")
@@ -30,6 +30,7 @@ class Chef(Base):
     status = Column(Text, nullable=True)
     last_updated = Column('last_updated', Text, nullable=True)
     perplexity_data = Column('perplexity_data', JSON, nullable=True)
+    restaurant_address = Column(Text, nullable=False)  # NEW mandatory field
 
     def to_dict(self):
         """Converts the Chef object to a dictionary."""
@@ -51,7 +52,7 @@ def get_db():
 
 # --- Database Operations ---
 def create_table_if_not_exists():
-    """Creates the 'chefs' table in the database if it doesn't exist."""
+    """Creates the 'chefs' table in the database if it doesn't exist. Adds restaurant_address column if missing."""
     try:
         print("Checking if 'chefs' table exists and creating if necessary...")
         Base.metadata.create_all(bind=engine)
@@ -61,16 +62,14 @@ def create_table_if_not_exists():
             if db.query(Chef).count() == 0:
                 print("Table is empty. Adding initial sample data...")
                 sample_data = [
-                    Chef(name="Jean Dupont", bio="Specializes in classic French cuisine.", image_url="", status="Candidate", perplexity_data={}),
-                    Chef(name="Marie Dubois", bio="Winner of Top Chef Season 2", image_url="", status="Winner", perplexity_data={}),
-                    Chef(name="Pierre Martin", bio="Known for modern techniques", image_url="", status="Finalist", perplexity_data={})
+                    Chef(name="Marie Dubois", bio="Winner of Top Chef Season 2", image_url="", status="Winner", perplexity_data={}, restaurant_address=""),
+                    Chef(name="Pierre Martin", bio="Known for modern techniques", image_url="", status="Finalist", perplexity_data={}, restaurant_address="")
                 ]
                 db.add_all(sample_data)
                 db.commit()
                 print("Sample data added.")
     except Exception as e:
         print(f"CRITICAL: Failed to create or check table: {e}")
-        # This is a critical error, might prevent the app from starting
         raise
 
 def load_database():
@@ -202,6 +201,11 @@ def remove_column(table_name: str, column_name: str):
 # In a Flask app, this is often done before the first request or at startup.
 # For simplicity, we can call it here, but be mindful of multiple processes.
 # A better approach might be a separate migration script or startup hook.
+try:
+    add_column("chefs", "restaurant_address", "TEXT NOT NULL DEFAULT ''")
+except Exception as e:
+    print(f"Warning: Could not ensure restaurant_address column exists: {e}")
+
 if __name__ == '__main__':
     print("Running database setup directly...")
     create_table_if_not_exists()

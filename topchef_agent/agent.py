@@ -134,18 +134,19 @@ def execute_update_chef_record(chef_id: int, field_name: str, new_value: str):
     log_to_ui("tool_start", {"name": "update_chef_record", "input": tool_input_data})
     print(f"--- Tool: Executing Database Update ---", flush=True)
     print(f"  Chef ID: {chef_id}, Field: {field_name}, New Value: {new_value}", flush=True)
-    allowed_fields = ["bio", "image_url", "status", "perplexity_data"]
-    if not isinstance(chef_id, int) or not isinstance(field_name, str) or not isinstance(new_value, str):
-         error_msg = json.dumps({"error": "Invalid input types for update_chef_record tool."})
-         print(f"  Error: Invalid input types.", flush=True)
-         log_to_ui("tool_error", {"name": "update_chef_record", "input": tool_input_data, "error": "Invalid input types."})
-         return error_msg
+    allowed_fields = ["bio", "image_url", "status", "perplexity_data", "restaurant_address"] # Added restaurant_address
     # Check if field_name is allowed OR if it's a newly added column (basic check)
     # A more robust check might involve querying the DB schema if many dynamic columns are expected
     if field_name not in allowed_fields and not field_name.startswith("custom_"): # Example prefix for dynamic columns
         error_msg = json.dumps({"error": f"Invalid or disallowed field name '{field_name}' provided for update."})
         print(f"  Error: Invalid field name '{field_name}'.", flush=True)
         log_to_ui("tool_error", {"name": "update_chef_record", "input": tool_input_data, "error": f"Invalid field name: {field_name}"})
+        return error_msg
+    # Check for critical error: missing restaurant_address
+    if field_name == "restaurant_address" and not new_value:
+        error_msg = json.dumps({"error": "Critical error: restaurant_address cannot be empty."})
+        print(f"  Error: Empty restaurant_address.", flush=True)
+        log_to_ui("tool_error", {"name": "update_chef_record", "input": tool_input_data, "error": "Empty restaurant_address."})
         return error_msg
 
     update_data = {field_name: new_value}
@@ -400,21 +401,21 @@ tools_list = [
         "type": "function",
         "function": {
             "name": "update_chef_record",
-            "description": "Updates a specific field for a specific chef in the PostgreSQL database. Use this ONLY after obtaining verified information (e.g., from search_web_perplexity). Allowed fields are 'bio', 'image_url', 'status', 'perplexity_data', or potentially custom fields.",
+            "description": "Updates a specific field for a specific chef in the PostgreSQL database. Use this ONLY after obtaining verified information (e.g., from search_web_perplexity). Allowed fields are 'bio', 'image_url', 'status', 'perplexity_data', 'restaurant_address', or potentially custom fields.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "chef_id": {
                         "type": "integer",
-                        "description": "The unique ID of the chef record to update."
+                        "description": "The unique ID of the chef to update."
                     },
                     "field_name": {
                         "type": "string",
-                        "description": "The exact name of the database field to update (e.g., 'bio', 'image_url', 'status', 'perplexity_data', or a custom added field)."
+                        "description": "The exact name of the database field to update (e.g., 'bio', 'image_url', 'status', 'perplexity_data', 'restaurant_address', or a custom added field)."
                     },
                     "new_value": {
                         "type": "string",
-                        "description": "The new, verified value to set for the specified field."
+                        "description": "The new value to set for the specified field."
                     }
                 },
                 "required": ["chef_id", "field_name", "new_value"]
@@ -557,8 +558,9 @@ def run_llm_driven_agent_cycle(task_prompt: str, max_iterations=15):
     # Define the system prompt for StephAI
     system_prompt = f"""
 You are {AGENT_NAME}, an autonomous AI agent responsible for maintaining a database of Top Chef France candidates.
+
 **Your Persona:** You must adopt the personality and speaking style of **Stéphane Rotenberg**, the charismatic host of Top Chef France on M6. Be enthusiastic, engaging, slightly dramatic, and use culinary language where appropriate. Address the process like you're commentating on the show for the viewers watching the UI (`index.html`). Think step-by-step, but explain your actions with flair!
-**Your Goal:** Like a meticulous chef checking ingredients, your technical goal is to identify missing or potentially outdated information in the database and use the available tools to find and update it. When prompted to brainstorm, you should also consider adding new relevant data points (columns) using `add_db_column` or removing irrelevant/duplicate columns using `remove_db_column`.
+**Your Goal:** Like a meticulous chef checking ingredients, your technical goal is to identify missing or potentially outdated information in the database and use the available tools to find and update it. When prompted to brainstorm, you should also consider adding new relevant data points (columns) using `add_db_column` or removing irrelevant/duplicate columns using `remove_db_column`. **Every chef must have a valid, exact `restaurant_address` field. This field is mandatory and must be checked and filled if missing or empty.**
 
 **Example Tone:** "Allez, let's dive into the database pantry!", "Incroyable! We have an anomaly here!", "Suspense... will the web search yield the missing ingredient?", "Et voilà! The database is updated!", "Hmm, perhaps we need a new category for 'Signature Dish'?"
 
@@ -568,7 +570,7 @@ You are {AGENT_NAME}, an autonomous AI agent responsible for maintaining a datab
 - `get_distinct_seasons`: Get available season numbers.
 - `get_chefs_by_season`: Get chef data for a specific season.
 - `search_web_perplexity`: Search web for specific info about a chef.
-- `update_chef_record`: Update a chef's record in the database (use ONLY after verification). Allowed fields are 'bio', 'image_url', 'status', 'perplexity_data', or potentially custom fields.
+- `update_chef_record`: Update a chef's record in the database (use ONLY after verification). Allowed fields are 'bio', 'image_url', 'status', 'perplexity_data', **'restaurant_address'**, or potentially custom fields.
 - `read_journal`: Read your entire persistent journal file to recall past events.
 - `append_journal_entry`: Add an entry to your persistent journal file. Use types: "Observation", "Action", "Error", "Insight", "Correction".
 - `add_db_column`: Adds a new column to the 'chefs' table. Use snake_case for column names. Use standard SQL types like TEXT, INTEGER, BOOLEAN, JSON.
@@ -579,7 +581,7 @@ Your Workflow & Journaling:
 2. **If Task is Brainstorming:** Think about what new information Top Chef fans might find interesting (e.g., signature dish, notable wins, social media link) or if any existing columns are redundant/useless. Propose adding a column using `add_db_column` or removing one using `remove_db_column`. Log the plan and result.
 3. **If Task is Routine Check:** Decide on the season to check.
 4. Retrieve season data using `get_chefs_by_season`.
-5. **Critically Analyze Data:** Examine for missing fields, inconsistencies (e.g., cross-season anomalies), and plausibility.
+5. **Critically Analyze Data:** Examine for missing fields, inconsistencies (e.g., cross-season anomalies), and plausibility. **If `restaurant_address` is missing or empty, this is a critical error and must be prioritized for correction.**
 6. **Evaluate & Log Observation:**
     - **Consider Significance:** Before logging, assess if the findings are truly significant (major errors, widespread missing data) or novel compared to past journal entries (use `read_journal` if unsure). Avoid logging minor, repetitive details unless they form a pattern.
     - **Log Key Findings:** Use `append_journal_entry` (type "Observation") for significant findings. Be concise but informative. Include `related_season`/`related_chef_id`.
