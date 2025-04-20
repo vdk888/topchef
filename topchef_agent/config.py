@@ -23,6 +23,14 @@ PERPLEXITY_API_KEY = os.getenv("PERPLEXITY_API_KEY") # Needed for search tool
 YOUR_SITE_URL = os.getenv("YOUR_SITE_URL", "http://localhost:5000") # Default if not set
 YOUR_SITE_NAME = os.getenv("YOUR_SITE_NAME", "TopChef Agent") # Default if not set
 
+# --- LLM Model List (Shared) ---
+LLM_MODELS_TO_TRY = [
+    "google/gemini-2.0-flash-exp:free", # Primary
+    "google/gemini-2.5-pro-exp-03-25:free",  # Fallback 1
+    "openai/gpt-4o-mini",      # Fallback 2
+    "openai/gpt-4.1-mini"                    # Fallback 3 (meta model)
+]
+
 # --- Database ---
 # DATABASE_FILE = os.getenv("DATABASE_FILE", "chefs.json") # No longer using JSON file
 DATABASE_URL = os.getenv("DATABASE_URL") # Load PostgreSQL URL from environment

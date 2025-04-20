@@ -12,7 +12,7 @@ from openai import OpenAI, APIError
 from topchef_agent.database import load_database, update_chef, add_column, remove_column # Ensure only valid functions are imported
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
-from topchef_agent.config import OPENROUTER_API_KEY, PERPLEXITY_API_KEY, YOUR_SITE_URL, YOUR_SITE_NAME
+from topchef_agent.config import OPENROUTER_API_KEY, PERPLEXITY_API_KEY, YOUR_SITE_URL, YOUR_SITE_NAME, LLM_MODELS_TO_TRY
 
 # --- Logging & Signaling Helpers ---
 FLASK_BASE_URL = os.environ.get("FLASK_BASE_URL", "http://127.0.0.1:5000")
@@ -54,7 +54,7 @@ def execute_get_distinct_seasons():
     try:
         seasons = get_distinct_seasons()
         result_msg = json.dumps({"seasons": seasons})
-        log_to_ui("tool_result", {"name": "get_distinct_seasons", "result": result_msg})
+        log_to_ui("tool_result", {"name": "get_distinct_seasons", "result": f"{len(seasons)} entries found."})
         print(f"  Seasons found: {seasons}", flush=True)
         return result_msg
     except Exception as e:
@@ -282,6 +282,8 @@ def execute_remove_db_column(table_name: str, column_name: str):
             print("  Database column removal successful (or column did not exist).", flush=True)
             log_to_ui("tool_result", {"name": "remove_db_column", "input": tool_input_data, "result": "OK"})
             # NOTE: Similar to adding, ORM might need app restart to fully reflect the change.
+            # This is complex to do dynamically. For now, the tool works at the SQL level.
+            # Consider adding a note about restarting the app or dynamically updating the model if needed.
             result_msg = json.dumps({"status": "OK", "message": f"Successfully removed column '{column_name}' from table '{table_name}' (or it didn't exist). NOTE: App restart might be needed for ORM features to reflect this change." })
             signal_database_update() # Signal the UI about the change
             return result_msg
@@ -810,12 +812,7 @@ Your Workflow & Journaling:
     log_to_ui("cycle_info", {"message": f"{AGENT_NAME}: Starting work..."}, role=AGENT_NAME)
 
     # Define the primary and fallback models
-    llm_models_to_try = [
-        "google/gemini-2.0-flash-exp:free", # Primary
-        "google/gemini-2.5-pro-exp-03-25:free",  # Fallback 1
-        "meta-llama/llama-4-maverick:free",      # Fallback 2
-        "openai/gpt-4o-mini"                # Fallback 3
-    ]
+    llm_models_to_try = LLM_MODELS_TO_TRY
 
     for i in range(max_iterations):
         print(f"\n{AGENT_NAME} Iteration {i+1}/{max_iterations}", flush=True)
