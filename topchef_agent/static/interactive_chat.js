@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', function() {
         conversation.forEach(msg => {
             const div = document.createElement('div');
             div.className = msg.role === 'user' ? 'user-msg' : 'ai-msg';
-            div.textContent = `${msg.role === 'user' ? 'You' : 'StephAI'}: ${msg.content}`;
+            div.textContent = `${msg.role === 'user' ? 'You' : 'StephAI Botenberg'}: ${msg.content}`;
             chatWindow.appendChild(div);
         });
         chatWindow.scrollTop = chatWindow.scrollHeight;

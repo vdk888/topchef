@@ -42,7 +42,7 @@ class InteractiveStephAI:
 
     def ask(self, user_message: str):
         if self.busy:
-            return {"status": "busy", "message": "StephAI est actuellement en train de traiter une autre requête. Veuillez patienter."}
+            return {"status": "busy", "message": "StephAI Botenberg est actuellement en train de traiter une autre requête. Veuillez patienter."}
         self.busy = True
         self.append_to_context("user", user_message)
         self.thread = threading.Thread(target=self._run_agent, args=(user_message,))
@@ -72,7 +72,7 @@ class InteractiveStephAI:
         # --- OPENAI FUNCTION CALLING LOGIC (ALL TOOLS) ---
         if openrouter_client is None:
             log_to_ui("llm_error", {"error": "LLM client not configured. Check OPENROUTER_API_KEY."}, role="system")
-            return "[StephAI]: Désolé, le backend LLM n'est pas configuré. Veuillez contacter l'administrateur."
+            return "[StephAI Botenberg]: Désolé, le backend LLM n'est pas configuré. Veuillez contacter l'administrateur."
 
         # Dynamically build function schemas for all available tools
         function_schemas = []
@@ -112,7 +112,7 @@ class InteractiveStephAI:
         messages.append({
             "role": "system",
             "content": (
-                "Tu es StephAI, l'assistant expert pour la curation des données de Top Chef France. Tu réponds toujours en français, avec le style et le charisme de Stéphane Rotenberg. Fais preuve d'élégance, d'humour subtil, et guide l'utilisateur comme dans l'émission Top Chef. Tu expliques chaque action et résultat de façon claire, pédagogique et engageante, sans jamais briser le personnage."
+                "Tu es StephAI Botenberg, l'assistant expert pour la curation des données de Top Chef France. Tu réponds toujours en français, avec le style et le charisme de Stéphane Rotenberg. Fais preuve d'élégance, d'humour subtil, et guide l'utilisateur comme dans l'émission Top Chef. Tu expliques chaque action et résultat de façon claire, pédagogique et engageante, sans jamais briser le personnage."
             )
         })
         for msg in history:
@@ -156,7 +156,7 @@ class InteractiveStephAI:
 
             if not successful_model:
                 log_to_ui("llm_error", {"error": "All LLM models failed", "last_api_error": str(last_api_error)}, role="system")
-                return "[StephAI]: Désolé, tous les modèles de langage ont échoué. Veuillez réessayer plus tard."
+                return "[StephAI Botenberg]: Désolé, tous les modèles de langage ont échoué. Veuillez réessayer plus tard."
 
             choice = response.choices[0] if hasattr(response, 'choices') and response.choices else None
             msg = getattr(choice, "message", None) if choice else None
@@ -185,7 +185,7 @@ class InteractiveStephAI:
                             tool_result = available_functions[tool_name](**tool_args)
                         except Exception as tool_exc:
                             log_to_ui("tool_error", {"tool": tool_name, "error": str(tool_exc)}, role="system")
-                            return f"[StephAI]: Désolé, il y a eu une erreur lors de l'exécution de l'outil {tool_name} : {tool_exc}"
+                            return f"[StephAI Botenberg]: Désolé, il y a eu une erreur lors de l'exécution de l'outil {tool_name} : {tool_exc}"
                         # Add the function result as a function response
                         messages.append({
                             "role": "function",
@@ -193,13 +193,13 @@ class InteractiveStephAI:
                             "content": tool_result
                         })
                     else:
-                        return f"[StephAI]: Outil inconnu: {tool_name}"
+                        return f"[StephAI Botenberg]: Outil inconnu: {tool_name}"
                 continue  # Loop again so LLM can react to tool result (may chain tools)
             # If no tool call, return the LLM's message
             if msg and getattr(msg, "content", None):
                 return msg.content
         # If we exit loop without a return, something went wrong
-        return "[StephAI]: Je n'ai pas compris la demande ou trop d'appels d'outils."
+        return "[StephAI Botenberg]: Je n'ai pas compris la demande ou trop d'appels d'outils."
 
     def get_response(self, timeout=0.1):
         try:

@@ -18,7 +18,7 @@ from topchef_agent.config import OPENROUTER_API_KEY, PERPLEXITY_API_KEY, YOUR_SI
 FLASK_BASE_URL = os.environ.get("FLASK_BASE_URL", "http://127.0.0.1:5000")
 LOGGING_ENDPOINT = f"{FLASK_BASE_URL}/log_message"
 DB_UPDATE_SIGNAL_ENDPOINT = f"{FLASK_BASE_URL}/signal_db_update" # New endpoint URL
-AGENT_NAME = "StephAI" # Define the agent's name
+AGENT_NAME = "StephAI Botenberg" # Define the agent's name
 
 def log_to_ui(message_type: str, data: dict or str, role: str = "system"):
     """Sends a log message to the Flask UI backend, including role."""
@@ -403,7 +403,7 @@ def execute_geocode_address_and_update(chef_id: int, address: str):
         return error_msg
 
 # --- Journaling Tool Functions ---
-JOURNAL_FILE = "topchef_agent/stephai_journal.json"
+JOURNAL_FILE = "topchef_agent/stephai_botenberg_journal.json"
 
 def read_journal_file():
     """Reads the entire journal file."""
@@ -771,7 +771,7 @@ def run_llm_driven_agent_cycle(task_prompt: str, max_iterations=15):
         log_to_ui("cycle_error", {"error": "OpenRouter client not initialized."}, role="system")
         return
 
-    # Define the system prompt for StephAI
+    # Define the system prompt for StephAI Botenberg
     system_prompt = f"""
     Vous êtes {AGENT_NAME}, un agent IA autonome responsable de la gestion d'une base de données sur les candidats de Top Chef France.
 

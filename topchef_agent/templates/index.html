@@ -227,8 +227,8 @@
         #background-log-area { color: var(--m6-text-secondary); } /* Keep secondary for background */
         #interactive-chat-log-area { color: var(--m6-text-primary); }
 
-        /* Adjust chat bubble styles for new background */
-        #chat-log-area .log-entry.log-entry-stephai,
+        /* M6 Theme Chat Bubbles & Log Entries */
+        #chat-log-area .log-entry.log-entry-stephai-botenberg,
         #interactive-chat-log-area .ai-msg {
             background: var(--m6-bg-secondary); /* Use secondary bg */
             color: var(--m6-text-primary); /* Light text */
@@ -251,6 +251,7 @@
             text-align: right;
         }
 
+        /* General Log Entry Styling */
         .log-entry {
             margin-bottom: 8px; /* Reduced margin */
             padding-bottom: 8px;
@@ -258,6 +259,7 @@
         }
         .log-entry:last-child { border-bottom: none; }
 
+        /* Background Log Specific Styling */
         #background-log-area .log-entry {
             background: none; /* Remove specific background */
             color: var(--m6-text-secondary); /* Use secondary text */
@@ -266,6 +268,7 @@
             margin-bottom: 4px;
             border: none; /* Remove border */
             font-size: 0.85em; /* Smaller font */
+            border-bottom: none; /* Override general log entry border */
         }
 
         .log-timestamp {
@@ -287,8 +290,8 @@
             font-family: Arial, Helvetica, sans-serif; /* Standard font */
             color: var(--m6-text-secondary); /* Use secondary text color */
         }
-        /* Highlight StephAI role slightly */
-         #background-log-area .role-StephAI .log-role {
+        /* Highlight StephAI role slightly in background log */
+         #background-log-area .role-StephAI-Botenberg .log-role {
             color: var(--m6-text-primary);
          }
 
@@ -508,6 +511,156 @@
             background: var(--m6-bg-secondary); /* Match popup bg */
         }
 
+
+        /* --- Responsive Design --- */
+        @media (max-width: 768px) {
+            html, body {
+                font-size: 13px; /* Slightly smaller base font for mobile */
+            }
+            .header {
+                padding: 10px 15px; /* Reduced header padding */
+                flex-direction: column; /* Stack title and controls */
+                align-items: flex-start; /* Align items left */
+                gap: 10px; /* Add gap between title and controls */
+            }
+            .header .title-group h1 {
+                font-size: 1.5em; /* Smaller title */
+            }
+             .header .title-group p {
+                font-size: 0.9em; /* Smaller subtitle */
+            }
+            .header > div:last-child { /* Target the controls container */
+                 display: flex;
+                 width: 100%; /* Make controls take full width */
+                 justify-content: space-between; /* Space out controls */
+                 align-items: center;
+            }
+             #season-filter {
+                 padding: 6px 20px 6px 8px; /* Adjust padding */
+                 font-size: 0.85em;
+                 margin-right: 10px; /* Adjust margin */
+                 flex-grow: 1; /* Allow filter to take available space */
+            }
+             #view-toggle-button {
+                 padding: 7px 15px; /* Adjust padding */
+                 font-size: 0.85em;
+            }
+
+            .main-content {
+                flex-direction: column; /* Stack main sections */
+                padding: 10px; /* Adjust padding */
+                gap: 10px; /* Adjust gap */
+                overflow-y: auto; /* Allow vertical scroll for the whole content area if needed */
+                height: calc(100% - 70px); /* Adjust height considering header */
+            }
+            .primary-view-container, .sidebar {
+                width: 100%; /* Full width */
+                flex-basis: auto; /* Reset flex-basis */
+                height: 50%; /* Approximate height split, adjust as needed */
+                min-height: 300px; /* Ensure minimum usable height */
+            }
+            .sidebar {
+                 height: auto; /* Allow sidebar to grow based on content */
+                 min-height: 400px; /* Ensure sidebar is usable */
+            }
+
+             /* Adjust sidebar section distribution */
+             #main-chat-container, #background-work-container, #interactive-chat-container {
+                 flex-basis: auto; /* Let content determine height more */
+             }
+             #interactive-chat-container {
+                 min-height: 150px; /* Slightly smaller min-height */
+             }
+
+             /* Ensure table scrolls horizontally if needed */
+             .db-table-wrapper {
+                 overflow-x: auto;
+             }
+             #database-table-container {
+                 padding: 15px; /* Adjust padding */
+             }
+             .db-table th, .db-table td {
+                 padding: 6px 10px; /* Smaller padding */
+                 white-space: nowrap; /* Prevent wrapping in table cells initially */
+             }
+             .db-table .col-bio {
+                 white-space: normal; /* Allow bio to wrap */
+             }
+        }
+
+        /* --- Animations & Transitions --- */
+        /* Smooth transition for sidebar enlarge */
+        .sidebar > div { /* Target direct children of sidebar */
+             transition: flex-basis 0.4s ease-in-out, opacity 0.4s ease-in-out;
+        }
+        .sidebar.enlarged-agent #background-work-container,
+        .sidebar.enlarged-agent #interactive-chat-container,
+        .sidebar.enlarged-bg #main-chat-container,
+        .sidebar.enlarged-bg #interactive-chat-container,
+        .sidebar.enlarged-interactive #main-chat-container,
+        .sidebar.enlarged-interactive #background-work-container {
+             flex-basis: 0 !important;
+             opacity: 0;
+             overflow: hidden; /* Hide content during transition */
+        }
+
+        /* Fade-in for table */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        #database-table-container {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        /* Background log collapse/expand transition */
+        #background-header .spinner {
+            /* Add spinner styles if needed, e.g., border color */
+            border-top-color: var(--tcf-yellow);
+            width: 14px; height: 14px; /* Smaller */
+            margin-right: 8px;
+        }
+        #background-work-container .background-header {
+             cursor: pointer; /* Indicate clickable header */
+        }
+        #background-log-area {
+             transition: max-height 0.4s ease-in-out, padding 0.4s ease-in-out, opacity 0.3s ease-in-out;
+             max-height: 300px; /* Adjust as needed for default visible height */
+             overflow: hidden;
+             opacity: 1;
+        }
+         #background-work-container.collapsed #background-log-area {
+             max-height: 0;
+             padding-top: 0;
+             padding-bottom: 0;
+             opacity: 0;
+             border-top: none; /* Hide border when collapsed */
+         }
+         #background-work-container.collapsed {
+             border-top: 1px solid var(--m6-border); /* Ensure top border remains */
+         }
+         #background-work-container:not(.collapsed) #background-log-area {
+              border-top: 1px solid var(--m6-border); /* Show border when expanded */
+         }
+
+        /* Welcome Message Style */
+        .welcome-message {
+            padding: 15px;
+            margin: 10px 8px; /* Match bubble margins */
+            background-color: rgba(255, 199, 44, 0.1); /* Subtle yellow background */
+            border: 1px solid var(--tcf-yellow);
+            border-radius: 6px;
+            color: var(--m6-text-primary);
+            font-style: italic;
+            text-align: center;
+            font-size: 0.95em;
+        }
+        .welcome-message strong {
+             color: var(--tcf-yellow);
+             font-weight: bold;
+        }
+
+
     </style>
 </head>
 <body>
@@ -562,11 +715,15 @@
             <!-- Main Chat Area -->
             <div id="main-chat-container">
                 <div class="header-row"> <!-- Use class for consistent styling -->
-                    <h2>Chef Agent Chat</h2>
+                    <h2>StephAI travaille</h2>
                     <button class="enlarge-btn" id="enlarge-agent" title="Enlarge">&#x2922;</button> <!-- Expand icon -->
                 </div>
                 <div id="chat-log-area">
-                    <!-- Initial message can be cleared by JS -->
+                    <div class="welcome-message">
+                        <strong>Bienvenue sur le Chef Explorer !</strong><br>
+                        Découvrez les candidats de Top Chef, leurs restaurants, et posez vos questions à notre agent interactif ci-dessous. StephAI Botenberg ajoutera bientôt ses propres commentaires ici !
+                    </div>
+                    <!-- Dynamic logs will be added here by JS -->
                 </div>
             </div>
             <!-- Background Activity Area -->
@@ -584,7 +741,7 @@
             <!-- Interactive Chat Area -->
             <div id="interactive-chat-container">
                 <div id="interactive-chat-header"> <!-- Use ID for JS, class for styling -->
-                    <span>Ask Chef Agent</span> <!-- Simplified -->
+                    <span>Discutez avec StephAI</span> <!-- Simplified -->
                     <button class="enlarge-btn" id="enlarge-interactive" title="Enlarge">&#x2922;</button> <!-- Expand icon -->
                 </div>
                 <div id="interactive-chat-log-area"></div>
@@ -702,7 +859,7 @@
             } else if (typeof data === 'object' && data !== null) {
                 // Handle specific object structures for chat if needed, otherwise stringify for background
                 // Use the passed logObject here
-                if (logObject.role === 'StephAI' && logObject.type === 'llm_response' && data.content) {
+                if (logObject.role === 'StephAI Botenberg' && logObject.type === 'llm_response' && data.content) {
                     return data.content; // Extract just the text content for chat
                 }
                 return JSON.stringify(data, null, 2); // Pretty print object for background
@@ -725,7 +882,7 @@
             let formattedData = formatLogData(log);
 
             // Determine target container and if it's a background task
-            if (log.role === 'StephAI' && log.type === 'llm_response') {
+            if (log.role === 'StephAI Botenberg' && log.type === 'llm_response') {
                 targetContainer = chatLogArea;
                 isBackgroundTask = false;
                 // Use the extracted content if available
@@ -740,7 +897,7 @@
             }
 
             // Clear initial message
-            if (targetContainer.textContent.includes("Waiting for StephAI...") || targetContainer.textContent.includes("Waiting for StephAI's first check...")) {
+            if (targetContainer.textContent.includes("Waiting for StephAI Botenberg...") || targetContainer.textContent.includes("Waiting for StephAI Botenberg's first check...")) {
                 targetContainer.innerHTML = '';
             }
 
@@ -753,7 +910,7 @@
 
             // Add specific classes for chat styling
             if (targetContainer === chatLogArea) {
-                if (log.role === 'StephAI') entryDiv.classList.add('log-entry-stephai');
+                if (log.role === 'StephAI Botenberg') entryDiv.classList.add('log-entry-stephai-botenberg');
                 else if (log.role === 'scheduler') entryDiv.classList.add('log-entry-scheduler');
             }
 

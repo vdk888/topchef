@@ -174,14 +174,14 @@ def get_chefs_data():
 
 @app.route('/interactive_chat', methods=['POST'])
 def interactive_chat():
-    """Endpoint for user to interact with StephAI (interactive chat)."""
+    """Endpoint for user to interact with StephAI Botenberg (interactive chat)."""
     try:
         data = request.get_json()
         user_message = data.get('message')
         session_id = request.cookies.get('session_id') or request.remote_addr or str(time.time())
         agent = get_interactive_agent(session_id)
         if agent.is_busy():
-            return jsonify({"status": "busy", "message": "StephAI is busy. Please wait."}), 429
+            return jsonify({"status": "busy", "message": "StephAI Botenberg is busy. Please wait."}), 429
         agent.ask(user_message)
         # Poll for response (short wait, frontend can poll if needed)
         for _ in range(20):
