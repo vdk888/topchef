@@ -375,10 +375,18 @@
 
     <div class="header">
         <div class="title-group">
-            <h1>Top Chef France Map & StephAI</h1>
-            <p>Explore restaurant locations and follow StephAI's database updates.</p>
+            <h1>Top Chef France Map & Agent</h1>
+            <p>Discover chefs by location, status, and season</p>
         </div>
-        <button id="view-toggle-button">Show Table</button>
+        <div>
+            <!-- Add a dropdown for filtering by season -->
+            <label for="season-filter" style="color:white; margin-right:8px;">Season:</label>
+            <select id="season-filter">
+                <option value="">All</option>
+                <!-- JS will populate additional options -->
+            </select>
+            <button id="view-toggle-button">Toggle View</button>
+        </div>
     </div>
 
     <div class="main-content">
@@ -393,7 +401,6 @@
             </div>
         </div>
 
-        <!-- Sidebar Log -->
         <!-- Sidebar Log -->
         <div class="sidebar">
             <!-- Main Chat Area -->
@@ -832,7 +839,60 @@
               };
           });
 
+          // Table and Map Data Loading
+          let allChefs = [];
+          let currentSeason = '';
 
+          // Populate the season filter dropdown based on chef data
+          function populateSeasonFilter(chefs) {
+              const seasonSet = new Set();
+              chefs.forEach(chef => {
+                  if (chef.season !== undefined && chef.season !== null) {
+                      seasonSet.add(chef.season);
+                  }
+              });
+              const seasonFilter = document.getElementById('season-filter');
+              // Remove old options except 'All'
+              seasonFilter.querySelectorAll('option:not([value=""])').forEach(opt => opt.remove());
+              Array.from(seasonSet).sort((a, b) => a - b).forEach(season => {
+                  const opt = document.createElement('option');
+                  opt.value = season;
+                  opt.textContent = `Season ${season}`;
+                  seasonFilter.appendChild(opt);
+              });
+          }
+
+          // Filter chefs by selected season
+          function filterChefsBySeason(chefs, season) {
+              if (!season) return chefs;
+              return chefs.filter(chef => chef.season == season);
+          }
+
+          // Listen for season filter changes
+          document.getElementById('season-filter').addEventListener('change', function() {
+              currentSeason = this.value;
+              loadAndDisplayTable();
+              // Optionally, refresh map markers as well if map supports filtering
+          });
+
+          // Update loadAndDisplayTable to use filtered chefs
+          function loadAndDisplayTable() {
+              const chefs = filterChefsBySeason(allChefs, currentSeason);
+              // ... existing table rendering code ...
+          }
+
+          // When fetching chef data, update allChefs and populate the filter
+          function refreshTableData() {
+              fetch('/api/chefs')
+                  .then(response => response.json())
+                  .then(data => {
+                      allChefs = data;
+                      populateSeasonFilter(allChefs);
+                      loadAndDisplayTable();
+                  });
+          }
+          // Call refreshTableData on page load
+          refreshTableData();
       </script>
 
  </body>
