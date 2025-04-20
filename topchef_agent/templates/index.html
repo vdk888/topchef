@@ -29,43 +29,164 @@
             background-color: #333;
             color: white;
             flex-shrink: 0; /* Prevent header from shrinking */
+            display: flex; /* Use flexbox for alignment */
+            justify-content: space-between; /* Space out title and button */
+            align-items: center; /* Vertically align items */
         }
 
-        .header h1 {
-            margin: 0;
+        .header .title-group h1 { /* Target h1 within a group */
+             margin: 0;
             font-size: 1.5em;
         }
-        .header p {
-            margin: 5px 0 0;
-            font-size: 0.9em;
-            color: #ccc;
+        .header .title-group p { /* Target p within a group */
+             margin: 5px 0 0;
+             font-size: 0.9em;
+             color: #ccc;
         }
+
+        /* Toggle Button Style */
+        #view-toggle-button {
+            padding: 8px 15px;
+            font-size: 0.9em;
+            cursor: pointer;
+            background-color: #555;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        #view-toggle-button:hover {
+            background-color: #777;
+        }
+
 
         .main-content {
             display: flex;
             flex-grow: 1; /* Allow main content to fill space */
             overflow: hidden; /* Prevent overflow issues */
             padding: 10px;
-            gap: 10px; /* Space between map and log */
+            gap: 10px; /* Space between primary view and log */
+        }
+
+        /* Container for the switchable view (Map or Table) */
+        .primary-view-container {
+            height: 100%;
+            width: 65%; /* Take up the main area */
+            position: relative; /* Needed for absolute positioning of children if required, or just structure */
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            background-color: #fff; /* Background for the container */
+            overflow: hidden; /* Hide overflow from children */
         }
 
         #map {
-            height: 100%; /* Fill vertical space in main-content */
-            width: 65%; /* Take up most of the width */
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            height: 100%;
+            width: 100%; /* Fill the primary container */
+            /* Removed border-radius and shadow as they are on the container now */
         }
 
         .sidebar {
             height: 100%;
-            width: 35%; /* Remaining width */
+            width: 35%; /* Remaining width for the log */
             display: flex;
             flex-direction: column;
             background-color: #fff;
             border-radius: 8px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            overflow: hidden; /* Contained scrolling */
+            overflow: hidden; /* Prevent scrollbar on the main sidebar div */
         }
+
+        /* Styling for the two log sections */
+        #main-chat-container, #background-work-container {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* Prevent inner containers from overflowing sidebar */
+        }
+
+        #main-chat-container {
+            flex-basis: 60%; /* Adjust initial height ratio as needed */
+            border-bottom: 2px solid #ccc; /* Separator */
+        }
+
+        #background-work-container {
+            flex-basis: 40%;
+        }
+
+        /* Headers for both sections */
+        .sidebar h2, .background-header {
+            margin: 0;
+            padding: 10px 15px; /* Slightly reduced padding */
+            background-color: #e2e2e2;
+            font-size: 1.1em; /* Slightly smaller */
+            color: #333;
+            border-bottom: 1px solid #ddd;
+            flex-shrink: 0;
+            display: flex; /* Use flex for alignment */
+            justify-content: space-between; /* Space out title and icons */
+            align-items: center;
+        }
+
+        .background-header {
+            cursor: pointer; /* Indicate clickable */
+            user-select: none; /* Prevent text selection */
+        }
+        .background-header:hover {
+            background-color: #d8d8d8;
+        }
+
+        /* Simple CSS Spinner */
+        .spinner {
+            border: 3px solid #f3f3f3; /* Light grey */
+            border-top: 3px solid #555; /* Dark grey */
+            border-radius: 50%;
+            width: 16px; /* Size */
+            height: 16px;
+            animation: spin 1s linear infinite;
+            display: none; /* Hidden by default */
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Toggle icon (simple +/-) */
+        .toggle-icon {
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        /* Log container styling */
+        #chat-log-area, #background-log-area {
+            flex-grow: 1; /* Allow log areas to fill their container */
+            padding: 10px; /* Reduced padding */
+            background-color: #282c34; /* Dark background */
+            color: #abb2bf; /* Light text */
+            overflow-y: scroll; /* Enable scrolling */
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.8em; /* Slightly smaller font */
+            line-height: 1.3;
+            white-space: pre-wrap; /* Preserve whitespace and wrap lines */
+        }
+
+        /* Hide background log area when collapsed */
+        #background-work-container.collapsed #background-log-area {
+            display: none;
+            /* Alternative: max-height transition
+            max-height: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+            */
+        }
+        /* Style when expanded (for transition alternative)
+        #background-work-container #background-log-area {
+             max-height: 500px; // Or a large enough value
+             transition: max-height 0.3s ease-in, padding 0.3s ease-in;
+        }
+        */
 
         .sidebar h2 {
             margin: 0;
@@ -74,35 +195,77 @@
             font-size: 1.2em;
             color: #333;
             border-bottom: 1px solid #ddd;
-            flex-shrink: 0;
         }
 
-        #log-container {
-            flex-grow: 1; /* Allow log to fill sidebar space */
-            padding: 15px;
-            background-color: #282c34; /* Dark background for logs */
-            color: #abb2bf; /* Light text */
-            overflow-y: scroll; /* Enable scrolling */
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 0.85em;
-            line-height: 1.4;
-            white-space: pre-wrap; /* Preserve whitespace and wrap lines */
+        /* Specific log area styling */
+        #chat-log-area {
+             background-color: #f8f9fa; /* Lighter background for chat */
+             color: #333; /* Darker text for chat */
+             font-family: sans-serif; /* More readable font for chat */
+             font-size: 0.9em;
         }
 
-        /* Log entry styling (same as before) */
-        .log-entry { margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #444; }
+        #background-log-area {
+             background-color: #282c34; /* Dark background for technical logs */
+            color: #abb2bf; /* Light text for technical logs */
+            /* Inherits font, size, line-height from shared rule */
+        }
+
+
+        /* Log entry styling */
+        .log-entry {
+            margin-bottom: 6px; /* Reduced margin */
+            padding-bottom: 6px;
+            border-bottom: 1px solid #444; /* Default border for dark theme */
+        }
         .log-entry:last-child { border-bottom: none; }
-        .log-timestamp { color: #61afef; margin-right: 10px; }
-        .log-type { font-weight: bold; margin-right: 10px; }
-        .log-type-cycle_start, .log-type-cycle_end { color: #e5c07b; } /* Yellow */
-        .log-type-llm_request { color: #c678dd; } /* Purple */
-        .log-type-llm_response { color: #abb2bf; } /* Default light text */
+
+        /* Specific border for light chat area */
+        #chat-log-area .log-entry {
+            border-bottom: 1px solid #eee;
+        }
+
+        .log-timestamp { color: #61afef; margin-right: 8px; font-size: 0.9em; }
+        #chat-log-area .log-timestamp { color: #6c757d; } /* Grey timestamp in chat */
+
+        .log-role { font-weight: bold; margin-right: 8px; }
+        /* Role-based coloring (can be applied in JS) */
+        .role-StephAI { color: #d19a66; } /* Orange/Brown for StephAI */
+        .role-scheduler { color: #61afef; } /* Blue for scheduler/user */
+        .role-tool_executor { color: #98c379; } /* Green for tools */
+        .role-system { color: #c678dd; } /* Purple for system */
+
+        .log-data { display: block; margin-top: 3px; margin-left: 15px; white-space: pre-wrap; }
+
+        /* Specific styling for chat messages */
+         #chat-log-area .log-entry .log-data {
+             margin-left: 0; /* No indent for main chat data */
+         }
+         #chat-log-area .log-entry.log-entry-stephai { /* Style agent messages */
+             background-color: #e9ecef;
+             padding: 8px;
+             border-radius: 5px;
+             margin-left: 20px; /* Indent agent messages */
+             border-bottom: none;
+         }
+         #chat-log-area .log-entry.log-entry-scheduler { /* Style user/scheduler messages */
+             background-color: #d1e7dd;
+             padding: 8px;
+             border-radius: 5px;
+             margin-right: 20px; /* Align user messages to the right (or keep left) */
+             border-bottom: none;
+         }
+
+
+        /* Type-based coloring (mostly for background log) */
+        .log-type-error { color: #e06c75; font-weight: bold; } /* Red for errors */
+        #background-log-area .log-entry.log-type-error { background-color: rgba(224, 108, 117, 0.1); }
+
+        .log-type-tool_result, .log-type-tool_start { color: #98c379; } /* Green */
         .log-type-llm_tool_request { color: #56b6c2; } /* Cyan */
-        .log-type-tool_start { color: #98c379; } /* Green */
-        .log-type-tool_result { color: #98c379; } /* Green */
-        .log-type-tool_error, .log-type-cycle_error, .log-type-llm_error { color: #e06c75; font-weight: bold; } /* Red */
+        .log-type-llm_request { color: #c678dd; } /* Purple */
         .log-type-cycle_info { color: #61afef; } /* Blue */
-        .log-data { display: block; margin-top: 4px; margin-left: 20px; white-space: pre-wrap; }
+        .log-type-cycle_start, .log-type-cycle_end { color: #e5c07b; } /* Yellow */
 
         /* Leaflet Popup Styling */
         .leaflet-popup-content-wrapper {
@@ -144,24 +307,118 @@
             font-style: italic;
         }
 
+
+        /* --- Table Styling (no changes needed here) --- */
+        #database-table-container {
+            height: 100%; /* Fill the primary container */
+            width: 100%;
+            padding: 15px;
+            overflow: auto; /* Allow scrolling within the container */
+            display: none; /* Initially hidden */
+            box-sizing: border-box; /* Include padding in height/width */
+            flex-direction: column; /* Stack h2 and table wrapper */
+        }
+        #database-table-container h2 {
+             margin: 0 0 15px 0;
+             padding-bottom: 10px;
+             border-bottom: 1px solid #ddd;
+             font-size: 1.3em;
+             color: #333;
+             flex-shrink: 0; /* Prevent shrinking when content overflows */
+        }
+        #table-placeholder {
+             padding: 20px;
+             text-align: center;
+             color: #666;
+             flex-grow: 1; /* Allow placeholder to fill space if table wrapper is empty */
+        }
+        .db-table-wrapper {
+             overflow-y: auto; /* Enable vertical scroll for the table content */
+             flex-grow: 1; /* Allow wrapper to fill remaining space */
+        }
+        .db-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9em;
+        }
+        .db-table th, .db-table td {
+            border: 1px solid #ddd;
+            padding: 8px 12px;
+            text-align: left;
+            vertical-align: top; /* Align content to the top */
+            white-space: normal; /* Allow text wrapping */
+            word-break: break-word; /* Break long words if necessary */
+        }
+        .db-table th {
+            background-color: #e9e9e9;
+            font-weight: bold;
+            position: sticky; /* Make header sticky */
+            top: 0; /* Stick to the top */
+            z-index: 1; /* Ensure header is above scrolling content */
+        }
+        .db-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .db-table tr:hover {
+            background-color: #f1f1f1;
+        }
+        .db-table .col-bio, .db-table .col-perplexity {
+             max-width: 300px; /* Example max width */
+             overflow: hidden;
+             text-overflow: ellipsis; /* Add ellipsis for overflow */
+        }
+
+
     </style>
 </head>
 <body>
 
     <div class="header">
-        <h1>Top Chef France Map & StephAI</h1>
-        <p>Explore restaurant locations and follow StephAI's database updates.</p>
+        <div class="title-group">
+            <h1>Top Chef France Map & StephAI</h1>
+            <p>Explore restaurant locations and follow StephAI's database updates.</p>
+        </div>
+        <button id="view-toggle-button">Show Table</button>
     </div>
 
     <div class="main-content">
-        <div id="map"></div>
+        <!-- Primary View Container (Map or Table) -->
+        <div class="primary-view-container">
+            <div id="map"></div>
+            <!-- Database Table Section (initially hidden) -->
+            <div id="database-table-container">
+                <h2>Chef Database View</h2>
+                <div id="table-placeholder">Loading database content...</div>
+                <!-- Table will be generated here by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Sidebar Log -->
+        <!-- Sidebar Log -->
         <div class="sidebar">
-            <h2>StephAI's Activity Log</h2>
-            <div id="log-container">
-                Waiting for StephAI's first check...
+            <!-- Main Chat Area -->
+            <div id="main-chat-container">
+                <h2>StephAI Chat</h2>
+                <div id="chat-log-area">
+                    Waiting for StephAI...
+                </div>
+            </div>
+            <!-- Background Activity Area (Collapsible) -->
+            <div id="background-work-container" class="collapsed">
+                 <div class="background-header" id="background-header">
+                     <span>Background Activity</span>
+                     <div> <!-- Container for spinner and toggle icon -->
+                         <div class="spinner" id="loading-spinner"></div>
+                         <span class="toggle-icon">+</span>
+                     </div>
+                 </div>
+                 <div id="background-log-area">
+                     <!-- Background logs will appear here -->
+                 </div>
             </div>
         </div>
     </div>
+
 
     <!-- Embed JSON data safely -->
     <script id="chefs-data" type="application/json">
@@ -190,17 +447,14 @@
             const rawJsonData = jsonDataElement.textContent || jsonDataElement.innerText;
             // Parse the retrieved JSON string
             chefsData = JSON.parse(rawJsonData);
-            // console.log("Parsed Chefs Data:", chefsData); // Debugging: Check the structure
 
             if (!Array.isArray(chefsData)) {
-                 // Ensure the parsed data is an array
                  throw new Error("Parsed data is not a valid array.");
             }
         } catch (e) {
             console.error("Error processing chef JSON data:", e);
-            // Optionally display an error to the user on the page
             const mapDiv = document.getElementById('map');
-            if (mapDiv) { // Check if map div exists before modifying
+            if (mapDiv) {
                  mapDiv.innerHTML = '<p style="color: red; padding: 20px;">Error loading chef data for the map.</p>';
             }
         }
@@ -208,23 +462,19 @@
         // --- Marker Creation ---
         if (Array.isArray(chefsData)) {
             chefsData.forEach(chef => {
-                // Check for valid coordinates (already partially validated in backend)
                 const lat = parseFloat(chef.latitude);
                 const lon = parseFloat(chef.longitude);
 
                 if (!isNaN(lat) && !isNaN(lon)) {
-                    // Create marker
                     const marker = L.marker([lat, lon]).addTo(map);
-
-                    // --- Create Popup Content ---
                     let popupContent = `<h3>${chef.name || 'Unknown Chef'}</h3>`;
-
-                    // Function to add detail if present
                     const addDetail = (label, value) => {
-                        // Basic escaping for simple text values to prevent potential XSS in popups
-                        const escapedValue = value !== null && value !== undefined ? String(value).replace(/</g, "<").replace(/>/g, ">") : value;
+                        // Use textContent for safety in popups too, unless HTML is needed
+                        const tempDiv = document.createElement('div');
+                        tempDiv.textContent = value !== null && value !== undefined ? String(value) : '';
+                        const escapedValue = tempDiv.innerHTML; // Let browser handle basic escaping
 
-                        if (escapedValue !== null && escapedValue !== undefined && escapedValue !== "") {
+                        if (value !== null && value !== undefined && String(value).trim() !== "") {
                             return `<p><strong>${label}:</strong> ${escapedValue}</p>`;
                         }
                         return `<p><strong>${label}:</strong> <span class="missing-data">Missing</span></p>`;
@@ -233,23 +483,15 @@
                     popupContent += addDetail('Status', chef.status);
                     popupContent += addDetail('Address', chef.restaurant_address);
                     popupContent += addDetail('Bio', chef.bio);
-                    // Add other relevant fields here...
-                    // popupContent += addDetail('Last Updated', chef.last_updated);
 
-                    // Add image if URL exists (Assume image URLs are safe or validated elsewhere)
                     if (chef.image_url) {
-                        // Basic check for potentially problematic URL schemes (though not foolproof)
                         if (String(chef.image_url).startsWith('http:') || String(chef.image_url).startsWith('https:')) {
                              popupContent += `<img src="${chef.image_url}" alt="${chef.name || 'Chef image'}" class="popup-image">`;
                         } else {
                              console.warn(`Skipping potentially unsafe image URL: ${chef.image_url}`);
                         }
                     }
-
-                    // Bind popup to marker
                     marker.bindPopup(popupContent);
-                } else {
-                     // console.log(`Skipping marker for chef ${chef.id || chef.name} due to invalid coordinates.`);
                 }
             });
         } else {
@@ -257,102 +499,296 @@
         }
 
 
-        // --- Log Viewer Logic (same as before) ---
-        const logContainer = document.getElementById('log-container');
+        // --- Log Viewer Logic ---
+        const chatLogArea = document.getElementById('chat-log-area');
+        const backgroundLogArea = document.getElementById('background-log-area');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        let backgroundTaskCount = 0; // Counter for active background tasks
 
-        function formatLogData(data) {
+        // Accepts the full log object passed to it
+        function formatLogData(logObject) {
+             // Add a safety check for the passed object
+             if (!logObject) {
+                 console.error("formatLogData received undefined logObject");
+                 return "[Error: Invalid log object received]";
+             }
+            const data = logObject.data; // Extract data from the passed log object
+
+            // Keep sensitive formatting for background logs
             if (typeof data === 'string') {
-                try {
-                    const parsed = JSON.parse(data);
-                    return JSON.stringify(parsed, null, 2);
-                } catch (e) { return data; }
-            } else if (typeof data === 'object' && data !== null) {
-                return JSON.stringify(data, null, 2);
-            }
-            return String(data);
-        }
+                 try {
+                     // Attempt to parse JSON only if it looks like JSON
+                     if (data.trim().startsWith('{') || data.trim().startsWith('[')) {
+                         const parsed = JSON.parse(data);
+                         return JSON.stringify(parsed, null, 2); // Pretty print for background
+                     }
+                 } catch (e) { /* Ignore parsing error, return original string */ }
+                 return data; // Return original string if not JSON or parsing failed
+             } else if (typeof data === 'object' && data !== null) {
+                 // Handle specific object structures for chat if needed, otherwise stringify for background
+                 // Use the passed logObject here
+                 if (logObject.role === 'StephAI' && logObject.type === 'llm_response' && data.content) {
+                     return data.content; // Extract just the text content for chat
+                 }
+                 return JSON.stringify(data, null, 2); // Pretty print object for background
+             }
+             return String(data); // Fallback for other types
+         }
 
-        function addLogEntry(log) {
-             if (logContainer.textContent === "Waiting for StephAI's first check...") {
-                 logContainer.innerHTML = ''; // Clear initial message only on first actual log
+         function updateSpinner() {
+             if (backgroundTaskCount > 0) {
+                 loadingSpinner.style.display = 'inline-block';
+             } else {
+                 loadingSpinner.style.display = 'none';
+             }
+         }
+
+         function addLogEntry(log) {
+             let targetContainer;
+             let isBackgroundTask = true;
+             // Pass the full log object (named 'log' in this scope) to formatLogData
+             let formattedData = formatLogData(log);
+
+             // Determine target container and if it's a background task
+             if (log.role === 'StephAI' && log.type === 'llm_response') {
+                 targetContainer = chatLogArea;
+                 isBackgroundTask = false;
+                 // Use the extracted content if available
+                 formattedData = (typeof log.data === 'object' && log.data !== null && log.data.content) ? log.data.content : formattedData;
+             } else if (log.role === 'scheduler') { // User/Scheduler messages also in chat
+                 targetContainer = chatLogArea;
+                 isBackgroundTask = false;
+                 formattedData = (typeof log.data === 'object' && log.data !== null && log.data.content) ? log.data.content : formattedData;
+             } else {
+                 targetContainer = backgroundLogArea;
+                 isBackgroundTask = true;
              }
 
-            const entryDiv = document.createElement('div');
-            entryDiv.classList.add('log-entry');
+             // Clear initial message
+             if (targetContainer.textContent.includes("Waiting for StephAI...") || targetContainer.textContent.includes("Waiting for StephAI's first check...")) {
+                 targetContainer.innerHTML = '';
+             }
 
-            const timestampSpan = document.createElement('span');
-            timestampSpan.classList.add('log-timestamp');
-            timestampSpan.textContent = new Date(log.timestamp * 1000).toLocaleTimeString();
+             // Create log entry elements
+             const entryDiv = document.createElement('div');
+             entryDiv.classList.add('log-entry');
+             if (log.role) entryDiv.classList.add(`role-${log.role}`); // Add role class
+             if (log.type) entryDiv.classList.add(`log-type-${log.type.split('_')[0]}`); // Add general type class (e.g., log-type-tool)
+             if (log.type && log.type.includes('error')) entryDiv.classList.add('log-type-error'); // Specific error class
 
-            const roleSpan = document.createElement('span');
-            roleSpan.style.fontWeight = 'bold';
-            roleSpan.style.marginRight = '10px';
-            const role_display = log.role || 'system';
-            roleSpan.textContent = `${role_display}:`;
-            if (role_display === 'StephAI') roleSpan.style.color = '#e5c07b';
-            else if (role_display === 'tool_executor') roleSpan.style.color = '#98c379';
-            else if (role_display === 'scheduler') roleSpan.style.color = '#61afef';
-            else roleSpan.style.color = '#abb2bf';
+             // Add specific classes for chat styling
+             if (targetContainer === chatLogArea) {
+                 if (log.role === 'StephAI') entryDiv.classList.add('log-entry-stephai');
+                 else if (log.role === 'scheduler') entryDiv.classList.add('log-entry-scheduler');
+             }
 
-            const dataSpan = document.createElement('span');
-            // Removed log-data class to make it inline for conversational flow
-            dataSpan.textContent = formatLogData(log.data); // Use textContent for safety
 
-            entryDiv.appendChild(timestampSpan);
-            entryDiv.appendChild(roleSpan);
-            entryDiv.appendChild(dataSpan);
+             const timestampSpan = document.createElement('span');
+             timestampSpan.classList.add('log-timestamp');
+             timestampSpan.textContent = new Date(log.timestamp * 1000).toLocaleTimeString();
 
-            logContainer.appendChild(entryDiv);
-            formatEntryByType(entryDiv, log, dataSpan); // Pass dataSpan for direct styling
+             const roleSpan = document.createElement('span');
+             roleSpan.classList.add('log-role');
+             roleSpan.textContent = `${log.role || 'system'}:`;
 
-            logContainer.scrollTop = logContainer.scrollHeight;
-        }
+             const dataSpan = document.createElement('span');
+             dataSpan.classList.add('log-data');
+             dataSpan.textContent = formattedData; // Use pre-formatted data
 
-         function formatEntryByType(entryDiv, log, dataSpan) {
-             // Apply styling based on log type directly to dataSpan or entryDiv
-             if (!dataSpan) return; // Should not happen if called correctly
+             // Assemble entry
+             entryDiv.appendChild(timestampSpan);
+             // Only show role in background log for cleaner chat
+             if (targetContainer === backgroundLogArea) {
+                 entryDiv.appendChild(roleSpan);
+             }
+             entryDiv.appendChild(dataSpan);
 
-            if (log.type && log.type.includes('error')) {
-                entryDiv.style.backgroundColor = 'rgba(224, 108, 117, 0.1)'; // Subtle red background
-                dataSpan.style.color = '#e06c75'; // Lighter red text
-                dataSpan.style.fontWeight = 'bold';
-            } else if (log.type === 'llm_response') {
-                 dataSpan.style.fontStyle = 'italic';
-                 dataSpan.style.color = '#e5c07b'; // Match StephAI role color
-            } else if (log.type === 'tool_result' || log.type === 'tool_start') {
-                 dataSpan.style.color = '#98c379'; // Green for tool actions/results
-            } else if (log.type === 'llm_tool_request') {
-                 dataSpan.style.color = '#56b6c2'; // Cyan for tool requests
-            } else if (log.type === 'stream_info' || log.type === 'cycle_info') {
-                 dataSpan.style.color = '#61afef'; // Blue for system/cycle info
-            }
-        }
+             // Append to the correct container
+             targetContainer.appendChild(entryDiv);
 
-        // --- SSE Connection (same as before) ---
+             // Scroll to bottom
+             targetContainer.scrollTop = targetContainer.scrollHeight;
+
+             // Update spinner logic
+             if (isBackgroundTask) {
+                 // Increment counter for starting tasks, decrement for ending tasks
+                 if (log.type === 'tool_start' || log.type === 'llm_request') {
+                     backgroundTaskCount++;
+                 } else if (log.type === 'tool_result' || log.type === 'tool_error' || log.type === 'llm_response' || log.type === 'llm_error' || log.type === 'llm_tool_request') {
+                     backgroundTaskCount = Math.max(0, backgroundTaskCount - 1); // Decrement, but not below 0
+                 }
+                 updateSpinner();
+             }
+         }
+
+
+        // --- SSE Connection ---
         const eventSource = new EventSource("/stream_logs");
 
         eventSource.onopen = function() {
-            // Don't clear immediately, wait for first log in addLogEntry
-            // addLogEntry({ type: 'stream_info', data: 'Connected to StephAI\'s log stream.', timestamp: Date.now() / 1000, role: 'system' });
             console.log("SSE Connected");
         };
 
         eventSource.onmessage = function(event) {
+             try {
+                 const logEntry = JSON.parse(event.data);
+                 addLogEntry(logEntry);
+             } catch (e) {
+                 console.error("Failed to parse SSE data:", event.data, e);
+                 // Log parsing errors to the background log
+                 addLogEntry({ type: 'stream_error', data: `Failed to parse log: ${event.data}`, timestamp: Date.now() / 1000, role: 'system' });
+             }
+         };
+
+         eventSource.onerror = function(err) {
+             console.error("EventSource failed:", err);
+             // Log connection errors to the background log
+             addLogEntry({ type: 'stream_error', data: 'Log stream connection error. Check console.', timestamp: Date.now() / 1000, role: 'system' });
+             backgroundTaskCount = 0; // Reset counter on error
+             updateSpinner();
+         };
+
+         // --- Background Log Collapse/Expand Logic ---
+         const backgroundHeader = document.getElementById('background-header');
+         const backgroundContainer = document.getElementById('background-work-container');
+         const toggleIcon = backgroundHeader.querySelector('.toggle-icon');
+
+         backgroundHeader.addEventListener('click', () => {
+             backgroundContainer.classList.toggle('collapsed');
+             if (backgroundContainer.classList.contains('collapsed')) {
+                 toggleIcon.textContent = '+';
+             } else {
+                 toggleIcon.textContent = '-';
+                 // Scroll to bottom when expanding
+                 backgroundLogArea.scrollTop = backgroundLogArea.scrollHeight;
+             }
+         });
+
+        // --- Database Table Loading Logic ---
+        let tableLoaded = false;
+        async function loadAndDisplayTable() {
+            if (tableLoaded) return;
+
+            const tablePlaceholder = document.getElementById('table-placeholder');
+            tablePlaceholder.textContent = 'Loading database content...';
+
             try {
-                const logEntry = JSON.parse(event.data);
-                addLogEntry(logEntry);
-            } catch (e) {
-                console.error("Failed to parse SSE data:", event.data, e);
-                addLogEntry({ type: 'stream_error', data: `Failed to parse log: ${event.data}`, timestamp: Date.now() / 1000, role: 'system' });
-            }
-        };
+                const response = await fetch('/api/chefs');
+                 if (!response.ok) {
+                     throw new Error(`HTTP error! status: ${response.status}`);
+                 }
+                 const chefs = await response.json();
 
-        eventSource.onerror = function(err) {
-            console.error("EventSource failed:", err);
-            addLogEntry({ type: 'stream_error', data: 'Log stream connection error. Check console.', timestamp: Date.now() / 1000, role: 'system' });
-        };
+                 if (!Array.isArray(chefs) || chefs.length === 0) {
+                     tablePlaceholder.textContent = 'No chef data found in the database.';
+                     return;
+                 }
 
-    </script>
+                const columns = [
+                    { key: 'id', header: 'ID' },
+                    { key: 'name', header: 'Name' },
+                    { key: 'status', header: 'Status' },
+                    { key: 'restaurant_address', header: 'Address' },
+                    { key: 'latitude', header: 'Lat' },
+                    { key: 'longitude', header: 'Lon' },
+                    { key: 'bio', header: 'Bio', className: 'col-bio' },
+                    { key: 'last_updated', header: 'Last Updated' },
+                 ];
 
-</body>
-</html>
+                 const tableWrapper = document.createElement('div');
+                 tableWrapper.classList.add('db-table-wrapper');
+                 const table = document.createElement('table');
+                 table.classList.add('db-table');
+                 const thead = document.createElement('thead');
+                 const tbody = document.createElement('tbody');
+                 const headerRow = document.createElement('tr');
+
+                columns.forEach(col => {
+                    const th = document.createElement('th');
+                    th.textContent = col.header;
+                    if (col.className) {
+                        th.classList.add(col.className);
+                    }
+                    headerRow.appendChild(th);
+                });
+                 thead.appendChild(headerRow);
+
+                 chefs.forEach(chef => {
+                     const row = document.createElement('tr');
+                     columns.forEach(col => {
+                         const td = document.createElement('td');
+                         let value = chef[col.key];
+
+                         // Handle potentially complex data like JSON
+                         if (col.key === 'perplexity_data' && typeof value === 'object' && value !== null) {
+                             value = '[JSON Data]';
+                         }
+
+                         // Use textContent for safety - this avoids the need for manual HTML escaping
+                         td.textContent = (value === null || typeof value === 'undefined') ? '' : String(value);
+
+                         if (col.className) {
+                             td.classList.add(col.className);
+                             // Add title attribute for potentially truncated columns
+                             if (col.className === 'col-bio' || col.className === 'col-perplexity') {
+                                 // Still set title attribute for hover text
+                                 td.setAttribute('title', (value === null || typeof value === 'undefined') ? '' : String(value));
+                             }
+                         }
+                         row.appendChild(td);
+                     });
+                     tbody.appendChild(row);
+                 });
+
+                 table.appendChild(thead);
+                 table.appendChild(tbody);
+                 tableWrapper.appendChild(table);
+
+                 tablePlaceholder.innerHTML = '';
+                 tablePlaceholder.appendChild(tableWrapper);
+                 tableLoaded = true;
+
+             } catch (error) {
+                 console.error('Error loading or displaying database table:', error);
+                 tablePlaceholder.textContent = `Error loading table data: ${error.message}. Check console for details.`;
+                 tablePlaceholder.style.color = 'red';
+             }
+         }
+
+         // --- View Toggle Logic ---
+         const toggleButton = document.getElementById('view-toggle-button');
+         const mapContainer = document.getElementById('map');
+         const tableContainer = document.getElementById('database-table-container');
+         let currentView = 'map';
+
+         toggleButton.addEventListener('click', () => {
+             if (currentView === 'map') {
+                 // Switch to Table View
+                 mapContainer.style.display = 'none';
+                 tableContainer.style.display = 'flex'; // Use flex now
+                 toggleButton.textContent = 'Show Map';
+                 currentView = 'table';
+                 loadAndDisplayTable(); // Load if not already loaded
+             } else {
+                 // Switch to Map View
+                 tableContainer.style.display = 'none';
+                 mapContainer.style.display = 'block';
+                 toggleButton.textContent = 'Show Table';
+                 currentView = 'map';
+                 setTimeout(() => {
+                     map.invalidateSize();
+                 }, 10);
+             }
+         });
+
+         // --- Initial Load Calls ---
+         document.addEventListener('DOMContentLoaded', () => {
+              // Map/Log setup happens via inline script execution order
+              // Table is loaded on demand by the toggle button click
+         });
+
+
+     </script>
+
+ </body>
+ </html>

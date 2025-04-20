@@ -129,30 +129,56 @@ def execute_search_web_perplexity(query: str):
         log_to_ui("tool_error", {"name": "search_web_perplexity", "error": str(e)})
         return error_msg
 
-
-def execute_update_chef_record(chef_id: int, field_name: str, new_value: str):
+# Updated to accept Any type for new_value and perform basic validation
+def execute_update_chef_record(chef_id: int, field_name: str, new_value: any):
     """Executes an update operation on a specific chef record."""
+    # --- Input Validation ---
+    if not isinstance(chef_id, int):
+        error_msg = json.dumps({"error": "Invalid type for chef_id, must be an integer."})
+        log_to_ui("tool_error", {"name": "update_chef_record", "error": "Invalid chef_id type."})
+        return error_msg
+    if not isinstance(field_name, str) or not field_name:
+        error_msg = json.dumps({"error": "Invalid or empty field_name provided."})
+        log_to_ui("tool_error", {"name": "update_chef_record", "error": "Invalid field_name."})
+        return error_msg
+    # new_value can be str, int, float, bool, None - further validation below
+
     tool_input_data = {"chef_id": chef_id, "field_name": field_name, "new_value": new_value}
     log_to_ui("tool_start", {"name": "update_chef_record", "input": tool_input_data})
     print(f"--- Tool: Executing Database Update ---", flush=True)
     print(f"  Chef ID: {chef_id}, Field: {field_name}, New Value: {new_value}", flush=True)
-    allowed_fields = ["bio", "image_url", "status", "perplexity_data", "restaurant_address"] # Added restaurant_address
-    # Check if field_name is allowed OR if it's a newly added column (basic check)
-    # A more robust check might involve querying the DB schema if many dynamic columns are expected
-    if field_name not in allowed_fields and not field_name.startswith("custom_"): # Example prefix for dynamic columns
-        error_msg = json.dumps({"error": f"Invalid or disallowed field name '{field_name}' provided for update."})
+
+    # --- Field Name Validation ---
+    # Define allowed fields (including new ones)
+    allowed_fields = ["bio", "image_url", "status", "perplexity_data", "restaurant_address", "latitude", "longitude"]
+    # Allow custom fields if needed, but validate known ones strictly
+    if field_name not in allowed_fields and not field_name.startswith("custom_"): # Example prefix
+        error_msg = json.dumps({"error": f"Invalid or disallowed field name '{field_name}' provided for update. Allowed: {allowed_fields} or custom_*"})
         print(f"  Error: Invalid field name '{field_name}'.", flush=True)
         log_to_ui("tool_error", {"name": "update_chef_record", "input": tool_input_data, "error": f"Invalid field name: {field_name}"})
         return error_msg
-    # Check for critical error: missing restaurant_address
-    if field_name == "restaurant_address" and not new_value:
-        error_msg = json.dumps({"error": "Critical error: restaurant_address cannot be empty."})
-        print(f"  Error: Empty restaurant_address.", flush=True)
+
+    # --- Value Validation (Basic) ---
+    if field_name == "restaurant_address" and (new_value is None or str(new_value).strip() == ""):
+        error_msg = json.dumps({"error": "Critical error: restaurant_address cannot be empty or None."})
+        print(f"  Error: Empty or None restaurant_address.", flush=True)
         log_to_ui("tool_error", {"name": "update_chef_record", "input": tool_input_data, "error": "Empty restaurant_address."})
         return error_msg
+    if field_name in ["latitude", "longitude"] and not isinstance(new_value, (int, float)) and new_value is not None:
+         try:
+             # Attempt conversion if it looks like a number string, otherwise error
+             new_value = float(new_value)
+             print(f"  Converted new_value for {field_name} to float: {new_value}", flush=True)
+         except (ValueError, TypeError):
+             error_msg = json.dumps({"error": f"Invalid value type for {field_name}, must be a number (or convertible string), got: {type(new_value)}."})
+             print(f"  Error: Invalid value type for {field_name}.", flush=True)
+             log_to_ui("tool_error", {"name": "update_chef_record", "input": tool_input_data, "error": f"Invalid value type for {field_name}."})
+             return error_msg
 
+    # --- Database Update ---
     update_data = {field_name: new_value}
     try:
+        # Assuming update_chef handles the actual DB interaction and commit/rollback
         success = update_chef(chef_id, update_data)
         if success:
             result_msg = json.dumps({"status": "OK", "message": f"Successfully updated {field_name} for chef ID {chef_id}."})

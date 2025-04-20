@@ -1,8 +1,9 @@
 import os
+import time # Import time for sleep
 import datetime # Import datetime
 from sqlalchemy import create_engine, Column, Integer, String, Text, JSON, Float, text # Added Float, text
 from sqlalchemy.orm import sessionmaker, declarative_base
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError, OperationalError # Import OperationalError for retry
 from contextlib import contextmanager
 
 from topchef_agent.config import DATABASE_URL
@@ -149,6 +150,33 @@ def load_database():
         print(f"Error loading database: {e}")
         # Return empty list on error, allows UI to potentially still load
     return chefs_list
+
+def load_database(max_retries=2, delay=1):
+    """Loads all chef records from the database with retry logic for connection errors."""
+    chefs_list = []
+    attempts = 0
+    while attempts <= max_retries:
+        attempts += 1
+        try:
+            with get_db() as db:
+                chefs = db.query(Chef).order_by(Chef.name).all()
+                chefs_list = [chef.to_dict() for chef in chefs]
+                return chefs_list # Success, exit loop and return
+        except OperationalError as e: # Catch specific connection errors
+            print(f"Warning: Database operational error on attempt {attempts}/{max_retries+1}: {e}", flush=True)
+            if attempts > max_retries:
+                print("Error: Max retries reached for loading database.", flush=True)
+                raise # Re-raise the exception after max retries
+            print(f"Retrying in {delay} second(s)...", flush=True)
+            time.sleep(delay)
+        except Exception as e:
+            print(f"Error loading database (non-retryable): {e}", flush=True)
+            # Return empty list on other errors, allows UI to potentially still load
+            return [] # Return empty list for non-connection errors
+
+    # Should not be reached if successful, but return empty list as fallback
+    return []
+
 
 # Removed get_distinct_seasons() and get_chefs_by_season() as they are deprecated
 

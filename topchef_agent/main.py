@@ -114,5 +114,19 @@ def stream_logs():
     # 'text/event-stream' mimetype is crucial for SSE
     return Response(generate_log_stream(), mimetype='text/event-stream')
 
+# --- NEW API Endpoint for Chef Data ---
+@app.route('/api/chefs')
+def get_chefs_data():
+    """Returns all chef data from the database as JSON."""
+    try:
+        chefs_data = load_database()
+        # Convert datetime objects for JSON compatibility if necessary
+        # The Chef.to_dict() method in database.py already handles this
+        return jsonify(chefs_data)
+    except Exception as e:
+        print(f"Error in /api/chefs route: {e}")
+        return jsonify({"error": "Failed to load chef data", "details": str(e)}), 500
+
+
 # Removed the __main__ block. Gunicorn or Flask CLI will run the app object.
 # Initial database check is handled when database.py is imported by agent/scheduler.

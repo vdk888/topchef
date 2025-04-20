@@ -214,5 +214,581 @@
     "related_season": null,
     "related_chef_id": null,
     "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "193675d0-118b-45b8-8bfd-99500bce78c6",
+    "timestamp": "2025-04-20T03:40:33.786137Z",
+    "type": "Observation",
+    "details": "Chef ID 1 (Jean Dupont) missing restaurant address.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "d37e6275-fe80-4947-8557-4aa86b50a343",
+    "timestamp": "2025-04-20T03:40:37.605438Z",
+    "type": "Observation",
+    "details": "Chef ID 2 (Marie Dubois) missing restaurant address.",
+    "related_season": null,
+    "related_chef_id": 2,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "cf0dcbd1-d3fa-44a9-8885-c1996f907258",
+    "timestamp": "2025-04-20T03:40:40.300990Z",
+    "type": "Observation",
+    "details": "Chef ID 3 (Pierre Martin) missing restaurant address.",
+    "related_season": null,
+    "related_chef_id": 3,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "45f849cb-cf72-4744-a3ab-d7eba79a371e",
+    "timestamp": "2025-04-20T03:40:44.224224Z",
+    "type": "Action",
+    "details": "Attempting to search web for Chef Jean Dupont's restaurant address.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "7d888192-4d42-4afd-accd-1f7081243c29",
+    "timestamp": "2025-04-20T03:40:55.181527Z",
+    "type": "Action",
+    "details": "Attempting to search web again, specifying Season 1 for Chef Jean Dupont.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "297af5d3-5dba-4684-a72d-3f1ca536d57a",
+    "timestamp": "2025-04-20T03:41:07.608785Z",
+    "type": "Error",
+    "details": "Web search for Jean Dupont's restaurant address (with Season 1) was unsuccessful.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "e38571c4-f56e-4f75-b520-3f2c24678403",
+    "timestamp": "2025-04-20T03:41:40.338722Z",
+    "type": "Observation",
+    "details": "Chef ID 1 (Jean Dupont) missing restaurant_address, latitude, and longitude.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "fbb99686-b556-448f-af66-11c967b78cc4",
+    "timestamp": "2025-04-20T03:41:44.545791Z",
+    "type": "Action",
+    "details": "Attempting to find restaurant address for Chef Jean Dupont (ID 1) using search_web_perplexity.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "254b19fe-7363-4b81-b3da-844820a27773",
+    "timestamp": "2025-04-20T03:41:57.343283Z",
+    "type": "Error",
+    "details": "Perplexity search for Jean Dupont's restaurant address was unsuccessful.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "53b5664c-9082-40f5-9b15-f3a20d54f386",
+    "timestamp": "2025-04-20T03:42:33.073227Z",
+    "type": "Observation",
+    "details": "Examining chefs 1, 2, and 3. All are missing image_url, restaurant_address, latitude, and longitude. Chef 2 has status \"Incorrectly Added\".",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "870b01a1-6259-452f-b300-c6bcf8bd71e5",
+    "timestamp": "2025-04-20T03:42:37.654720Z",
+    "type": "Action",
+    "details": "Attempting to find restaurant_address for Chef Jean Dupont (ID 1) using web search.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "c3d8968a-a197-4b25-9d8e-c2d9bc776d9a",
+    "timestamp": "2025-04-20T03:42:48.565340Z",
+    "type": "Error",
+    "details": "Web search for Chef Jean Dupont's (ID 1) restaurant address was unsuccessful.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "da1b68f3-28f3-4d2b-8881-6f770e05311e",
+    "timestamp": "2025-04-20T03:42:52.658771Z",
+    "type": "Action",
+    "details": "Attempting to find restaurant_address for Chef Marie Dubois (ID 2) using web search.",
+    "related_season": null,
+    "related_chef_id": 2,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "d2aa6a80-5a94-457f-9f7b-2830c66e38f0",
+    "timestamp": "2025-04-20T03:49:35.944844Z",
+    "type": "Observation",
+    "details": "Chef ID 1 (Jean Dupont) missing restaurant_address, latitude, and longitude.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "d38727e5-58f8-472c-b371-2228c383103a",
+    "timestamp": "2025-04-20T03:49:39.841804Z",
+    "type": "Action",
+    "details": "Attempting to search web for restaurant address for Chef Jean Dupont (ID 1).",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "44e3b851-ede3-4b2a-9dbe-c1f317e1ed4b",
+    "timestamp": "2025-04-20T03:49:51.052535Z",
+    "type": "Error",
+    "details": "Perplexity search for Jean Dupont's restaurant address returned no useful information.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "e2468344-d55c-475d-a0fa-e5b43a739985",
+    "timestamp": "2025-04-20T03:49:53.975907Z",
+    "type": "Observation",
+    "details": "Chef ID 2 (Marie Dubois) missing restaurant_address, latitude, and longitude.",
+    "related_season": null,
+    "related_chef_id": 2,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "eb4e9d5e-be75-4981-a506-e4af6fa55bcd",
+    "timestamp": "2025-04-20T03:49:57.989750Z",
+    "type": "Action",
+    "details": "Attempting to search web for restaurant address for Chef Marie Dubois (ID 2).",
+    "related_season": null,
+    "related_chef_id": 2,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "f7121446-5aa8-4f44-8c53-c7f9f50b27f9",
+    "timestamp": "2025-04-20T03:50:09.834049Z",
+    "type": "Observation",
+    "details": "Perplexity search for Marie Dubois found her restaurant name: Maison Dubois in Paris.",
+    "related_season": null,
+    "related_chef_id": 2,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "c1eeb7ed-87f2-4451-b06d-287fd39a5502",
+    "timestamp": "2025-04-20T03:50:14.024213Z",
+    "type": "Action",
+    "details": "Attempting to search web for the exact address of Maison Dubois in Paris.",
+    "related_season": null,
+    "related_chef_id": 2,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "cc0abb72-aead-4e22-8fe7-a77105c6104e",
+    "timestamp": "2025-04-20T03:54:19.035198Z",
+    "type": "Observation",
+    "details": "Chef ID 1 (Jean Dupont) missing restaurant_address, latitude, and longitude.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "0772c0b1-2ac1-4522-aef1-3b136fb67bf6",
+    "timestamp": "2025-04-20T03:54:23.011411Z",
+    "type": "Observation",
+    "details": "Chef ID 2 (Marie Dubois) has status 'Incorrectly Added' and is missing restaurant_address, latitude, and longitude.",
+    "related_season": null,
+    "related_chef_id": 2,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "e352e2f1-f899-4eab-9eb5-bb58652f24ce",
+    "timestamp": "2025-04-20T03:54:26.409533Z",
+    "type": "Observation",
+    "details": "Chef ID 3 (Pierre Martin) missing restaurant_address, latitude, and longitude.",
+    "related_season": null,
+    "related_chef_id": 3,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "89f3405e-a6b2-41b9-b246-6f113c1d7143",
+    "timestamp": "2025-04-20T03:54:30.374559Z",
+    "type": "Action",
+    "details": "Attempting to find restaurant address for Chef Jean Dupont (ID 1) using web search.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "4fb5c05c-9f29-484b-a37e-3d99ce9917a4",
+    "timestamp": "2025-04-20T03:54:39.838873Z",
+    "type": "Observation",
+    "details": "Web search found potential restaurant address for Chef Jean Dupont (ID 1): \"Chez Dupont\" in Bordeaux, France.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "152c3198-b61f-4ab7-98f4-06c7995b2ead",
+    "timestamp": "2025-04-20T03:55:14.486137Z",
+    "type": "Observation",
+    "details": "Chef ID 1 (Jean Dupont) missing restaurant_address, latitude, longitude, and image_url.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "7ae9a443-3d2e-4c5c-aadc-d86c54350337",
+    "timestamp": "2025-04-20T03:55:18.594140Z",
+    "type": "Observation",
+    "details": "Chef ID 2 (Marie Dubois) missing restaurant_address, latitude, longitude, and image_url.",
+    "related_season": null,
+    "related_chef_id": 2,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "38154d4f-4206-48a9-9212-c68d9d077437",
+    "timestamp": "2025-04-20T03:55:23.156538Z",
+    "type": "Observation",
+    "details": "Chef ID 3 (Pierre Martin) missing restaurant_address, latitude, longitude, and image_url.",
+    "related_season": null,
+    "related_chef_id": 3,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "d8118581-a261-4b78-9d68-18cc54aae272",
+    "timestamp": "2025-04-20T03:55:26.896065Z",
+    "type": "Action",
+    "details": "Attempting to search web for restaurant address for Chef Jean Dupont (ID 1).",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "fac9da70-9b9a-4176-b63d-e8b0f96023a0",
+    "timestamp": "2025-04-20T03:55:38.809735Z",
+    "type": "Observation",
+    "details": "Found restaurant address for Chef Jean Dupont (ID 1): 14 Place Du Marché, 92200 Neuilly-sur-Seine, France.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "77a2e1dd-1a43-4efe-8089-90f520780daa",
+    "timestamp": "2025-04-20T03:55:42.468152Z",
+    "type": "Action",
+    "details": "Attempting to geocode address for Chef Jean Dupont (ID 1): 14 Place Du Marché, 92200 Neuilly-sur-Seine, France.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "9b114f5f-c0af-46d2-845f-d893f4a28b04",
+    "timestamp": "2025-04-20T03:55:50.430417Z",
+    "type": "Observation",
+    "details": "Geocoding successful for Chef Jean Dupont (ID 1). Coordinates: Latitude 48.8807576, Longitude 2.275608.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "20d62d10-f9d3-405f-8913-e1513a3b905a",
+    "timestamp": "2025-04-20T03:55:58.259138Z",
+    "type": "Error",
+    "details": "Failed to update Chef Jean Dupont's record with both address and coordinates simultaneously. Error: Incorrect arguments provided for tool update_chef_record: execute_update_chef_record() got an unexpected keyword argument 'restaurant_address'.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "f1bc4e3a-c21e-4e16-9fa8-5f7e8ac289d5",
+    "timestamp": "2025-04-20T03:56:02.470851Z",
+    "type": "Insight",
+    "details": "Insight: The update_chef_record tool may require separate calls for different fields or the arguments were incorrect for simultaneous updates.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "b5d18abc-0c18-4578-9ba4-815e524d4266",
+    "timestamp": "2025-04-20T03:56:41.386896Z",
+    "type": "Observation",
+    "details": "Chef ID 1 (Jean Dupont) is missing image_url, latitude, longitude, and restaurant_address.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "afc3f36e-c11e-4b85-9538-85466da39344",
+    "timestamp": "2025-04-20T03:56:44.262993Z",
+    "type": "Observation",
+    "details": "Chef ID 2 (Marie Dubois) is missing image_url, latitude, longitude, and restaurant_address. Status is 'Incorrectly Added'.",
+    "related_season": null,
+    "related_chef_id": 2,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "7130ca39-d91c-4409-b6ac-5ef6cd407452",
+    "timestamp": "2025-04-20T03:56:48.130714Z",
+    "type": "Observation",
+    "details": "Chef ID 3 (Pierre Martin) is missing image_url, latitude, longitude, and restaurant_address.",
+    "related_season": null,
+    "related_chef_id": 3,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "3bfd8510-7b7d-4b1d-aaac-6cfe977dcda6",
+    "timestamp": "2025-04-20T03:56:52.569028Z",
+    "type": "Action",
+    "details": "Attempting to find the restaurant address for Chef Jean Dupont using web search.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "6419e321-3a66-47be-8447-a604f14c056b",
+    "timestamp": "2025-04-20T03:57:03.490340Z",
+    "type": "Observation",
+    "details": "Web search found potential restaurant address for Chef Jean Dupont: 45 Rue Notre Dame, 33000 Bordeaux, France.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "cc6dd47d-5508-4e77-b0ea-9aa526229457",
+    "timestamp": "2025-04-20T03:57:07.809433Z",
+    "type": "Action",
+    "details": "Updating Chef Jean Dupont's restaurant_address with the found address.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "18282b5b-fc72-48b4-9de9-1fab7842bd6c",
+    "timestamp": "2025-04-20T03:57:15.993487Z",
+    "type": "Error",
+    "details": "Attempted to update Chef Jean Dupont's restaurant_address but the tool returned an error: 'Incorrect arguments provided for tool update_chef_record: execute_update_chef_record() got an unexpected keyword argument 'restaurant_address''.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "7777dec5-d446-45b0-8463-bbc00238e10d",
+    "timestamp": "2025-04-20T03:57:20.965303Z",
+    "type": "Insight",
+    "details": "Insight: The update_chef_record tool is currently not accepting 'restaurant_address' as a valid argument, contrary to expectations.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "331c189f-93ca-40de-b727-b30d3468a861",
+    "timestamp": "2025-04-20T03:57:56.291106Z",
+    "type": "Observation",
+    "details": "Chef ID 1 (Jean Dupont) missing restaurant_address, latitude, and longitude.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "39591dfd-45fc-4092-aae0-14df6931a41a",
+    "timestamp": "2025-04-20T03:58:00.558911Z",
+    "type": "Action",
+    "details": "Attempting to find restaurant_address for Chef Jean Dupont (ID 1) using web search.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "5122ffe5-d19a-4bcf-9974-37393e011eea",
+    "timestamp": "2025-04-20T03:58:11.957958Z",
+    "type": "Error",
+    "details": "Web search for Jean Dupont's restaurant address returned no relevant information.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "ae0114b1-8b62-47ce-8c8b-054a1cd111e8",
+    "timestamp": "2025-04-20T03:58:16.311661Z",
+    "type": "Observation",
+    "details": "Chef ID 2 (Marie Dubois) missing restaurant_address, latitude, and longitude.",
+    "related_season": null,
+    "related_chef_id": 2,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "6c8eaa06-8c55-44d5-aa9c-4895b55411d7",
+    "timestamp": "2025-04-20T03:58:19.409001Z",
+    "type": "Action",
+    "details": "Attempting to find restaurant_address for Chef Marie Dubois (ID 2) using web search.",
+    "related_season": null,
+    "related_chef_id": 2,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "11f94548-b77a-4974-bb2b-9b74cde2b81a",
+    "timestamp": "2025-04-20T03:58:40.848548Z",
+    "type": "Error",
+    "details": "Web search for Marie Dubois's restaurant address returned no relevant information.",
+    "related_season": null,
+    "related_chef_id": 2,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "adbdca17-8b54-4a2b-b3c1-538c809d313c",
+    "timestamp": "2025-04-20T03:58:45.599531Z",
+    "type": "Observation",
+    "details": "Chef ID 3 (Pierre Martin) missing restaurant_address, latitude, and longitude.",
+    "related_season": null,
+    "related_chef_id": 3,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "740d98cd-e2e8-47b5-ac95-f00fb0033feb",
+    "timestamp": "2025-04-20T03:58:50.993122Z",
+    "type": "Action",
+    "details": "Attempting to find restaurant_address for Chef Pierre Martin (ID 3) using web search.",
+    "related_season": null,
+    "related_chef_id": 3,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "8746bd03-aa38-4f92-be2f-6bb744a3541f",
+    "timestamp": "2025-04-20T03:59:05.378235Z",
+    "type": "Error",
+    "details": "Web search for Pierre Martin's restaurant address returned no relevant information.",
+    "related_season": null,
+    "related_chef_id": 3,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "6253efea-1332-44a0-8064-48a1a18b242c",
+    "timestamp": "2025-04-20T04:00:17.820966Z",
+    "type": "Observation",
+    "details": "Chefs 1, 2, and 3 are missing restaurant addresses and coordinates.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "d7e21cbd-cf2e-4b4e-828d-ba41ecfca491",
+    "timestamp": "2025-04-20T04:00:21.757433Z",
+    "type": "Action",
+    "details": "Attempting to search the web for Chef Jean Dupont's restaurant address.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "37e70e98-327d-4798-8d25-7a4c280a4da3",
+    "timestamp": "2025-04-20T04:01:03.406188Z",
+    "type": "Observation",
+    "details": "Chefs Jean Dupont (ID 1), Marie Dubois (ID 2), and Pierre Martin (ID 3) are missing image_url, latitude, longitude, and restaurant_address.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "3982915d-e9d7-4e73-ab36-6a765f3db13d",
+    "timestamp": "2025-04-20T04:01:07.832928Z",
+    "type": "Action",
+    "details": "Attempting to search the web for Jean Dupont's restaurant address.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "ee4394c2-4f9f-4845-a3e0-2de771662c3b",
+    "timestamp": "2025-04-20T04:01:19.690815Z",
+    "type": "Observation",
+    "details": "Found potential restaurant address for Jean Dupont: Chez Dupont, 45 Rue Notre Dame, 33000 Bordeaux, France.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "2764f9ad-306a-4700-b8fd-c66ae7d5815c",
+    "timestamp": "2025-04-20T04:01:23.370549Z",
+    "type": "Action",
+    "details": "Updating Jean Dupont's record with the found restaurant address.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "e850c917-497a-4d6d-a24a-1824bdbc6022",
+    "timestamp": "2025-04-20T04:01:30.201699Z",
+    "type": "Correction",
+    "details": "Incorrectly used chef name instead of ID in update_chef_record. Correcting now.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": "2764f9ad-306a-4700-b8fd-c66ae7d5815c"
+  },
+  {
+    "entry_id": "cabc33ca-360c-40e1-9fbf-1f3ab4b7d2ad",
+    "timestamp": "2025-04-20T04:01:34.670094Z",
+    "type": "Action",
+    "details": "Attempting to update Jean Dupont's record (ID 1) with the found restaurant address using the correct argument.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "0ce0ce01-50bc-48c6-911d-0ab4ac85e98e",
+    "timestamp": "2025-04-20T04:04:24.565046Z",
+    "type": "Observation",
+    "details": "Chefs Jean Dupont (ID 1) and Pierre Martin (ID 3) are missing restaurant_address, latitude, and longitude.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "63e5ebe0-6115-4c91-a347-9643afd28cac",
+    "timestamp": "2025-04-20T04:04:28.656612Z",
+    "type": "Observation",
+    "details": "Chef Pierre Martin (ID 3) is missing restaurant_address, latitude, and longitude.",
+    "related_season": null,
+    "related_chef_id": 3,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "7c5fff7a-9c65-443b-ac7c-85d2d61b4434",
+    "timestamp": "2025-04-20T04:04:31.987168Z",
+    "type": "Observation",
+    "details": "Chef Marie Dubois (ID 2) has an unclear status: 'Incorrectly Added'. Need to investigate.",
+    "related_season": null,
+    "related_chef_id": 2,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "8dc02393-edd6-4258-871b-bf4b556284c8",
+    "timestamp": "2025-04-20T04:04:45.999725Z",
+    "type": "Action",
+    "details": "Attempted to find Jean Dupont's restaurant using Perplexity, but the search was unsuccessful.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "4d97c673-7215-4129-b888-c20b5b236b27",
+    "timestamp": "2025-04-20T04:04:57.496795Z",
+    "type": "Action",
+    "details": "Attempted to find Pierre Martin's restaurant using Perplexity, but the search was unsuccessful.",
+    "related_season": null,
+    "related_chef_id": 3,
+    "correction_target_entry_id": null
   }
 ]
