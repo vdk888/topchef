@@ -368,7 +368,97 @@
              text-overflow: ellipsis; /* Add ellipsis for overflow */
         }
 
+        /* --- INTERACTIVE CHAT STYLES --- */
+        #interactive-chat-container {
+            display: flex;
+            flex-direction: column;
+            border-top: 2px solid #ccc;
+            background: #f6f7fa;
+            flex-basis: 35%;
+            min-height: 180px;
+        }
+        #interactive-chat-header {
+            background: #e2e2e2;
+            color: #333;
+            padding: 12px 15px;
+            font-size: 1.1em;
+            border-bottom: 1px solid #ddd;
+            font-weight: bold;
+        }
+        #interactive-chat-log-area {
+            flex: 1;
+            padding: 10px;
+            background: #21242b;
+            color: #e7e7e7;
+            overflow-y: auto;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9em;
+        }
+        #interactive-chat-input-row {
+            display: flex;
+            padding: 8px;
+            background: #e2e2e2;
+        }
+        #interactive-chat-input {
+            flex: 1;
+            padding: 6px 10px;
+            font-size: 1em;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-right: 8px;
+        }
+        #interactive-chat-send {
+            padding: 6px 16px;
+            font-size: 1em;
+            background: #333;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #interactive-chat-send:disabled {
+            background: #888;
+            cursor: not-allowed;
+        }
+        .user-msg {
+            text-align: right;
+            margin-bottom: 6px;
+            color: #b7e4c7;
+        }
+        .ai-msg {
+            text-align: left;
+            margin-bottom: 6px;
+            color: #f9dc5c;
+        }
 
+        /* --- ENLARGE/RESTORE BUTTON --- */
+        .enlarge-btn {
+            background: none;
+            border: none;
+            font-size: 1.2em;
+            cursor: pointer;
+            margin-left: 8px;
+            color: #555;
+        }
+        .enlarge-btn:focus {
+            outline: none;
+        }
+        /* Enlarged window styles */
+        .sidebar.enlarged-agent #main-chat-container,
+        .sidebar.enlarged-bg #background-work-container,
+        .sidebar.enlarged-interactive #interactive-chat-container {
+            flex-basis: 100% !important;
+            height: 100%;
+            display: flex;
+        }
+        .sidebar.enlarged-agent #background-work-container,
+        .sidebar.enlarged-agent #interactive-chat-container,
+        .sidebar.enlarged-bg #main-chat-container,
+        .sidebar.enlarged-bg #interactive-chat-container,
+        .sidebar.enlarged-interactive #main-chat-container,
+        .sidebar.enlarged-interactive #background-work-container {
+            display: none !important;
+        }
     </style>
 </head>
 <body>
@@ -405,7 +495,10 @@
         <div class="sidebar">
             <!-- Main Chat Area -->
             <div id="main-chat-container">
-                <h2>StephAI Chat</h2>
+                <div class="header-row">
+                    <h2>Agent Chat (legacy, not interactive)</h2>
+                    <button class="enlarge-btn" id="enlarge-agent" title="Enlarge">&#128269;</button>
+                </div>
                 <div id="chat-log-area">
                     Waiting for StephAI...
                 </div>
@@ -413,15 +506,28 @@
             <!-- Background Activity Area (Collapsible) -->
             <div id="background-work-container" class="collapsed">
                  <div class="background-header" id="background-header">
-                     <span>Background Activity</span>
+                     <span>See stephAI work (Background Activity)</span>
                      <div> <!-- Container for spinner and toggle icon -->
                          <div class="spinner" id="loading-spinner"></div>
                          <span class="toggle-icon">+</span>
                      </div>
+                     <button class="enlarge-btn" id="enlarge-bg" title="Enlarge">&#128269;</button>
                  </div>
                  <div id="background-log-area">
                      <!-- Background logs will appear here -->
                  </div>
+            </div>
+            <!-- Interactive Chat Area -->
+            <div id="interactive-chat-container">
+                <div id="interactive-chat-header">
+                    Talk to StephAI (Interactive)
+                    <button class="enlarge-btn" id="enlarge-interactive" title="Enlarge">&#128269;</button>
+                </div>
+                <div id="interactive-chat-log-area"></div>
+                <div id="interactive-chat-input-row">
+                    <input type="text" id="interactive-chat-input" placeholder="Type your question..." autocomplete="off" />
+                    <button id="interactive-chat-send">Send</button>
+                </div>
             </div>
         </div>
     </div>
@@ -893,7 +999,30 @@
           }
           // Call refreshTableData on page load
           refreshTableData();
-      </script>
+
+          // Enlarging chat windows logic
+          const sidebar = document.querySelector('.sidebar');
+          const enlargeAgent = document.getElementById('enlarge-agent');
+          const enlargeBg = document.getElementById('enlarge-bg');
+          const enlargeInteractive = document.getElementById('enlarge-interactive');
+          let enlarged = '';
+          function toggleEnlarge(which) {
+              if (enlarged === which) {
+                  sidebar.classList.remove('enlarged-' + which);
+                  enlarged = '';
+              } else {
+                  sidebar.classList.remove('enlarged-agent', 'enlarged-bg', 'enlarged-interactive');
+                  sidebar.classList.add('enlarged-' + which);
+                  enlarged = which;
+              }
+          }
+          if (enlargeAgent) enlargeAgent.addEventListener('click', function() { toggleEnlarge('agent'); });
+          if (enlargeBg) enlargeBg.addEventListener('click', function() { toggleEnlarge('bg'); });
+          if (enlargeInteractive) enlargeInteractive.addEventListener('click', function() { toggleEnlarge('interactive'); });
+        
+
+    </script>
+    <script src="/static/interactive_chat.js"></script>
 
  </body>
  </html>

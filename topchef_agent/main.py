@@ -8,6 +8,7 @@ from markupsafe import escape # Import escape from markupsafe
 from topchef_agent.database import load_database # No need for save_database here anymore
 from topchef_agent.config import DATABASE_URL # Use database URL for validation maybe
 import datetime
+from topchef_agent.interactive_agent import get_interactive_agent
 
 app = Flask(__name__)
 
@@ -173,6 +174,26 @@ def get_chefs_data():
         print(f"Error in /api/chefs route: {e}")
         return jsonify({"error": "Failed to load chef data", "details": str(e)}), 500
 
+@app.route('/interactive_chat', methods=['POST'])
+def interactive_chat():
+    """Endpoint for user to interact with StephAI (interactive chat)."""
+    try:
+        data = request.get_json()
+        user_message = data.get('message')
+        session_id = request.cookies.get('session_id') or request.remote_addr or str(time.time())
+        agent = get_interactive_agent(session_id)
+        if agent.is_busy():
+            return jsonify({"status": "busy", "message": "StephAI is busy. Please wait."}), 429
+        agent.ask(user_message)
+        # Poll for response (short wait, frontend can poll if needed)
+        for _ in range(20):
+            response = agent.get_response(timeout=0.25)
+            if response:
+                return jsonify(response)
+            time.sleep(0.05)
+        return jsonify({"status": "processing"})
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
 
 # Removed the __main__ block. Gunicorn or Flask CLI will run the app object.
 # Initial database check is handled when database.py is imported by agent/scheduler.

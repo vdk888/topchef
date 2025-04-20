@@ -9,10 +9,10 @@ from openai import OpenAI, APIError
 # Import all necessary functions from database
 # Added add_column and remove_column imports
 # Removed get_distinct_seasons, get_chefs_by_season from this import as they are deprecated
-from database import load_database, update_chef, add_column, remove_column # Ensure only valid functions are imported
+from topchef_agent.database import load_database, update_chef, add_column, remove_column # Ensure only valid functions are imported
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
-from config import OPENROUTER_API_KEY, PERPLEXITY_API_KEY, YOUR_SITE_URL, YOUR_SITE_NAME
+from topchef_agent.config import OPENROUTER_API_KEY, PERPLEXITY_API_KEY, YOUR_SITE_URL, YOUR_SITE_NAME
 
 # --- Logging & Signaling Helpers ---
 FLASK_BASE_URL = os.environ.get("FLASK_BASE_URL", "http://127.0.0.1:5000")
@@ -657,7 +657,7 @@ def execute_geocode_address_and_update(chef_id: int, address: str):
         location = geolocator.geocode(address, timeout=10, country_codes='FR')
         if location:
             coordinates = {"latitude": location.latitude, "longitude": location.longitude}
-            from database import update_chef
+            from topchef_agent.database import update_chef
             update_data = {"latitude": location.latitude, "longitude": location.longitude}
             success = update_chef(chef_id, update_data)
             if success:
