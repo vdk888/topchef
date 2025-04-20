@@ -80,7 +80,7 @@ def execute_search_web_perplexity(query: str):
     # [Perplexity API call logic remains the same as before]
     url = "https://api.perplexity.ai/chat/completions"
     payload = {
-        "model": "sonar-medium-online",
+        "model": "sonar",
         "messages": [
             {"role": "system", "content": "You are an AI assistant specialized in finding specific, factual information about Top Chef France candidates. Provide only the requested information, concisely and directly. If you cannot find the exact information, state that clearly."},
             {"role": "user", "content": query}
@@ -314,7 +314,7 @@ Speak naturally, like you are explaining your work process.
 
         try:
             response = openrouter_client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model="deepseek/deepseek-chat-v3-0324:free",
                 messages=conversation,
                 tools=tools_list,
                 tool_choice="auto",
