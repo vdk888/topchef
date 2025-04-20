@@ -8,7 +8,8 @@ from datetime import datetime # Needed for timestamps
 from openai import OpenAI, APIError
 # Import all necessary functions from database
 # Added add_column and remove_column imports
-from database import load_database, update_chef, get_distinct_seasons, get_chefs_by_season, add_column, remove_column
+# Removed get_distinct_seasons, get_chefs_by_season from this import as they are deprecated
+from database import load_database, update_chef, add_column, remove_column # Ensure only valid functions are imported
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
 from config import OPENROUTER_API_KEY, PERPLEXITY_API_KEY, YOUR_SITE_URL, YOUR_SITE_NAME
