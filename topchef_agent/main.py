@@ -9,6 +9,7 @@ from topchef_agent.database import load_database, get_chefs_by_season # No need 
 from topchef_agent.config import DATABASE_URL # Use database URL for validation maybe
 import datetime
 from topchef_agent.interactive_agent import get_interactive_agent
+from topchef_agent.agent import read_journal_file, execute_read_journal # For retrieving agent activity
 
 app = Flask(__name__)
 
@@ -192,6 +193,63 @@ def interactive_chat():
         return jsonify({"status": "processing"})
     except Exception as e:
         return jsonify({"status": "error", "error": str(e)}), 500
+
+# --- NEW API Endpoint for Agent Journal ---
+@app.route('/api/agent/journal')
+def get_agent_journal():
+    """Returns the agent's journal entries as JSON, allowing users to see the agent's work history."""
+    try:
+        # Use the function from agent.py to read the journal
+        journal_entries = execute_read_journal()
+        
+        # Optionally filter by entry type, chef ID, or season
+        entry_type = request.args.get('type', default=None, type=str)
+        chef_id = request.args.get('chef_id', default=None, type=int)
+        season = request.args.get('season', default=None, type=int)
+        limit = request.args.get('limit', default=100, type=int)  # Default to last 100 entries
+        
+        # Filter the journal entries based on query parameters
+        filtered_entries = journal_entries
+        
+        if entry_type:
+            filtered_entries = [entry for entry in filtered_entries if entry.get('type') == entry_type]
+        
+        if chef_id is not None:
+            filtered_entries = [entry for entry in filtered_entries if entry.get('related_chef_id') == chef_id]
+            
+        if season is not None:
+            filtered_entries = [entry for entry in filtered_entries if entry.get('related_season') == season]
+        
+        # Sort entries by timestamp (newest first) and limit the number
+        filtered_entries = sorted(filtered_entries, key=lambda x: x.get('timestamp', ''), reverse=True)[:limit]
+        
+        return jsonify(filtered_entries)
+    except Exception as e:
+        print(f"Error retrieving agent journal: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/agent/history')
+def agent_history_page():
+    """Displays a page showing the autonomous agent's work history."""
+    try:
+        # Get the agent's journal entries
+        journal_entries = execute_read_journal()
+        
+        # Sort entries by timestamp (newest first)
+        journal_entries = sorted(journal_entries, key=lambda x: x.get('timestamp', ''), reverse=True)
+        
+        # Convert the journal entries to a JSON string for the template
+        journal_json = json.dumps(journal_entries, default=lambda o: o.isoformat() if isinstance(o, datetime.datetime) else str(o))
+        
+        # Render a template that displays the agent's history
+        return render_template('agent_history.html', journal_json=journal_json)
+    except Exception as e:
+        print(f"Error in agent history page: {e}")
+        import traceback
+        traceback.print_exc()
+        return f"<html><body><h1>Agent History</h1><p>Error loading data: {escape(str(e))}</p><p><a href='/'>Return to Home</a></p></body></html>"
 
 # Removed the __main__ block. Gunicorn or Flask CLI will run the app object.
 # Initial database check is handled when database.py is imported by agent/scheduler.
