@@ -369,6 +369,30 @@
             border-top: 1px solid var(--m6-border); /* Standard border */
             flex-shrink: 0; /* Prevent input row from shrinking */
         }
+        
+        /* Agent History Link Styling */
+        .nav-links {
+            display: flex;
+            align-items: center;
+            margin-right: 20px;
+        }
+        
+        .agent-history-link {
+            color: var(--tcf-yellow);
+            text-decoration: none;
+            font-size: 0.9em;
+            padding: 5px 10px;
+            border: 1px solid var(--m6-border);
+            border-radius: 3px;
+            background: var(--m6-bg-secondary);
+            transition: all 0.2s ease;
+        }
+        
+        .agent-history-link:hover {
+            background: var(--m6-border);
+            color: var(--m6-white);
+            border-color: var(--tcf-yellow);
+        }
 
         #interactive-chat-input {
             flex: 1;
@@ -669,6 +693,9 @@
         <div class="title-group">
             <h1>Top Chef France</h1>
             <p>Chef Explorer</p>
+        </div>
+        <div class="nav-links">
+            <a href="/agent/history" class="agent-history-link">Agent History</a>
         </div>
         <div>
             <label for="season-filter">Season:</label>
