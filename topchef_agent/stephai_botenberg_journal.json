@@ -1,0 +1,20 @@
+[
+  {
+    "entry_id": "a0a812ad-0585-43ce-9244-18f502700ce1",
+    "timestamp": "2025-04-21T20:18:48.516290Z",
+    "type": "Observation",
+    "details": "Pierre Martin (Chef ID 2) n'a pas d'image URL.",
+    "related_season": null,
+    "related_chef_id": 2,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "c6826371-87ff-4ac2-8c0f-a37423746893",
+    "timestamp": "2025-04-22T17:14:25.508675Z",
+    "type": "Observation",
+    "details": "Aucune donnée de chefs trouvée dans la base de données, toutes les saisons vérifiées sont vides.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  }
+]

@@ -199,8 +199,16 @@ def interactive_chat():
 def get_agent_journal():
     """Returns the agent's journal entries as JSON, allowing users to see the agent's work history."""
     try:
-        # Use the function from agent.py to read the journal
-        journal_entries = execute_read_journal()
+        # Get journal entries directly from the file
+        journal_entries = read_journal_file()
+        
+        # Handle the case where the journal file doesn't exist or is empty
+        if journal_entries is None or (isinstance(journal_entries, list) and len(journal_entries) == 0):
+            return jsonify([])  # Return empty array if no entries
+        
+        # Ensure we have a list
+        if not isinstance(journal_entries, list):
+            journal_entries = [journal_entries]
         
         # Optionally filter by entry type, chef ID, or season
         entry_type = request.args.get('type', default=None, type=str)
@@ -212,16 +220,25 @@ def get_agent_journal():
         filtered_entries = journal_entries
         
         if entry_type:
-            filtered_entries = [entry for entry in filtered_entries if entry.get('type') == entry_type]
+            filtered_entries = [entry for entry in filtered_entries 
+                              if isinstance(entry, dict) and entry.get('type') == entry_type]
         
         if chef_id is not None:
-            filtered_entries = [entry for entry in filtered_entries if entry.get('related_chef_id') == chef_id]
+            filtered_entries = [entry for entry in filtered_entries 
+                              if isinstance(entry, dict) and entry.get('related_chef_id') == chef_id]
             
         if season is not None:
-            filtered_entries = [entry for entry in filtered_entries if entry.get('related_season') == season]
+            filtered_entries = [entry for entry in filtered_entries 
+                              if isinstance(entry, dict) and entry.get('related_season') == season]
         
         # Sort entries by timestamp (newest first) and limit the number
-        filtered_entries = sorted(filtered_entries, key=lambda x: x.get('timestamp', ''), reverse=True)[:limit]
+        try:
+            filtered_entries = sorted(filtered_entries, 
+                                    key=lambda x: x.get('timestamp', '') if isinstance(x, dict) else '', 
+                                    reverse=True)[:limit]
+        except Exception as sort_error:
+            print(f"Error sorting journal entries: {sort_error}")
+            return jsonify({"status": "error", "message": f"Error sorting entries: {str(sort_error)}"}), 500
         
         return jsonify(filtered_entries)
     except Exception as e:
@@ -234,11 +251,43 @@ def get_agent_journal():
 def agent_history_page():
     """Displays a page showing the autonomous agent's work history."""
     try:
-        # Get the agent's journal entries
-        journal_entries = execute_read_journal()
+        # Get the agent's journal entries directly from the file
+        # This avoids the extra JSON wrapping that execute_read_journal does
+        journal_entries = read_journal_file()
         
+        # Handle the case where the journal file doesn't exist or is empty
+        if journal_entries is None or (isinstance(journal_entries, list) and len(journal_entries) == 0):
+            # Create a placeholder entry for empty journals
+            journal_entries = [{
+                "entry_id": "placeholder",
+                "timestamp": datetime.datetime.now().isoformat(),
+                "type": "Info",
+                "details": "No journal entries found. The autonomous agent may not have run yet or has not recorded any actions.",
+                "related_season": None,
+                "related_chef_id": None
+            }]
+        
+        # Ensure journal_entries is a list
+        if not isinstance(journal_entries, list):
+            # If it's not a list, wrap in a list
+            journal_entries = [journal_entries]
+            
         # Sort entries by timestamp (newest first)
-        journal_entries = sorted(journal_entries, key=lambda x: x.get('timestamp', ''), reverse=True)
+        try:
+            journal_entries = sorted(journal_entries, 
+                                   key=lambda x: x.get('timestamp', '') if isinstance(x, dict) else '', 
+                                   reverse=True)
+        except Exception as sort_error:
+            print(f"Error sorting journal entries: {sort_error}")
+            # Add an entry about the sorting error
+            journal_entries.append({
+                "entry_id": "error",
+                "timestamp": datetime.datetime.now().isoformat(),
+                "type": "Error",
+                "details": f"Error sorting journal entries: {sort_error}",
+                "related_season": None,
+                "related_chef_id": None
+            })
         
         # Convert the journal entries to a JSON string for the template
         journal_json = json.dumps(journal_entries, default=lambda o: o.isoformat() if isinstance(o, datetime.datetime) else str(o))
