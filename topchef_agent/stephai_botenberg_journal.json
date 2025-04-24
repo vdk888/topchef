@@ -16,5 +16,14 @@
     "related_season": null,
     "related_chef_id": null,
     "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "8d833724-5bf9-4a58-963b-d1c55e9cf562",
+    "timestamp": "2025-04-24T06:21:33.313115Z",
+    "type": "Observation",
+    "details": "Base de données de chefs vide. Nécessite une investigation technique.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
   }
 ]
