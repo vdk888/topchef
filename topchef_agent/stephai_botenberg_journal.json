@@ -25,5 +25,14 @@
     "related_season": null,
     "related_chef_id": null,
     "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "b4772dde-ee73-4f18-9707-6e548258dfc6",
+    "timestamp": "2025-04-24T06:23:38.420108Z",
+    "type": "Observation",
+    "details": "Les informations sur Pierre Martin (ID 2) semblent incorrectes. Il est indiqué comme ayant participé à la saison 1, mais la recherche ne donne aucun résultat.",
+    "related_season": 1,
+    "related_chef_id": 2,
+    "correction_target_entry_id": null
   }
 ]
