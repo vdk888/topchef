@@ -9,7 +9,7 @@ from openai import OpenAI, APIError
 # Import all necessary functions from database
 # Added add_column and remove_column imports
 # Removed get_distinct_seasons, get_chefs_by_season from this import as they are deprecated
-from topchef_agent.database import load_database, update_chef, add_column, remove_column, get_chefs_by_season # Ensure only valid functions are imported
+from topchef_agent.database import load_database, update_chef, add_column, remove_column, get_chefs_by_season, add_chef # Ensure only valid functions are imported
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
 from topchef_agent.config import OPENROUTER_API_KEY, PERPLEXITY_API_KEY, YOUR_SITE_URL, YOUR_SITE_NAME, LLM_MODELS_TO_TRY
@@ -499,7 +499,70 @@ def execute_append_journal_entry(entry_type: str, details: str, related_season: 
         return error_msg
 
 
-# --- Tool Definitions for LLM ---
+# --- NEW TOOL EXECUTION FUNCTION for adding a chef ---
+def execute_add_chef(name: str, season: int, bio: str = None, image_url: str = None, status: str = None, restaurant_address: str = None):
+    """Adds a new chef to the database.
+
+    Requires the chef's name and season. Other fields like bio, image_url, status, and restaurant_address are optional.
+    Geocoding (latitude/longitude) should be handled separately AFTER the chef is added using their address.
+    """
+    tool_input_data = {
+        "name": name,
+        "season": season,
+        "bio": bio,
+        "image_url": image_url,
+        "status": status,
+        "restaurant_address": restaurant_address
+    }
+    log_to_ui("tool_start", {"name": "add_chef", "input": tool_input_data})
+    print(f"--- Tool: Executing Add Chef --- ", flush=True)
+    print(f"  Attempting to add Chef: {name}, Season: {season}", flush=True)
+
+    # Basic validation
+    if not name or not isinstance(name, str):
+        error_msg = json.dumps({"error": "Invalid or missing 'name' for add_chef."})
+        log_to_ui("tool_error", {"name": "add_chef", "input": tool_input_data, "error": "Invalid name"})
+        print(f"  Error: Invalid name provided.", flush=True)
+        return error_msg
+    if not isinstance(season, int):
+        error_msg = json.dumps({"error": "Invalid or missing 'season' (must be an integer) for add_chef."})
+        log_to_ui("tool_error", {"name": "add_chef", "input": tool_input_data, "error": "Invalid season type"})
+        print(f"  Error: Invalid season provided (must be integer).", flush=True)
+        return error_msg
+
+    try:
+        # Call the database function (latitude/longitude are not added here, needs geocoding tool)
+        new_chef_id = add_chef(
+            name=name,
+            season=season,
+            bio=bio,
+            image_url=image_url,
+            status=status,
+            restaurant_address=restaurant_address,
+            # Note: Lat/Lon/Perplexity data are omitted here, handled by other tools/updates
+        )
+
+        if new_chef_id is not None:
+            result_msg = json.dumps({"status": "OK", "message": f"Successfully added chef '{name}' (Season {season}) with new ID {new_chef_id}.", "chef_id": new_chef_id})
+            print(f"  Successfully added chef '{name}' with ID {new_chef_id}.", flush=True)
+            log_to_ui("tool_result", {"name": "add_chef", "input": tool_input_data, "result": f"OK, new ID: {new_chef_id}"})
+            signal_database_update() # Signal UI about the change
+            return result_msg
+        else:
+            error_msg = json.dumps({"status": "Failed", "error": f"Failed to add chef '{name}' to the database. Check logs for details.", "name": name, "season": season})
+            print(f"  Database function failed to add chef '{name}'.", flush=True)
+            log_to_ui("tool_error", {"name": "add_chef", "input": tool_input_data, "error": "Database add function returned None"})
+            return error_msg
+    except Exception as e:
+        error_msg = json.dumps({"status": "Error", "error": f"An unexpected error occurred while adding chef '{name}': {e}", "name": name, "season": season})
+        print(f"  Exception during add_chef execution: {e}", flush=True)
+        # Optional: Log traceback
+        # import traceback
+        # traceback.print_exc()
+        log_to_ui("tool_error", {"name": "add_chef", "input": tool_input_data, "error": str(e)})
+        return error_msg
+
+# --- TOOL DEFINITIONS for LLM ---
 
 tools_list = [
     # { # Removed get_distinct_seasons as it's no longer relevant
@@ -707,6 +770,44 @@ tools_list = [
                 "required": ["chef_id", "address"]
             }
         }
+    },
+    # --- NEW TOOL DEFINITION for adding a chef ---
+    {
+        "type": "function",
+        "function": {
+            "name": "add_chef",
+            "description": "Adds a new chef to the database. Requires name and season. Other fields like bio, image_url, status, and restaurant_address are optional.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "The name of the chef."
+                    },
+                    "season": {
+                        "type": "integer",
+                        "description": "The season number of the chef."
+                    },
+                    "bio": {
+                        "type": ["string", "null"],
+                        "description": "Optional: The bio of the chef."
+                    },
+                    "image_url": {
+                        "type": ["string", "null"],
+                        "description": "Optional: The image URL of the chef."
+                    },
+                    "status": {
+                        "type": ["string", "null"],
+                        "description": "Optional: The status of the chef."
+                    },
+                    "restaurant_address": {
+                        "type": ["string", "null"],
+                        "description": "Optional: The restaurant address of the chef."
+                    }
+                },
+                "required": ["name", "season"]
+            }
+        }
     }
 ]
 
@@ -731,16 +832,16 @@ def execute_get_chefs_for_season(season_number: int):
 available_functions = {
     # "get_distinct_seasons": execute_get_distinct_seasons, # Removed
     "get_all_chefs": execute_get_all_chefs, # Renamed from get_chefs_by_season
-    "search_web_perplexity": execute_search_web_perplexity,
+    "get_chefs_for_season": execute_get_chefs_for_season, # Re-added for specific season lookup
+    "add_chef": execute_add_chef, # NEW TOOL
     "update_chef_record": execute_update_chef_record,
-    "read_journal": execute_read_journal,
-    "append_journal_entry": execute_append_journal_entry,
-    # --- NEW TOOL MAPPING ---
+    "search_web_perplexity": execute_search_web_perplexity,
     "add_db_column": execute_add_db_column,
     "remove_db_column": execute_remove_db_column,
-    "geocode_address": execute_geocode_address, # Added geocoding function
-    "geocode_address_and_update": execute_geocode_address_and_update, # Added geocoding and updating function
-    "get_chefs_for_season": execute_get_chefs_for_season, # Added get chefs for season function
+    "geocode_address": execute_geocode_address,
+    "geocode_address_and_update": execute_geocode_address_and_update, # New combined tool
+    "read_journal": execute_read_journal,
+    "append_journal_entry": execute_append_journal_entry
 }
 
 

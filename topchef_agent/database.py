@@ -274,6 +274,110 @@ def remove_column(table_name: str, column_name: str):
         print(f"Unexpected error removing column: {e}")
         return False
 
+# --- NEW FUNCTION TO ADD CHEF ---
+def add_chef(name: str, season: int, bio: str = None, image_url: str = None, status: str = None, restaurant_address: str = None, latitude: float = None, longitude: float = None, perplexity_data: dict = None, max_retries=2, delay=1):
+    """Adds a new chef record to the database with retry logic for connection errors.
+
+    Args:
+        name (str): The name of the chef (required).
+        season (int): The season the chef participated in (required).
+        bio (str, optional): Biography of the chef. Defaults to None.
+        image_url (str, optional): URL to the chef's image. Defaults to None.
+        status (str, optional): Status (e.g., Winner, Finalist). Defaults to None.
+        restaurant_address (str, optional): Address of the chef's restaurant. Defaults to None.
+        latitude (float, optional): Latitude of the restaurant. Defaults to None.
+        longitude (float, optional): Longitude of the restaurant. Defaults to None.
+        perplexity_data (dict, optional): Additional data from Perplexity. Defaults to None.
+        max_retries (int): Maximum number of retry attempts for connection errors.
+        delay (int): Delay between retries in seconds.
+
+    Returns:
+        int or None: The ID of the newly created chef, or None if creation failed.
+    """
+    attempts = 0
+    last_exception = None
+    while attempts <= max_retries:
+        attempts += 1
+        try:
+            with get_db() as db:
+                new_chef = Chef(
+                    name=name,
+                    season=season,
+                    bio=bio,
+                    image_url=image_url,
+                    status=status,
+                    restaurant_address=restaurant_address,
+                    latitude=latitude,
+                    longitude=longitude,
+                    perplexity_data=perplexity_data,
+                    last_updated=datetime.datetime.now(datetime.timezone.utc).isoformat()
+                )
+                db.add(new_chef)
+                db.commit()
+                db.refresh(new_chef) # To get the generated ID
+                print(f"Successfully added chef '{name}' with ID {new_chef.id} to season {season}.", flush=True)
+                return new_chef.id # Return the ID of the new chef
+        except OperationalError as e:
+            last_exception = e
+            print(f"Warning: Database operational error on attempt {attempts}/{max_retries+1} while adding chef '{name}': {e}", flush=True)
+            if attempts > max_retries:
+                print(f"Error: Max retries reached for adding chef '{name}'.", flush=True)
+                break # Exit loop after max retries
+            print(f"Retrying in {delay} second(s)...", flush=True)
+            time.sleep(delay)
+        except Exception as e:
+            last_exception = e
+            print(f"Error adding chef '{name}' (non-retryable): {e}", flush=True)
+            # Optional: Log traceback
+            # import traceback
+            # traceback.print_exc()
+            break # Exit loop on non-retryable error
+
+    # If loop finished without returning an ID, it failed.
+    print(f"Failed to add chef '{name}'. Last error: {last_exception}", flush=True)
+    return None
+
+def update_chef(chef_id, update_data, max_retries=2, delay=1):
+    """Updates an existing chef record with retry logic."""
+    updated = False
+    attempts = 0
+    while attempts <= max_retries:
+        attempts += 1
+        try:
+            with get_db() as db:
+                chef = db.query(Chef).filter(Chef.id == chef_id).first()
+                if chef:
+                    for key, value in update_data.items():
+                        # Only update if the key is a valid column and value is different
+                        if hasattr(chef, key) and getattr(chef, key) != value:
+                            setattr(chef, key, value)
+                            updated = True
+                    if updated:
+                        db.commit()
+                        print(f"Updated chef record ID: {chef_id}")
+                    else:
+                        print(f"No changes detected for chef record ID: {chef_id}")
+                else:
+                    print(f"Error: Chef with ID {chef_id} not found for update.")
+                    return False # Indicate chef not found
+        except OperationalError as e:
+            print(f"Warning: Database operational error on attempt {attempts}/{max_retries+1} while updating chef ID {chef_id}: {e}", flush=True)
+            if attempts > max_retries:
+                print(f"Error: Max retries reached for updating chef ID {chef_id}.", flush=True)
+                break # Exit loop after max retries
+            print(f"Retrying in {delay} second(s)...", flush=True)
+            time.sleep(delay)
+        except Exception as e:
+            print(f"Error updating chef ID {chef_id} (non-retryable): {e}", flush=True)
+            # Optional: Log traceback
+            # import traceback
+            # traceback.print_exc()
+            break # Exit loop on non-retryable error
+
+    # If loop finished without returning, it failed.
+    print(f"Failed to update chef ID {chef_id}.", flush=True)
+    return False
+
 # --- Initial Setup ---
 # Call this once when the application starts to ensure the table exists and has necessary columns.
 # This might run multiple times if multiple processes import it (e.g., Flask dev server, scheduler)
@@ -289,28 +393,3 @@ else:
     # Ensure table exists and columns are checked when module is imported
     # Set drop_first=False (or omit) for regular imports to avoid data loss on every import
     create_table_if_not_exists(drop_first=False)
-
-def update_chef(chef_id: int, update_data: dict):
-    """Updates a specific chef record in the database."""
-    updated = False
-    try:
-        with get_db() as db:
-            chef = db.query(Chef).filter(Chef.id == chef_id).first()
-            if chef:
-                for key, value in update_data.items():
-                    # Only update if the key is a valid column and value is different
-                    if hasattr(chef, key) and getattr(chef, key) != value:
-                        setattr(chef, key, value)
-                        updated = True
-                if updated:
-                    db.commit()
-                    print(f"Updated chef record ID: {chef_id}")
-                else:
-                    print(f"No changes detected for chef record ID: {chef_id}")
-            else:
-                print(f"Error: Chef with ID {chef_id} not found for update.")
-                return False # Indicate chef not found
-    except Exception as e:
-        print(f"Error updating chef ID {chef_id}: {e}")
-        return False # Indicate error during update
-    return updated # Return True if commit was successful or no changes needed, False on error

@@ -1456,6 +1456,80 @@
                 spinnerElement.style.display = 'none';
             }
         })();
+
+        // Setup interactive chat
+        (function setupInteractiveChat() {
+            const inputElement = document.getElementById('interactive-chat-input');
+            const sendButton = document.getElementById('interactive-chat-send');
+            const logArea = document.getElementById('interactive-chat-log-area');
+            const storageKey = 'interactiveLogs';
+            let logs = []; // Use a local array for interactive logs
+
+            const sendMessage = async () => {
+                const message = inputElement.value.trim();
+                if (message === '') {
+                    return; // Don't send empty messages
+                }
+
+                // Add user message to log
+                const userLog = { message: message, source: 'user', timestamp: new Date().toISOString() };
+                addLogEntry(userLog, logArea, storageKey, logs);
+                inputElement.value = ''; // Clear input field
+
+                // Add thinking indicator
+                const thinkingLog = { message: 'Thinking...', source: 'agent', timestamp: new Date().toISOString(), type: 'thinking' };
+                const thinkingElement = addLogEntry(thinkingLog, logArea, storageKey, logs, true); // Add temporarily
+
+                try {
+                    const response = await fetch('/ask_agent', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ query: message }),
+                    });
+
+                    // Remove thinking indicator
+                    if (thinkingElement) {
+                        logArea.removeChild(thinkingElement);
+                        // Also remove from the logs array if it was added temporarily
+                        logs.pop(); 
+                        // Note: This assumes thinking log was the last one added temporarily. 
+                        // A more robust approach might involve IDs if needed.
+                    }
+
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({ error: 'Failed to parse error response.' }));
+                        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+
+                    // Add agent response to log
+                    const agentLog = { message: data.response, source: 'agent', timestamp: new Date().toISOString() };
+                    addLogEntry(agentLog, logArea, storageKey, logs);
+
+                } catch (error) {
+                     // Remove thinking indicator even if there's an error
+                    if (thinkingElement && thinkingElement.parentNode === logArea) {
+                        logArea.removeChild(thinkingElement);
+                         logs.pop(); // Remove from array as well
+                    }
+                    console.error('Error sending message:', error);
+                    const errorLog = { message: `Error: ${error.message}`, source: 'system', type: 'error', timestamp: new Date().toISOString() };
+                    addLogEntry(errorLog, logArea, storageKey, logs);
+                }
+            };
+
+            sendButton.addEventListener('click', sendMessage);
+
+            inputElement.addEventListener('keypress', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault(); // Prevent default form submission/newline
+                    sendMessage();
+                }
+            });
+        })();
     </script>
     <!-- Load the interactive chat JavaScript -->
     <script>
