@@ -331,5 +331,32 @@
     "related_season": null,
     "related_chef_id": null,
     "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "4f9c0d56-3cde-40de-bb01-d564dbe37fdd",
+    "timestamp": "2025-04-28T14:49:14.242830Z",
+    "type": "Observation",
+    "details": "No additional information found on the current restaurants of Jean Dupont, Marie Dubois, and Pierre Martin.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "4aeebe97-99d7-45f3-a990-cd1927e3daf1",
+    "timestamp": "2025-04-28T14:57:26.746278Z",
+    "type": "Observation",
+    "details": "Les 3 premiers chefs (ID 1, 2, 3) ont toutes les informations essentielles : adresse, coordonnées GPS, bio et image.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "1fa72679-d2cf-40b7-9b5b-cb1b2eb274d1",
+    "timestamp": "2025-04-28T14:57:48.266665Z",
+    "type": "Observation",
+    "details": "Aucune donnée de chef trouvée pour les 16 saisons de Top Chef France. Vérification nécessaire.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
   }
 ]

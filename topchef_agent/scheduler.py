@@ -8,6 +8,7 @@ import os
 import sys
 import random
 import schedule
+import threading
 from datetime import datetime
 
 # Import the necessary functions from our agent module
@@ -42,33 +43,46 @@ def job():
         initial_prompt = "Bonjour StephAI Botenberg! Time to put chefs on the map! Find chefs with missing latitude/longitude data but who have restaurant addresses. Use geocoding to add their coordinates to make them appear on our beautiful map!"
         print(f"  [AUTONOMOUS AGENT] Using special 'Geocoding' prompt this time.", flush=True)
     else:  # Default routine check
-        initial_prompt = "Okay StephAI Botenberg, time for your routine check. Ask yourself: did you check the Top Chef database recently? You should check a random season for missing data."
+        current_year = datetime.now().year
+        start_year = 2010 # Assuming Top Chef France started in 2010
+        expected_seasons = current_year - start_year + 1 # Calculate expected seasons dynamically
+        initial_prompt = f"Okay StephAI Botenberg, time for your routine check for {current_year}. Verify the database integrity: Ensure all {expected_seasons} expected seasons (from season 1 up to season {expected_seasons}) are present and that each season has at least 14 candidates listed. Also, check a random season for other missing data points (like bios, images, or addresses)."
 
-    try:
-        # Pass the selected initial prompt to the agent cycle
-        run_llm_driven_agent_cycle(initial_prompt)
-        
-        # Signal that the database was updated
-        signal_database_update()
-        
-        log_to_ui("autonomous_job_complete", {
-            "job_id": job_counter,
-            "timestamp": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        }, role="autonomous_agent")
-    except Exception as e:
-        error_msg = f"Error during scheduled run_llm_driven_agent_cycle: {e}"
-        print(f"[AUTONOMOUS AGENT] {error_msg}", file=sys.stderr, flush=True)
-        # Log the full traceback for better debugging
-        import traceback
-        traceback_text = traceback.format_exc()
-        traceback.print_exc(file=sys.stderr)
-        
-        log_to_ui("autonomous_job_error", {
-            "job_id": job_counter,
-            "error": error_msg,
-            "traceback": traceback_text,
-            "timestamp": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        }, role="autonomous_agent")
+    # Define the target function for the background thread
+    def run_job_in_background():
+        job_id_for_thread = job_counter # Capture current job_id for the thread
+        try:
+            print(f"  [AUTONOMOUS AGENT] Starting background task for Job #{job_id_for_thread}...", flush=True)
+            # Pass the selected initial prompt to the agent cycle
+            run_llm_driven_agent_cycle(initial_prompt)
+            
+            # Signal that the database was updated
+            signal_database_update()
+            
+            log_to_ui("autonomous_job_complete", {
+                "job_id": job_id_for_thread,
+                "timestamp": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            }, role="autonomous_agent")
+            print(f"  [AUTONOMOUS AGENT] Background task for Job #{job_id_for_thread} completed.", flush=True)
+        except Exception as e:
+            error_msg = f"Error during scheduled run_llm_driven_agent_cycle (Job #{job_id_for_thread}): {e}"
+            print(f"[AUTONOMOUS AGENT] {error_msg}", file=sys.stderr, flush=True)
+            # Log the full traceback for better debugging
+            import traceback
+            traceback_text = traceback.format_exc()
+            traceback.print_exc(file=sys.stderr)
+            
+            log_to_ui("autonomous_job_error", {
+                "job_id": job_id_for_thread,
+                "error": error_msg,
+                "traceback": traceback_text,
+                "timestamp": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            }, role="autonomous_agent")
+
+    # Create and start the background thread
+    thread = threading.Thread(target=run_job_in_background, daemon=True)
+    thread.start()
+    print(f"[AUTONOMOUS AGENT] Dispatched background task for Job #{job_counter}. Scheduler loop continues.", flush=True)
 
 # Main execution
 if __name__ == "__main__":
