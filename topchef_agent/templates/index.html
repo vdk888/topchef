@@ -786,15 +786,43 @@
     </script>
 
     <script>
+        // --- Global Variables & Constants ---
+        window.AGENT_NAME = {{ AGENT_NAME|tojson }}; // Define Agent Name as a window property to avoid redeclaration issues
+        window.BACKGROUND_LOG_KEY = 'topchef_background_logs'; // Restore definition
+        window.INTERACTIVE_LOG_KEY = 'topchef_interactive_logs'; // Restore definition
+        window.MAIN_LOG_KEY = 'topchef_main_logs'; // Key for StephAI's main messages
+        let backgroundLogArea = document.getElementById('background-log-area');
+        let interactiveLogArea = document.getElementById('interactive-chat-log-area');
+        let chatLogArea = document.getElementById('chat-log-area'); // Area for StephAI's main commentary
+        let logCounter = 0;
+        const maxLogEntries = 200; // Limit stored log entries
+
         // --- Map Initialization ---
         // Center roughly on France
         const map = L.map('map').setView([46.603354, 1.888334], 6);
+        let markerLayer; // Declare markerLayer here
 
-        // Add OpenStreetMap tile layer
+        // Add Tile Layer (OpenStreetMap)
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         }).addTo(map);
+
+        // Initialize marker layer and add to map
+        markerLayer = L.layerGroup().addTo(map);
+
+        // Function to add details to popup safely
+        function addDetail(label, value) {
+            // Use textContent for safety in popups too, unless HTML is needed
+            const tempDiv = document.createElement('div');
+            tempDiv.textContent = value !== null && value !== undefined ? String(value) : '';
+            const escapedValue = tempDiv.innerHTML; // Let browser handle basic escaping
+
+            if (value !== null && value !== undefined && String(value).trim() !== "") {
+                return `<p><strong>${label}:</strong> ${escapedValue}</p>`;
+            }
+            return `<p><strong>${label}:</strong> <span class="missing-data">Missing</span></p>`;
+        }
 
         // --- Chef Data Processing ---
         let chefsData = [];
@@ -828,17 +856,7 @@
                 if (!isNaN(lat) && !isNaN(lon)) {
                     const marker = L.marker([lat, lon]).addTo(map);
                     let popupContent = `<h3>${chef.name || 'Unknown Chef'}</h3>`;
-                    const addDetail = (label, value) => {
-                        // Use textContent for safety in popups too, unless HTML is needed
-                        const tempDiv = document.createElement('div');
-                        tempDiv.textContent = value !== null && value !== undefined ? String(value) : '';
-                        const escapedValue = tempDiv.innerHTML; // Let browser handle basic escaping
-
-                        if (value !== null && value !== undefined && String(value).trim() !== "") {
-                            return `<p><strong>${label}:</strong> ${escapedValue}</p>`;
-                        }
-                        return `<p><strong>${label}:</strong> <span class="missing-data">Missing</span></p>`;
-                    };
+                    // Use the global addDetail function defined earlier
 
                     popupContent += addDetail('Status', chef.status);
                     popupContent += addDetail('Address', chef.restaurant_address);
@@ -859,175 +877,261 @@
         }
 
         // --- Log Viewer Logic ---
-        const chatLogArea = document.getElementById('chat-log-area');
-        const backgroundLogArea = document.getElementById('background-log-area');
-        const loadingSpinner = document.getElementById('loading-spinner');
-        let backgroundTaskCount = 0; // Counter for active background tasks
+        const spinnerElement = document.getElementById('loading-spinner');
+        let allLogs = []; // Maintain all logs in memory for filtering/searching if needed later
 
-        // Accepts the full log object passed to it
-        function formatLogData(logObject) {
-            // Add a safety check for the passed object
-            if (!logObject) {
-                console.error("formatLogData received undefined logObject");
-                return "[Error: Invalid log object received]";
+        // --- Functions ---
+
+        // Helper to save logs to localStorage
+        function saveLogsToStorage(key, logsArray) {
+            try {
+                localStorage.setItem(key, JSON.stringify(logsArray.slice(-maxLogEntries))); // Store only the last N logs
+            } catch (e) {
+                console.error(`Error saving logs to localStorage (${key}):`, e);
             }
-            const data = logObject.data; // Extract data from the passed log object
+        }
 
-            // Keep sensitive formatting for background logs
-            if (typeof data === 'string') {
-                try {
-                    // Attempt to parse JSON only if it looks like JSON
-                    if (data.trim().startsWith('{') || data.trim().startsWith('[')) {
-                        const parsed = JSON.parse(data);
-                        return JSON.stringify(parsed, null, 2); // Pretty print for background
+        // Helper to load logs from localStorage
+        function loadLogsFromStorage(key) {
+            try {
+                const storedLogs = localStorage.getItem(key);
+                return storedLogs ? JSON.parse(storedLogs) : [];
+            } catch (e) {
+                console.error(`Error loading logs from localStorage (${key}):`, e);
+                return [];
+            }
+        }
+
+        // Function to format structured log data (re-added)
+        function formatLogData(log) {
+            if (!log || !log.data) return 'Invalid log data';
+
+            // Basic formatting - can be expanded
+            if (typeof log.data === 'object') {
+                // Handle different message formats
+                if (log.data.content) {
+                    return log.data.content; // Return content directly
+                }
+                if (log.data.message) {
+                    return log.data.message; // Return message directly
+                }
+                // Handle tool call summaries
+                if (log.data.count && log.data.calls) {
+                    return `<em>Executing ${log.data.count} tool call(s)...</em>`;
+                }
+                // Example: Handle a specific known structure, e.g., tool call
+                if (log.data.tool_name && log.data.arguments) {
+                    return `Tool: ${log.data.tool_name} Args: ${JSON.stringify(log.data.arguments)}`;
+                }
+                
+                // Try to find any string field that might contain a message
+                for (const key in log.data) {
+                    if (typeof log.data[key] === 'string' && log.data[key].length > 5) {
+                        return log.data[key];
                     }
-                } catch (e) { /* Ignore parsing error, return original string */ }
-                return data; // Return original string if not JSON or parsing failed
-            } else if (typeof data === 'object' && data !== null) {
-                // Handle specific object structures for chat if needed, otherwise stringify for background
-                // Use the passed logObject here
-                if (logObject.role === 'StephAI Botenberg' && logObject.type === 'llm_response' && data.content) {
-                    return data.content; // Extract just the text content for chat
                 }
-                return JSON.stringify(data, null, 2); // Pretty print object for background
-            }
-            return String(data); // Fallback for other types
-        }
-
-        function updateSpinner() {
-            if (backgroundTaskCount > 0) {
-                loadingSpinner.style.display = 'inline-block';
-            } else {
-                loadingSpinner.style.display = 'none';
-            }
-        }
-
-        function addLogEntry(log) {
-            let targetContainer;
-            let isBackgroundTask = true;
-            // Pass the full log object (named 'log' in this scope) to formatLogData
-            let formattedData = formatLogData(log);
-
-            // Determine target container and if it's a background task
-            if (log.role === 'StephAI Botenberg' && log.type === 'llm_response') {
-                targetContainer = chatLogArea;
-                isBackgroundTask = false;
-                // Use the extracted content if available
-                formattedData = (typeof log.data === 'object' && log.data !== null && log.data.content) ? log.data.content : formattedData;
-            } else if (log.role === 'scheduler') { // User/Scheduler messages also in chat
-                targetContainer = chatLogArea;
-                isBackgroundTask = false;
-                formattedData = (typeof log.data === 'object' && log.data !== null && log.data.content) ? log.data.content : formattedData;
-            } else {
-                targetContainer = backgroundLogArea;
-                isBackgroundTask = true;
-            }
-
-            // Clear initial message
-            if (targetContainer.textContent.includes("Waiting for StephAI Botenberg...") || targetContainer.textContent.includes("Waiting for StephAI Botenberg's first check...")) {
-                targetContainer.innerHTML = '';
-            }
-
-            // Create log entry elements
-            const entryDiv = document.createElement('div');
-            entryDiv.classList.add('log-entry');
-            if (log.role) entryDiv.classList.add(`role-${log.role}`); // Add role class
-            if (log.type) entryDiv.classList.add(`log-type-${log.type.split('_')[0]}`); // Add general type class (e.g., log-type-tool)
-            if (log.type && log.type.includes('error')) entryDiv.classList.add('log-type-error'); // Specific error class
-
-            // Add specific classes for chat styling
-            if (targetContainer === chatLogArea) {
-                if (log.role === 'StephAI Botenberg') entryDiv.classList.add('log-entry-stephai-botenberg');
-                else if (log.role === 'scheduler') entryDiv.classList.add('log-entry-scheduler');
-            }
-
-            const timestampSpan = document.createElement('span');
-            timestampSpan.classList.add('log-timestamp');
-            timestampSpan.textContent = new Date(log.timestamp * 1000).toLocaleTimeString();
-
-            const roleSpan = document.createElement('span');
-            roleSpan.classList.add('log-role');
-            roleSpan.textContent = `${log.role || 'system'}:`;
-
-            const dataSpan = document.createElement('span');
-            dataSpan.classList.add('log-data');
-            dataSpan.textContent = formattedData; // Use pre-formatted data
-
-            // Assemble entry
-            entryDiv.appendChild(timestampSpan);
-            // Only show role in background log for cleaner chat
-            if (targetContainer === backgroundLogArea) {
-                entryDiv.appendChild(roleSpan);
-            }
-            entryDiv.appendChild(dataSpan);
-
-            // Append to the correct container
-            targetContainer.appendChild(entryDiv);
-
-            // Scroll to bottom
-            targetContainer.scrollTop = targetContainer.scrollHeight;
-
-            // Update spinner logic
-            if (isBackgroundTask) {
-                // Increment counter for starting tasks, decrement for ending tasks
-                if (log.type === 'tool_start' || log.type === 'llm_request') {
-                    backgroundTaskCount++;
-                } else if (log.type === 'tool_result' || log.type === 'tool_error' || log.type === 'llm_response' || log.type === 'llm_error' || log.type === 'llm_tool_request') {
-                    backgroundTaskCount = Math.max(0, backgroundTaskCount - 1); // Decrement, but not below 0
+                
+                // Default for other objects
+                try {
+                    return `<pre>${JSON.stringify(log.data, null, 2)}</pre>`; // Pretty print JSON
+                } catch {
+                    return 'Could not format log data object.';
                 }
-                updateSpinner();
+            }
+            // Fallback for non-objects (though addLogEntry handles strings separately)
+            return String(log.data);
+        }
+
+        // Modified addLogEntry to handle both background and interactive logs, and save to storage
+        function addLogEntry(log, areaElement, storageKey, logArray) {
+            console.log('[addLogEntry] Received log:', log, 'Target Area:', areaElement ? areaElement.id : 'UNKNOWN'); // Debug: Log received data and target
+            if (!log || !areaElement) {
+                console.error('[addLogEntry] Error: Invalid log object or areaElement provided.', log, areaElement);
+                return;
+            }
+
+            const logEntryElement = document.createElement('div');
+            logEntryElement.classList.add('log-entry');
+
+            let role = log.role || 'system'; // Default role
+            let messageContent = '';
+            let timestamp = log.timestamp ? new Date(log.timestamp * 1000).toLocaleTimeString() : new Date().toLocaleTimeString();
+
+            // Determine class based on role
+            if (role === AGENT_NAME) { // Use the agent's name
+                logEntryElement.classList.add('log-entry-agent');
+            } else if (role === 'user') {
+                logEntryElement.classList.add('user-msg');
+            } else if (role === 'system' || role === 'autonomous_agent') {
+                logEntryElement.classList.add('log-entry-system');
+            } else if (role === 'tool_executor') {
+                logEntryElement.classList.add('log-entry-tool');
+            } else {
+                logEntryElement.classList.add('log-entry-info'); // Default/other
+            }
+
+            // Format message content based on log type or data structure
+            if (typeof log.data === 'string') {
+                messageContent = log.data;
+            } else if (typeof log.data === 'object' && log.data !== null) {
+                // Special handling for agent messages with various field structures
+                if (log.role === AGENT_NAME) {
+                    // Handle different message formats from the agent
+                    if (log.data.content) {
+                        messageContent = log.data.content; // Use content field directly
+                    } else if (log.data.message) {
+                        messageContent = log.data.message; // Use message field directly
+                    } else if (log.data.count && log.data.calls) {
+                        // For tool call summaries, format them nicely
+                        messageContent = `<em>Executing ${log.data.count} tool call(s)...</em>`;
+                        // Don't show the raw JSON for tool calls in the main chat
+                    } else {
+                        // Try to find any string field that might contain a message
+                        let foundMessage = false;
+                        for (const key in log.data) {
+                            if (typeof log.data[key] === 'string' && log.data[key].length > 5) {
+                                messageContent = log.data[key];
+                                foundMessage = true;
+                                break;
+                            }
+                        }
+                        
+                        if (!foundMessage) {
+                            // If no suitable field found, use the formatter but hide in main chat
+                            messageContent = "<em>Processing...</em>";
+                        }
+                    }
+                } else {
+                    messageContent = formatLogData(log); // Use existing formatter for non-agent messages
+                }
+            } else if (log.response) { // For interactive agent responses
+                messageContent = log.response;
+            } else if (log.error) { // For errors
+                messageContent = `Error: ${log.error}`;
+                logEntryElement.classList.add('log-entry-error');
+            } else {
+                messageContent = JSON.stringify(log); // Fallback
+            }
+
+            const timestampElement = document.createElement('span');
+            timestampElement.classList.add('log-timestamp');
+            timestampElement.textContent = `[${timestamp}]`;
+
+            const roleElement = document.createElement('span');
+            roleElement.classList.add('log-role');
+            roleElement.textContent = role;
+
+            const messageContentElement = document.createElement('span');
+            messageContentElement.innerHTML = messageContent; // Use innerHTML for potential formatting from formatLogData
+
+            logEntryElement.appendChild(timestampElement);
+            logEntryElement.appendChild(roleElement);
+            logEntryElement.appendChild(messageContentElement);
+
+            console.log('[addLogEntry] Created element:', logEntryElement); // Debug: Log the created element
+
+            try {
+                areaElement.appendChild(logEntryElement);
+                console.log('[addLogEntry] Successfully appended element to:', areaElement.id); // Debug: Confirm append
+            } catch (error) {
+                console.error('[addLogEntry] FAILED to append element to:', areaElement.id, error); // Debug: Log append failure
+                 // Optionally display an error in the log area itself
+                 const errorElement = document.createElement('div');
+                 errorElement.className = 'log-entry log-entry-error';
+                 errorElement.textContent = `[UI Error] Failed to display log entry. See console.`;
+                 areaElement.appendChild(errorElement);
+            }
+
+            // Auto-scroll to the bottom
+            areaElement.scrollTop = areaElement.scrollHeight;
+            // Add to the in-memory array and save to storage
+            logArray.push(log); // Store the original log object
+            saveLogsToStorage(storageKey, logArray);
+
+            // Remove oldest entries if exceeding max
+            while (areaElement.children.length > maxLogEntries) {
+                areaElement.removeChild(areaElement.firstChild);
+            }
+            // Also trim the in-memory array if needed (though saveLogs already slices)
+            if (logArray.length > maxLogEntries * 1.1) { // Keep a bit more in memory just in case
+                 logArray.splice(0, logArray.length - maxLogEntries);
+            }
+
+            // Hide spinner after first message (if it exists)
+            if (spinnerElement) {
+                spinnerElement.style.display = 'none';
             }
         }
 
-        // --- SSE Connection ---
+        // Load initial logs from storage
+        let backgroundLogs = loadLogsFromStorage(BACKGROUND_LOG_KEY);
+        backgroundLogs.forEach(log => addLogEntry(log, backgroundLogArea, BACKGROUND_LOG_KEY, backgroundLogs));
+
+        let mainLogs = loadLogsFromStorage(MAIN_LOG_KEY); // Load main chat logs
+        mainLogs.forEach(log => addLogEntry(log, chatLogArea, MAIN_LOG_KEY, mainLogs)); // Populate main chat area
+
+        // Interactive logs handled by interactive_chat.js
+
+        // --- SSE Connection (Background Logs) ---
         const eventSource = new EventSource("/stream_logs");
 
         eventSource.onopen = function() {
-            console.log("SSE Connected");
+            console.log("SSE connection opened for background logs.");
+            // Optional: add a visual indicator
         };
 
         eventSource.onmessage = function(event) {
-            try {
-                const logEntry = JSON.parse(event.data);
-                addLogEntry(logEntry);
-            } catch (e) {
-                console.error("Failed to parse SSE data:", event.data, e);
-                // Log parsing errors to the background log
-                addLogEntry({ type: 'stream_error', data: `Failed to parse log: ${event.data}`, timestamp: Date.now() / 1000, role: 'system' });
+            // Ignore empty messages or potential keep-alive pings
+            if (!event.data || !event.data.trim()) {
+                // console.debug("SSE: Received empty message.");
+                return;
+            }
+            // Check if data looks like JSON before parsing
+            const potentialJson = event.data.trim();
+            if (potentialJson.startsWith('{') || potentialJson.startsWith('[')) {
+                try {
+                    const logData = JSON.parse(potentialJson);
+                    if (logData.type === 'stream_error') {
+                        console.error('SSE Stream Error:', logData.data.error);
+                        addLogEntry({ role: 'system', data: `Stream Error: ${logData.data.error}`, timestamp: Date.now()/1000, type: 'error' }, backgroundLogArea, BACKGROUND_LOG_KEY, backgroundLogs);
+                    } else if (logData.type) { // Basic check for a valid log structure
+                        // Route based on role
+                        if (logData.role === AGENT_NAME) {
+                             // Send Agent's main messages to the main chat area
+                             console.log(`Routing log from ${AGENT_NAME} to main chat area.`);
+                             addLogEntry(logData, chatLogArea, MAIN_LOG_KEY, mainLogs);
+                        } else {
+                             // Send system/tool logs to the background area
+                             console.log(`Routing log from ${logData.role || 'unknown'} to background area.`);
+                             addLogEntry(logData, backgroundLogArea, BACKGROUND_LOG_KEY, backgroundLogs);
+                        }
+                    } else {
+                         console.warn("SSE: Received JSON data without 'type' field: ", logData);
+                    }
+                } catch (e) {
+                    console.error("Error parsing seemingly valid JSON from SSE:", event.data, e);
+                     addLogEntry({ type: 'db_stream_error', data: `Failed processing log data: ${e.message}`, timestamp: Date.now() / 1000, role: 'system' }, backgroundLogArea, BACKGROUND_LOG_KEY, backgroundLogs);
+                }
+            } else {
+                 // Silently ignore non-JSON messages (likely keep-alives)
+                 console.debug("SSE: Ignored non-JSON message: ", event.data);
             }
         };
 
         eventSource.onerror = function(err) {
-            console.error("EventSource failed:", err);
-            // Log connection errors to the background log
-            addLogEntry({ type: 'stream_error', data: 'Log stream connection error. Check console.', timestamp: Date.now() / 1000, role: 'system' });
-            backgroundTaskCount = 0; // Reset counter on error
-            updateSpinner();
+            console.error("SSE Error occurred:", err);
+            addLogEntry({ type: 'db_stream_error', data: 'Log stream connection error. Trying to reconnect...', timestamp: Date.now() / 1000, role: 'system' }, backgroundLogArea, BACKGROUND_LOG_KEY, backgroundLogs);
+            // EventSource automatically attempts to reconnect.
+            // Consider closing after too many errors: eventSource.close();
         };
 
-        // --- Background Log Collapse/Expand Logic ---
-        const backgroundHeader = document.getElementById('background-header');
-        const backgroundContainer = document.getElementById('background-work-container');
-        const toggleIcon = backgroundHeader.querySelector('.toggle-icon');
-
-        backgroundHeader.addEventListener('click', () => {
-            backgroundContainer.classList.toggle('collapsed');
-            if (backgroundContainer.classList.contains('collapsed')) {
-                toggleIcon.textContent = '+';
-            } else {
-                toggleIcon.textContent = '-';
-                // Scroll to bottom when expanding
-                backgroundLogArea.scrollTop = backgroundLogArea.scrollHeight;
-            }
-        });
-
-        // --- Database Table Loading & Refreshing Logic ---
+        // --- Restored Database Table, Filtering, View Toggle, and DB Update Logic ---
         let tableLoaded = false; // Tracks initial load
         const tablePlaceholder = document.getElementById('table-placeholder');
         const tableContainer = document.getElementById('database-table-container'); // Get container reference
 
-        async function refreshTableData() {
-            console.log("Refreshing table data...");
+        async function refreshTableData(season = null) {
+            console.log("Refreshing table data...", season ? `for season ${season}` : '');
             tablePlaceholder.textContent = 'Refreshing database content...'; // Update placeholder text
             tablePlaceholder.style.color = '#666'; // Reset color
             tableLoaded = false; // Reset flag to allow reload display logic
@@ -1037,20 +1141,25 @@
             if (existingWrapper) {
                 tablePlaceholder.removeChild(existingWrapper);
             }
-
-            await loadAndDisplayTable(); // Call the main loading function
+            // Fetch potentially filtered data
+            const chefs = await fetchChefs(season);
+            await loadAndDisplayTable(chefs); // Call the main loading function with fetched data
         }
 
-        async function loadAndDisplayTable() {
+        async function loadAndDisplayTable(chefs) {
             try {
-                const response = await fetch('/api/chefs');
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                // Data is now passed in, no need to fetch here
+                if (!Array.isArray(chefs)) {
+                    throw new Error("Invalid chef data provided to loadAndDisplayTable.");
                 }
-                const chefs = await response.json();
 
-                if (!Array.isArray(chefs) || chefs.length === 0) {
-                    tablePlaceholder.textContent = 'No chef data found in the database.';
+                if (chefs.length === 0) {
+                    tablePlaceholder.textContent = 'No chef data found matching the criteria.';
+                    // Clear any previous table
+                     const existingWrapper = tablePlaceholder.querySelector('.db-table-wrapper');
+                    if (existingWrapper) {
+                        tablePlaceholder.removeChild(existingWrapper);
+                    }
                     return;
                 }
 
@@ -1090,19 +1199,19 @@
                         const td = document.createElement('td');
                         let value = chef[col.key];
 
-                        // Handle potentially complex data like JSON
-                        if (col.key === 'perplexity_data' && typeof value === 'object' && value !== null) {
-                            value = '[JSON Data]';
+                        // Format date nicely
+                        if (col.key === 'last_updated' && value) {
+                            try {
+                                value = new Date(value).toLocaleString();
+                            } catch { /* leave as is */ }
                         }
 
-                        // Use textContent for safety - this avoids the need for manual HTML escaping
+                        // Use textContent for safety
                         td.textContent = (value === null || typeof value === 'undefined') ? '' : String(value);
 
                         if (col.className) {
                             td.classList.add(col.className);
-                            // Add title attribute for potentially truncated columns
-                            if (col.className === 'col-bio' || col.className === 'col-perplexity') {
-                                // Still set title attribute for hover text
+                            if (col.className === 'col-bio') {
                                 td.setAttribute('title', (value === null || typeof value === 'undefined') ? '' : String(value));
                             }
                         }
@@ -1130,66 +1239,78 @@
         const toggleButton = document.getElementById('view-toggle-button');
         const mapContainer = document.getElementById('map');
         // tableContainer is already defined above
-        let currentView = 'map';
+        let currentView = 'map'; // Assume map is default
 
-        toggleButton.addEventListener('click', () => {
+        toggleButton.addEventListener('click', async () => {
             if (currentView === 'map') {
                 // Switch to Table View
                 mapContainer.style.display = 'none';
                 tableContainer.style.display = 'flex'; // Use flex now
                 toggleButton.textContent = 'Show Map';
                 currentView = 'table';
-                if (!tableLoaded) { // Only load initially if not already loaded
-                    loadAndDisplayTable();
-                }
+                // Load table data based on the *current* season filter
+                const selectedSeason = document.getElementById('season-filter').value;
+                const chefsToDisplay = filterChefsBySeason(allChefs, selectedSeason);
+                await loadAndDisplayTable(chefsToDisplay);
             } else {
                 // Switch to Map View
                 tableContainer.style.display = 'none';
                 mapContainer.style.display = 'block';
                 toggleButton.textContent = 'Show Table';
                 currentView = 'map';
+                // Update map markers based on the current season filter
+                const selectedSeason = document.getElementById('season-filter').value;
+                const chefsToDisplay = filterChefsBySeason(allChefs, selectedSeason);
+                updateMapMarkers(chefsToDisplay); // Assumes updateMapMarkers exists and handles clearing/adding
                 setTimeout(() => {
-                    map.invalidateSize();
+                    map.invalidateSize(); // Ensure map resizes correctly
                 }, 10);
             }
         });
 
-        // --- Initial Load Calls ---
-        document.addEventListener('DOMContentLoaded', () => {
-            // Map/Log setup happens via inline script execution order
-            // Table is loaded on demand by the toggle button click
+        // --- SSE Connection for Database Updates ---
+        const dbUpdateEventSource = new EventSource("/stream_db_updates");
 
-            // --- SSE Connection for Database Updates ---
-            const dbUpdateEventSource = new EventSource("/stream_db_updates");
+        dbUpdateEventSource.onopen = function() {
+            console.log("DB Update SSE Connected");
+        };
 
-            dbUpdateEventSource.onopen = function() {
-                console.log("DB Update SSE Connected");
-            };
-
-            dbUpdateEventSource.onmessage = function(event) {
-                try {
-                    const updateSignal = JSON.parse(event.data);
-                    console.log("Received DB update signal:", updateSignal);
-                    if (updateSignal.event === "update" && currentView === 'table') {
-                        // If the table is currently visible, refresh its data
-                        refreshTableData();
+        dbUpdateEventSource.onmessage = async function(event) {
+            try {
+                const updateSignal = JSON.parse(event.data);
+                console.log("Received DB update signal:", updateSignal);
+                if (updateSignal.event === "update") {
+                    // 1. Re-fetch all data to update the global 'allChefs' array
+                    allChefs = await fetchChefs();
+                    console.log("Refetched all chef data after update signal.");
+                    // 2. Get current filter
+                    const selectedSeason = document.getElementById('season-filter').value;
+                    // 3. Filter the newly fetched data
+                    const chefsToDisplay = filterChefsBySeason(allChefs, selectedSeason);
+                    // 4. Update the currently active view
+                    if (currentView === 'table') {
+                        console.log("Refreshing table view after update signal.");
+                        await loadAndDisplayTable(chefsToDisplay);
+                    } else {
+                        console.log("Refreshing map view after update signal.");
+                        updateMapMarkers(chefsToDisplay); // Update map markers
                     }
-                } catch (e) {
-                    console.error("Failed to parse DB Update SSE data:", event.data, e);
-                    // Optionally log this to the background log area too
-                    addLogEntry({ type: 'db_stream_error', data: `Failed to parse DB update signal: ${event.data}`, timestamp: Date.now() / 1000, role: 'system' });
+                    // 5. Repopulate season filter in case seasons changed
+                    populateSeasonFilter(allChefs);
                 }
-            };
+            } catch (e) {
+                console.error("Failed to parse DB Update SSE data or refresh view:", event.data, e);
+                addLogEntry({ type: 'db_stream_error', data: `Failed processing DB update signal: ${e.message}`, timestamp: Date.now() / 1000, role: 'system' }, backgroundLogArea, BACKGROUND_LOG_KEY, backgroundLogs);
+            }
+        };
 
-            dbUpdateEventSource.onerror = function(err) {
-                console.error("DB Update EventSource failed:", err);
-                addLogEntry({ type: 'db_stream_error', data: 'DB Update stream connection error. Check console.', timestamp: Date.now() / 1000, role: 'system' });
-            };
-        });
+        dbUpdateEventSource.onerror = function(err) {
+            console.error("DB Update EventSource failed:", err);
+            addLogEntry({ type: 'db_stream_error', data: 'DB Update stream connection error. Check console.', timestamp: Date.now() / 1000, role: 'system' }, backgroundLogArea, BACKGROUND_LOG_KEY, backgroundLogs);
+        };
 
-        // Table and Map Data Loading
-        let allChefs = [];
-        let currentSeason = '';
+        // --- Table and Map Data Loading / Filtering ---
+        let allChefs = []; // Holds all chef data fetched initially or after update
 
         // Populate the season filter dropdown based on chef data
         function populateSeasonFilter(chefs) {
@@ -1200,6 +1321,7 @@
                 }
             });
             const seasonFilter = document.getElementById('season-filter');
+            const currentValue = seasonFilter.value; // Preserve selection if possible
             // Remove old options except 'All'
             seasonFilter.querySelectorAll('option:not([value=""])').forEach(opt => opt.remove());
             Array.from(seasonSet).sort((a, b) => a - b).forEach(season => {
@@ -1208,20 +1330,60 @@
                 opt.textContent = `Season ${season}`;
                 seasonFilter.appendChild(opt);
             });
+            // Try to restore previous selection, default to 'All' if it's gone
+             if (Array.from(seasonFilter.options).some(opt => opt.value === currentValue)) {
+                 seasonFilter.value = currentValue;
+             } else {
+                 seasonFilter.value = ""; // Default to 'All'
+             }
         }
 
-        // Filter chefs by selected season
+        // Filter chefs by selected season (accepts string or number for season)
         function filterChefsBySeason(chefs, season) {
-            if (!season || season === "") return chefs;
-            return chefs.filter(chef => chef.season == season);
+            if (season === null || season === "" || season === undefined) return chefs; // Handle 'All Seasons'
+            const seasonNum = parseInt(season, 10);
+            return chefs.filter(chef => chef.season === seasonNum);
+        }
+
+        // Update Map Markers (Moved definition here)
+        function updateMapMarkers(chefsToDisplay) {
+            markerLayer.clearLayers(); // Clear existing markers
+            chefsToDisplay.forEach(chef => {
+                if (chef.latitude != null && chef.longitude != null) {
+                    try {
+                        const lat = parseFloat(chef.latitude);
+                        const lon = parseFloat(chef.longitude);
+                        if (!isNaN(lat) && !isNaN(lon)) {
+                            const marker = L.marker([lat, lon]);
+
+                            // Build popup content using helper
+                            let popupContent = `<strong>${chef.name || 'Unknown Chef'}</strong><br>`;
+                            popupContent += addDetail('Season', chef.season);
+                            popupContent += addDetail('Status', chef.status);
+                            popupContent += addDetail('Address', chef.restaurant_address);
+                            popupContent += addDetail('Bio', chef.bio);
+
+                            marker.bindPopup(popupContent);
+                            markerLayer.addLayer(marker);
+                        }
+                    } catch (e) {
+                        console.warn(`Skipping marker for chef ${chef.id} due to invalid coordinates`, e);
+                    }
+                }
+            });
         }
 
         // Listen for season filter changes
         document.getElementById('season-filter').addEventListener('change', async function() {
-            currentSeason = this.value;
-            allChefs = await fetchChefs(currentSeason);
-            populateSeasonFilter(allChefs);
-            loadAndDisplayTable();
+            const selectedSeason = this.value;
+            // Filter the existing 'allChefs' data
+            const chefsToDisplay = filterChefsBySeason(allChefs, selectedSeason);
+            // Update the currently active view
+            if (currentView === 'table') {
+                await loadAndDisplayTable(chefsToDisplay);
+            } else {
+                updateMapMarkers(chefsToDisplay);
+            }
         });
 
         // Enlarging chat windows logic
@@ -1229,15 +1391,14 @@
         const enlargeAgent = document.getElementById('enlarge-agent');
         const enlargeBg = document.getElementById('enlarge-bg');
         const enlargeInteractive = document.getElementById('enlarge-interactive');
-        let enlarged = '';
         function toggleEnlarge(which) {
-            if (enlarged === which) {
-                sidebar.classList.remove('enlarged-' + which);
-                enlarged = '';
+            if (!sidebar) return; // Safety check
+            const targetClass = 'enlarged-' + which;
+            if (sidebar.classList.contains(targetClass)) {
+                 sidebar.classList.remove(targetClass);
             } else {
-                sidebar.classList.remove('enlarged-agent', 'enlarged-bg', 'enlarged-interactive');
-                sidebar.classList.add('enlarged-' + which);
-                enlarged = which;
+                sidebar.classList.remove('enlarged-agent', 'enlarged-bg', 'enlarged-interactive'); // Remove any existing enlarge class
+                sidebar.classList.add(targetClass);
             }
         }
         if (enlargeAgent) enlargeAgent.addEventListener('click', function() { toggleEnlarge('agent'); });
@@ -1247,19 +1408,64 @@
         // Fetch chefs from backend with optional season param
         async function fetchChefs(season = null) {
             let url = '/api/chefs';
-            if (season) url += `?season=${season}`;
-            const response = await fetch(url);
-            return response.json();
+            // Only add season param if it's a specific season (not empty string for 'All')
+            if (season !== null && season !== "") {
+                 url += `?season=${season}`;
+            }
+            try {
+                const response = await fetch(url);
+                 if (!response.ok) {
+                     throw new Error(`API fetch error! status: ${response.status}`);
+                 }
+                 return await response.json();
+            } catch (error) {
+                 console.error('Failed to fetch chefs:', error);
+                 tablePlaceholder.textContent = `Error fetching chef data: ${error.message}.`;
+                 tablePlaceholder.style.color = 'red';
+                 return []; // Return empty array on error
+            }
         }
 
-        // Initial load
+        // --- Background Log Collapse/Expand Logic (Now follows restored code) ---
+        const backgroundHeader = document.getElementById('background-header');
+        const backgroundContainer = document.getElementById('background-work-container');
+        const toggleIcon = backgroundHeader.querySelector('.toggle-icon');
+
+        backgroundHeader.addEventListener('click', () => {
+            backgroundContainer.classList.toggle('collapsed');
+            if (backgroundContainer.classList.contains('collapsed')) {
+                toggleIcon.textContent = '+';
+            } else {
+                toggleIcon.textContent = '-';
+                // Scroll to bottom when expanding
+                backgroundLogArea.scrollTop = backgroundLogArea.scrollHeight;
+            }
+        });
+
+        // --- Initial Load --- Execute async function (Modified)
         (async function() {
-            allChefs = await fetchChefs();
-            populateSeasonFilter(allChefs);
-            loadAndDisplayTable();
+            allChefs = await fetchChefs(); // Fetch all initially
+            populateSeasonFilter(allChefs); // Populate filter based on fetched data
+            updateMapMarkers(allChefs); // Initial map display (all seasons)
+            // Initial table load ONLY if table view is the default/active on load
+            if (currentView === 'table') { // Check currentView state determined by toggle logic
+                 await loadAndDisplayTable(allChefs);
+            }
+            // Ensure spinner is hidden after initial load attempts
+            if (spinnerElement) {
+                spinnerElement.style.display = 'none';
+            }
         })();
     </script>
-    <script src="/static/interactive_chat.js"></script>
-
+    <!-- Load the interactive chat JavaScript -->
+    <script>
+        // Make necessary functions/variables global or pass them carefully
+        window.addLogEntry = addLogEntry;
+        window.interactiveLogArea = interactiveLogArea;
+        window.INTERACTIVE_LOG_KEY = INTERACTIVE_LOG_KEY;
+        window.interactiveLogs = interactiveLogs; // Pass the initially loaded logs
+        window.AGENT_NAME = "{{ AGENT_NAME }}"; // Use the AGENT_NAME passed from Flask
+    </script>
+    <script src="{{ url_for('static', filename='interactive_chat.js') }}"></script>
 </body>
 </html>

@@ -10,8 +10,16 @@ from topchef_agent.config import DATABASE_URL # Use database URL for validation 
 import datetime
 from topchef_agent.interactive_agent import get_interactive_agent
 from topchef_agent.agent import read_journal_file, execute_read_journal # For retrieving agent activity
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+AGENT_NAME = os.getenv("AGENT_NAME", "StephAI Botenberg")
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = os.getenv("FLASK_SECRET_KEY", "default_secret_key") # Needed for session management
+app.json.compact = False # Pretty print JSON responses
 
 # --- Logging Queue Setup ---
 log_queue = queue.Queue()
@@ -54,7 +62,7 @@ def index():
         chefs_json = json.dumps(chefs_data, default=lambda o: o.isoformat() if isinstance(o, datetime.datetime) else str(o))
 
         # Pass the JSON string to the template
-        return render_template('index.html', chefs_json=chefs_json)
+        return render_template('index.html', chefs_json=chefs_json, AGENT_NAME=AGENT_NAME)
 
     except Exception as e:
         print(f"Error in index route: {e}")

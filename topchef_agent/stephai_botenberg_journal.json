@@ -70,5 +70,266 @@
     "related_season": null,
     "related_chef_id": 2,
     "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "95cb19c5-e1a7-4107-9fc1-6c2aae6f3dd5",
+    "timestamp": "2025-04-28T11:14:59.539177Z",
+    "type": "Observation",
+    "details": "Pierre Martin n'a pas d'adresse de restaurant ni de coordonnées. Recherche web n'a pas donné d'informations.",
+    "related_season": null,
+    "related_chef_id": 3,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "6ff4ffa1-3afc-4d71-82a6-314125714afe",
+    "timestamp": "2025-04-28T11:15:16.226770Z",
+    "type": "Observation",
+    "details": "Marie Dubois a un statut 'Incorrectly Added'. Recherche web n'a pas donné d'informations sur son statut actuel.",
+    "related_season": null,
+    "related_chef_id": 2,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "37718073-53ae-4a33-b357-9ccdd71f4bdd",
+    "timestamp": "2025-04-28T13:41:58.003718Z",
+    "type": "Observation",
+    "details": "Marie Dubois a un statut 'Incorrectly Added'.",
+    "related_season": null,
+    "related_chef_id": 2,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "b4b56402-b76f-42d2-9da3-997065c27234",
+    "timestamp": "2025-04-28T13:43:37.693640Z",
+    "type": "Observation",
+    "details": "Vérification de routine effectuée. Tous les chefs ont des adresses et coordonnées valides : Jean Dupont, Marie Dubois, Pierre Martin.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "86d20638-3312-4f59-9790-aec3bca5a9d4",
+    "timestamp": "2025-04-28T13:44:51.840554Z",
+    "type": "Observation",
+    "details": "Tous les chefs vérifiés (Jean Dupont, Marie Dubois, Pierre Martin) ont des données complètes.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "928ff55c-9f3c-4c03-a9c1-68c61ebde917",
+    "timestamp": "2025-04-28T13:48:01.528101Z",
+    "type": "Observation",
+    "details": "Chef ID 1 (Jean Dupont) n'a pas de saison attribuée, aucune participation trouvée.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "c11cce27-c141-4e22-8b14-7204da693618",
+    "timestamp": "2025-04-28T13:48:01.567068Z",
+    "type": "Observation",
+    "details": "Chef ID 2 (Marie Dubois) n'a pas de saison attribuée, aucune participation trouvée.",
+    "related_season": null,
+    "related_chef_id": 2,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "2ba5f465-d76b-4866-a6f6-91cbfb0ba7d9",
+    "timestamp": "2025-04-28T13:48:01.613974Z",
+    "type": "Observation",
+    "details": "Chef ID 3 (Pierre Martin) n'a pas de saison attribuée, aucune participation trouvée.",
+    "related_season": null,
+    "related_chef_id": 3,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "dab1c2f4-de07-45bc-a55f-b3d1ce7920b8",
+    "timestamp": "2025-04-28T13:49:30.295462Z",
+    "type": "Observation",
+    "details": "Jean Dupont, Marie Dubois, and Pierre Martin do not have a season assigned in the database. Searches for their seasons yielded no results.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "44c26285-63c1-4b50-9e66-4e5815a8a1bb",
+    "timestamp": "2025-04-28T13:49:30.334389Z",
+    "type": "Observation",
+    "details": "Marie Dubois does not have a season assigned in the database. Searches for her season yielded no results.",
+    "related_season": null,
+    "related_chef_id": 2,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "55875bb8-daf5-4004-b1fb-23e263078a23",
+    "timestamp": "2025-04-28T13:49:30.375795Z",
+    "type": "Observation",
+    "details": "Pierre Martin does not have a season assigned in the database. Searches for his season yielded no results.",
+    "related_season": null,
+    "related_chef_id": 3,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "bb63efe5-640a-4d23-a4c8-81e8fd8cbe70",
+    "timestamp": "2025-04-28T13:51:31.904381Z",
+    "type": "Observation",
+    "details": "Les chefs Jean Dupont, Marie Dubois et Pierre Martin ont tous un champ 'image_url' vide.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "f5e65471-8e11-44e7-a09b-5ce2f60797cb",
+    "timestamp": "2025-04-28T13:51:31.942282Z",
+    "type": "Observation",
+    "details": "Les chefs Jean Dupont, Marie Dubois et Pierre Martin ont tous un champ 'image_url' vide.",
+    "related_season": null,
+    "related_chef_id": 2,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "877fee46-df92-4bb4-a72f-d0c0f5516639",
+    "timestamp": "2025-04-28T13:51:31.973215Z",
+    "type": "Observation",
+    "details": "Les chefs Jean Dupont, Marie Dubois et Pierre Martin ont tous un champ 'image_url' vide.",
+    "related_season": null,
+    "related_chef_id": 3,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "5ec51b0b-8921-4f67-9021-2bbc11f9d793",
+    "timestamp": "2025-04-28T13:56:23.854815Z",
+    "type": "Observation",
+    "details": "Jean Dupont n'a pas d'adresse de restaurant trouvée. Recherche nécessaire.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "722e5a37-b7d7-40db-9ea3-377b3c210eeb",
+    "timestamp": "2025-04-28T13:56:23.884914Z",
+    "type": "Observation",
+    "details": "Marie Dubois n'a pas d'adresse de restaurant trouvée. Recherche nécessaire.",
+    "related_season": null,
+    "related_chef_id": 2,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "76bcd106-1c68-463a-9ab9-ab7d76c8059f",
+    "timestamp": "2025-04-28T13:57:00.695172Z",
+    "type": "Observation",
+    "details": "Aucune adresse de restaurant vérifiable trouvée pour Jean Dupont dans les recherches.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "b8a35aac-5cdb-4a8b-8676-ca434d35caa2",
+    "timestamp": "2025-04-28T13:57:00.730708Z",
+    "type": "Observation",
+    "details": "Aucune adresse de restaurant vérifiable trouvée pour Marie Dubois dans les recherches.",
+    "related_season": null,
+    "related_chef_id": 2,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "456c9af9-db3a-4db7-9459-b50c296dfbe1",
+    "timestamp": "2025-04-28T13:59:35.538379Z",
+    "type": "Observation",
+    "details": "Vérification initiale des chefs Jean Dupont, Marie Dubois et Pierre Martin. Les champs principaux (bio, image, coordonnées, adresse) semblent complets.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "3a6cb851-4f50-462a-942d-530eea52f6c1",
+    "timestamp": "2025-04-28T14:03:38.694510Z",
+    "type": "Observation",
+    "details": "Tous les chefs vérifiés (Jean Dupont, Marie Dubois, Pierre Martin) ont des adresses et des coordonnées valides.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "68616876-9f15-415f-a489-47e8a76b5fae",
+    "timestamp": "2025-04-28T14:06:15.192920Z",
+    "type": "Observation",
+    "details": "Routine check completed. All checked chefs (Jean Dupont, Marie Dubois, Pierre Martin) have complete information.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "8431f3eb-56d1-4ad5-8af5-a8021c777867",
+    "timestamp": "2025-04-28T14:07:42.601742Z",
+    "type": "Observation",
+    "details": "Jean Dupont, Marie Dubois, and Pierre Martin do not have restaurant addresses found in the recent web search.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "3873f938-55f1-4899-b7e9-f904417730f4",
+    "timestamp": "2025-04-28T14:07:42.640263Z",
+    "type": "Observation",
+    "details": "Jean Dupont, Marie Dubois, and Pierre Martin do not have restaurant addresses found in the recent web search.",
+    "related_season": null,
+    "related_chef_id": 2,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "2219d32f-730e-4794-9d9d-e9c1175c2389",
+    "timestamp": "2025-04-28T14:07:42.672782Z",
+    "type": "Observation",
+    "details": "Jean Dupont, Marie Dubois, and Pierre Martin do not have restaurant addresses found in the recent web search.",
+    "related_season": null,
+    "related_chef_id": 3,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "71a775b0-bac6-4563-a9f6-ba8ec6436d57",
+    "timestamp": "2025-04-28T14:12:13.863705Z",
+    "type": "Observation",
+    "details": "Aucune information trouvée sur le statut actuel de Jean Dupont.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "7ffd8ab9-59b8-49f0-8b86-4cc450a31e21",
+    "timestamp": "2025-04-28T14:12:23.903918Z",
+    "type": "Observation",
+    "details": "Aucune information trouvée sur le statut actuel de Marie Dubois.",
+    "related_season": null,
+    "related_chef_id": 2,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "d045bf3a-07fe-4d1b-8ebd-e53e1eace62c",
+    "timestamp": "2025-04-28T14:12:33.946245Z",
+    "type": "Observation",
+    "details": "Pierre Martin est actuellement le chef exécutif et propriétaire du restaurant Chez Pimousse à Lyon. Son restaurant a reçu deux toques de Gault & Millau en 2021 et il a été récompensé par le trophée Jeune Talent Auvergne Rhône-Alpes.",
+    "related_season": null,
+    "related_chef_id": 3,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "9da67777-6860-4450-912a-7d6be498702a",
+    "timestamp": "2025-04-28T14:27:56.365950Z",
+    "type": "Action",
+    "details": "Ajout de la colonne 'signature_dish' à la table 'chefs' pour enrichir la base de données.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "75915b16-83ef-4092-8a47-639889bf56e7",
+    "timestamp": "2025-04-28T14:38:28.032579Z",
+    "type": "Observation",
+    "details": "Tous les chefs vérifiés (Jean Dupont, Marie Dubois, Pierre Martin) ont des informations complètes et à jour.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
   }
 ]
