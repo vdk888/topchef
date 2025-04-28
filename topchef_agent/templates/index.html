@@ -911,31 +911,27 @@
                 // Handle different message formats
                 if (log.data.content) {
                     return log.data.content; // Return content directly
-                }
-                if (log.data.message) {
+                } else if (log.data.message) {
                     return log.data.message; // Return message directly
-                }
-                // Handle tool call summaries
-                if (log.data.count && log.data.calls) {
+                } else if (log.data.count && log.data.calls) {
+                    // For tool call summaries, format them nicely
                     return `<em>Executing ${log.data.count} tool call(s)...</em>`;
-                }
-                // Example: Handle a specific known structure, e.g., tool call
-                if (log.data.tool_name && log.data.arguments) {
-                    return `Tool: ${log.data.tool_name} Args: ${JSON.stringify(log.data.arguments)}`;
-                }
-                
-                // Try to find any string field that might contain a message
-                for (const key in log.data) {
-                    if (typeof log.data[key] === 'string' && log.data[key].length > 5) {
-                        return log.data[key];
+                    // Don't show the raw JSON for tool calls in the main chat
+                } else {
+                    // Try to find any string field that might contain a message
+                    let foundMessage = false;
+                    for (const key in log.data) {
+                        if (typeof log.data[key] === 'string' && log.data[key].length > 5) {
+                            return log.data[key];
+                            foundMessage = true;
+                            break;
+                        }
                     }
-                }
-                
-                // Default for other objects
-                try {
-                    return `<pre>${JSON.stringify(log.data, null, 2)}</pre>`; // Pretty print JSON
-                } catch {
-                    return 'Could not format log data object.';
+                    
+                    if (!foundMessage) {
+                        // If no suitable field found, use the formatter but hide in main chat
+                        return "<em>Processing...</em>";
+                    }
                 }
             }
             // Fallback for non-objects (though addLogEntry handles strings separately)
@@ -1481,12 +1477,12 @@
                 const thinkingElement = addLogEntry(thinkingLog, logArea, storageKey, logs, true); // Add temporarily
 
                 try {
-                    const response = await fetch('/ask_agent', {
+                    const response = await fetch('/interactive_chat', { // Corrected URL
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                         },
-                        body: JSON.stringify({ query: message }),
+                        body: JSON.stringify({ message: message }), // Corrected payload key
                     });
 
                     // Remove thinking indicator
