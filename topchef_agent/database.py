@@ -32,10 +32,13 @@ class Chef(Base):
     status = Column(Text, nullable=True)
     last_updated = Column('last_updated', Text, nullable=True)
     perplexity_data = Column('perplexity_data', JSON, nullable=True)
-    restaurant_address = Column(Text, nullable=True) # Changed to nullable=True initially
+    restaurant_address = Column(Text, nullable=False) # Changed to nullable=False
     latitude = Column(Float, nullable=True) # NEW coordinate field
     longitude = Column(Float, nullable=True) # NEW coordinate field
     season = Column(Integer, nullable=True)  # NEW season column
+    current_restaurant = Column(Text, nullable=True) # NEW column
+    season_number = Column(Integer, nullable=True) # NEW column
+    signature_dish = Column(Text, nullable=True) # NEW column
 
     def to_dict(self):
         """Converts the Chef object to a dictionary, handling potential missing columns."""
@@ -98,7 +101,10 @@ def create_table_if_not_exists(drop_first=False):
             ("restaurant_address", "TEXT"),
             ("latitude", "FLOAT"),
             ("longitude", "FLOAT"),
-            ("season", "INTEGER")  # Ensure season column exists
+            ("season", "INTEGER"),  # Ensure season column exists
+            ("current_restaurant", "TEXT"),  # NEW column
+            ("season_number", "INTEGER"),  # NEW column
+            ("signature_dish", "TEXT")  # NEW column
         ]
         with engine.connect() as connection:
             for col_name, col_type in columns_to_ensure:
@@ -127,8 +133,8 @@ def create_table_if_not_exists(drop_first=False):
             if db.query(Chef).count() == 0:
                 print("Table is empty. Adding initial sample data...")
                 sample_data = [
-                    Chef(name="Marie Dubois", bio="Winner of Top Chef Season 2", image_url="", status="Winner", perplexity_data={}, restaurant_address="1 Rue de Rivoli, 75001 Paris, France", latitude=48.8566, longitude=2.3522, season=2), # Example coords, season
-                    Chef(name="Pierre Martin", bio="Known for modern techniques", image_url="", status="Finalist", perplexity_data={}, restaurant_address="10 Avenue des Champs-Élysées, 75008 Paris, France", latitude=48.8698, longitude=2.3070, season=1) # Example coords, season
+                    Chef(name="Marie Dubois", bio="Winner of Top Chef Season 2", image_url="", status="Winner", perplexity_data={}, restaurant_address="1 Rue de Rivoli, 75001 Paris, France", latitude=48.8566, longitude=2.3522, season=2, current_restaurant="Le Rivoli", season_number=2, signature_dish="Duck L'Orange"), # Example coords, season
+                    Chef(name="Pierre Martin", bio="Known for modern techniques", image_url="", status="Finalist", perplexity_data={}, restaurant_address="10 Avenue des Champs-Élysées, 75008 Paris, France", latitude=48.8698, longitude=2.3070, season=1, current_restaurant="Le Champs", season_number=1, signature_dish="Foie Gras Torchon") # Example coords, season
                 ]
                 db.add_all(sample_data)
                 db.commit()

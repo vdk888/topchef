@@ -36,6 +36,12 @@ def index():
     """Displays the main page with the map and log viewer."""
     try:
         chefs_data = load_database()
+        column_names = [] # Initialize empty list for column names
+
+        # Determine column names dynamically from the first chef entry if data exists
+        if chefs_data:
+            column_names = list(chefs_data[0].keys())
+
         # Filter out chefs without valid coordinates for the map display itself,
         # but we'll pass all data for potential popups or future use.
         # Ensure latitude and longitude are floats if they exist
@@ -61,16 +67,16 @@ def index():
         # Use json.dumps for proper JSON formatting, pass this to the template
         chefs_json = json.dumps(chefs_data, default=lambda o: o.isoformat() if isinstance(o, datetime.datetime) else str(o))
 
-        # Pass the JSON string to the template
-        return render_template('index.html', chefs_json=chefs_json, AGENT_NAME=AGENT_NAME)
+        # Pass column names along with chef data to the template
+        return render_template('index.html',
+                               chefs=valid_chefs_for_map,
+                               all_chef_data=json.dumps(chefs_data),
+                               column_names=column_names) # Pass the dynamic column names
 
     except Exception as e:
-        print(f"Error in index route: {e}")
-        import traceback
-        traceback.print_exc()
-        # Return a basic error page
-        # Use escape to prevent potential XSS if error message contains HTML/JS
-        return f"<html><body><h1>Top Chef Agent</h1><p>Error loading data: {escape(str(e))}</p><p><a href='/'>Retry</a></p></body></html>"
+        print(f"Error loading index page data: {e}", flush=True)
+        # Render template with empty data on error
+        return render_template('index.html', chefs=[], all_chef_data='[]', column_names=[])
 
 @app.route('/log_message', methods=['POST'])
 def receive_log():

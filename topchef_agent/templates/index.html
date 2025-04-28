@@ -717,20 +717,9 @@
                 <!-- Table structure remains the same, styling handled by CSS -->
                 <div class="db-table-wrapper"> <!-- Added wrapper for potential future scrollbars -->
                      <table class="db-table">
-                         <thead>
-                             <tr>
-                                 <th>ID</th>
-                                 <th>Name</th>
-                                 <th>Status</th>
-                                 <th>Address</th>
-                                 <th>Lat</th>
-                                 <th>Lon</th>
-                                 <th>Bio</th>
-                                 <th>Season</th>
-                                 <th>Last Updated</th>
-                             </tr>
+                         <thead id="database-table-head">
                          </thead>
-                         <tbody id="chef-table">
+                         <tbody id="database-table-body">
                          </tbody>
                      </table>
                  </div>
@@ -1143,92 +1132,70 @@
         }
 
         async function loadAndDisplayTable(chefs) {
-            try {
-                // Data is now passed in, no need to fetch here
-                if (!Array.isArray(chefs)) {
-                    throw new Error("Invalid chef data provided to loadAndDisplayTable.");
-                }
-
-                if (chefs.length === 0) {
-                    tablePlaceholder.textContent = 'No chef data found matching the criteria.';
-                    // Clear any previous table
-                     const existingWrapper = tablePlaceholder.querySelector('.db-table-wrapper');
-                    if (existingWrapper) {
-                        tablePlaceholder.removeChild(existingWrapper);
-                    }
-                    return;
-                }
-
-                const columns = [
-                    { key: 'id', header: 'ID' },
-                    { key: 'name', header: 'Name' },
-                    { key: 'status', header: 'Status' },
-                    { key: 'restaurant_address', header: 'Address' },
-                    { key: 'latitude', header: 'Lat' },
-                    { key: 'longitude', header: 'Lon' },
-                    { key: 'bio', header: 'Bio', className: 'col-bio' },
-                    { key: 'season', header: 'Season' },
-                    { key: 'last_updated', header: 'Last Updated' },
-                ];
-
-                const tableWrapper = document.createElement('div');
-                tableWrapper.classList.add('db-table-wrapper');
-                const table = document.createElement('table');
-                table.classList.add('db-table');
-                const thead = document.createElement('thead');
-                const tbody = document.createElement('tbody');
-                const headerRow = document.createElement('tr');
-
-                columns.forEach(col => {
-                    const th = document.createElement('th');
-                    th.textContent = col.header;
-                    if (col.className) {
-                        th.classList.add(col.className);
-                    }
-                    headerRow.appendChild(th);
-                });
-                thead.appendChild(headerRow);
-
-                chefs.forEach(chef => {
-                    const row = document.createElement('tr');
-                    columns.forEach(col => {
-                        const td = document.createElement('td');
-                        let value = chef[col.key];
-
-                        // Format date nicely
-                        if (col.key === 'last_updated' && value) {
-                            try {
-                                value = new Date(value).toLocaleString();
-                            } catch { /* leave as is */ }
-                        }
-
-                        // Use textContent for safety
-                        td.textContent = (value === null || typeof value === 'undefined') ? '' : String(value);
-
-                        if (col.className) {
-                            td.classList.add(col.className);
-                            if (col.className === 'col-bio') {
-                                td.setAttribute('title', (value === null || typeof value === 'undefined') ? '' : String(value));
-                            }
-                        }
-                        row.appendChild(td);
-                    });
-                    tbody.appendChild(row);
-                });
-
-                table.appendChild(thead);
-                table.appendChild(tbody);
-                tableWrapper.appendChild(table);
-
-                tablePlaceholder.innerHTML = ''; // Clear placeholder text/spinner
-                tablePlaceholder.appendChild(tableWrapper);
-                tableLoaded = true; // Mark as loaded after successful display
-
-            } catch (error) {
-                console.error('Error loading or displaying database table:', error);
-                tablePlaceholder.textContent = `Error loading table data: ${error.message}. Check console for details.`;
-                tablePlaceholder.style.color = 'red';
+            const tableBody = document.getElementById('database-table-body');
+            const tableHead = document.getElementById('database-table-head');
+            if (!tableBody || !tableHead) {
+                console.error("Table body or head not found!");
+                return;
             }
+
+            // Clear existing table content
+            tableHead.innerHTML = '';
+            tableBody.innerHTML = '';
+
+            if (!chefs || chefs.length === 0 || !columnNames || columnNames.length === 0) {
+                // Ensure table container exists before modifying innerHTML
+                if (tableContainer) {
+                    tableContainer.innerHTML = '<p>No chef data or column definition available.</p>';
+                    tablePlaceholder.style.display = 'none';
+                    tableContainer.style.display = 'block'; // Show the container with the message
+                } else {
+                     console.error("Table container not found!");
+                }
+                return;
+            }
+
+            // --- Create Table Header dynamically ---
+            const headerRow = document.createElement('tr');
+            columnNames.forEach(colName => {
+                const th = document.createElement('th');
+                th.textContent = formatColumnName(colName);
+                headerRow.appendChild(th);
+            });
+            tableHead.appendChild(headerRow);
+
+            // --- Populate Table Body dynamically ---
+            chefs.forEach(chef => {
+                const row = document.createElement('tr');
+                columnNames.forEach(colName => {
+                    const td = document.createElement('td');
+                    let value = chef[colName];
+
+                    // Handle specific formatting
+                    if (colName === 'perplexity_data' && typeof value === 'object' && value !== null) {
+                        const pre = document.createElement('pre');
+                        pre.style.whiteSpace = 'pre-wrap'; // Ensure JSON wraps
+                        pre.style.wordBreak = 'break-all'; // Ensure long strings break
+                        pre.textContent = JSON.stringify(value, null, 2); // Pretty print JSON
+                        td.appendChild(pre);
+                    } else if (colName === 'image_url' && value) {
+                        const img = document.createElement('img');
+                        img.src = value;
+                        img.alt = `Image of ${chef.name || 'chef'}`;
+                        img.style.maxWidth = '50px'; img.style.maxHeight = '50px'; img.style.display = 'block';
+                        img.onerror = () => { td.textContent = '(No Image)'; };
+                        td.appendChild(img);
+                    } else {
+                       td.textContent = (value !== null && value !== undefined) ? String(value) : ''; // Handle null/undefined, ensure string
+                    }
+                    row.appendChild(td);
+                });
+                tableBody.appendChild(row);
+            });
+
+             // Ensure container is visible after loading
+             if (tablePlaceholder) tablePlaceholder.style.display = 'none';
+             if (tableContainer) tableContainer.style.display = 'table'; // Use 'table' display
         }
 
         // --- View Toggle Logic ---
@@ -1346,27 +1313,44 @@
             markerLayer.clearLayers(); // Clear existing markers
             chefsToDisplay.forEach(chef => {
                 if (chef.latitude != null && chef.longitude != null) {
-                    try {
+                     try {
                         const lat = parseFloat(chef.latitude);
                         const lon = parseFloat(chef.longitude);
                         if (!isNaN(lat) && !isNaN(lon)) {
                             const marker = L.marker([lat, lon]);
 
-                            // Build popup content using helper
-                            let popupContent = `<strong>${chef.name || 'Unknown Chef'}</strong><br>`;
-                            popupContent += addDetail('Season', chef.season);
-                            popupContent += addDetail('Status', chef.status);
-                            popupContent += addDetail('Address', chef.restaurant_address);
-                            popupContent += addDetail('Bio', chef.bio);
+                            // --- Build Popup Content dynamically ---
+                            let popupContent = `<h3>${chef.name || 'Unknown Chef'}</h3><hr>`;
+                            if (columnNames && columnNames.length > 0) {
+                                columnNames.forEach(colName => {
+                                    // Exclude fields not suitable for popup
+                                    if (!['id', 'latitude', 'longitude', 'perplexity_data', 'image_url', 'last_updated'].includes(colName)) {
+                                        popupContent = addDetail(popupContent, colName, chef[colName]);
+                                    }
+                                });
+                            } else {
+                                // Fallback if column names aren't available
+                                 // You could add some default fields here if needed
+                                popupContent += '<p>Details unavailable.</p>';
+                            }
+                            // Add image separately if URL exists
+                            if(chef.image_url) {
+                                 popupContent += `<img src="${chef.image_url}" alt="Image of ${chef.name || 'chef'}" style="max-width: 100px; max-height: 100px; margin-top: 5px;">`;
+                            }
 
                             marker.bindPopup(popupContent);
-                            markerLayer.addLayer(marker);
+                            marker.addTo(map);
                         }
-                    } catch (e) {
-                        console.warn(`Skipping marker for chef ${chef.id} due to invalid coordinates`, e);
-                    }
+                     } catch(e) {
+                         console.error(`Error processing marker for chef ID ${chef.id}:`, e);
+                     }
+                } else {
+                     // Optional: Log missing coordinates
+                     // console.warn(`Skipping chef ID ${chef.id}: Missing coordinates.`);
                 }
             });
+            // Optional: Log marker update
+            // console.log(`Updated map with ${currentMarkers.length} markers.`);
         }
 
         // Listen for season filter changes
