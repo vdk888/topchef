@@ -358,5 +358,68 @@
     "related_season": null,
     "related_chef_id": null,
     "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "68a20865-ddde-4124-9ed6-f546f7a9a137",
+    "timestamp": "2025-04-28T18:54:08.133758Z",
+    "type": "Observation",
+    "details": "Vérification de routine : plusieurs saisons n'ont pas le quota de 14 candidats. Saisons 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 et 16 sous-représentées.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "c0b2bf0f-3692-4586-830d-45d304ce167e",
+    "timestamp": "2025-04-28T18:54:59.243670Z",
+    "type": "Action",
+    "details": "Mise à jour réussie pour Adrien Cachot avec l'adresse du restaurant Vaisseau et ses coordonnées.",
+    "related_season": 11,
+    "related_chef_id": 56,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "f3f31ce5-cd9a-463d-ab35-38ff53e4ed76",
+    "timestamp": "2025-04-28T19:25:18.016001Z",
+    "type": "Observation",
+    "details": "Saison 1 a 8 candidats, Saison 2 a 1 candidat, Saison 3 a 7 candidats, Saison 4 a 8 candidats, Saison 5 a 7 candidats, Saison 6 a 5 candidats, Saison 7 a 9 candidats, Saison 8 a 6 candidats, Saison 9 a 2 candidats, Saison 10 a 7 candidats, Saison 11 a 14 candidats, Saison 12 a 3 candidats, Saison 13 a 3 candidats, Saison 14 a 10 candidats, Saison 15 a 10 candidats, Saison 16 a 7 candidats. Plusieurs saisons n'ont pas le minimum requis de 14 candidats.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "3ab7acd6-930c-43fb-aadc-c7e03f0088bf",
+    "timestamp": "2025-04-28T19:25:18.031796Z",
+    "type": "Observation",
+    "details": "Saison 11 a de nombreux candidats sans adresse et sans image.",
+    "related_season": 11,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "c16f29cf-97c2-4de2-a016-785bdd338bbb",
+    "timestamp": "2025-04-28T21:54:37.891030Z",
+    "type": "Observation",
+    "details": "Marie Dubois (Saison 2) a une adresse de restaurant manquante. Recherche web infructueuse.",
+    "related_season": 2,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "dd3b20cd-cb52-4690-a7bc-13442ba041cb",
+    "timestamp": "2025-04-28T22:24:32.325420Z",
+    "type": "Observation",
+    "details": "Unable to find restaurant address for Anaïs Catherine (Chef ID 101) from Top Chef France Season 1 using Perplexity.",
+    "related_season": 1,
+    "related_chef_id": 101,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "a985255d-0ae0-41cc-b9f6-465eed0407f4",
+    "timestamp": "2025-04-28T22:25:21.241333Z",
+    "type": "Observation",
+    "details": "Unable to find restaurant address for Flora Lamoure (Chef ID 102) from Top Chef France Season 1 using Perplexity.",
+    "related_season": 1,
+    "related_chef_id": 102,
+    "correction_target_entry_id": null
   }
 ]
