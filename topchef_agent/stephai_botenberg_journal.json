@@ -421,5 +421,230 @@
     "related_season": 1,
     "related_chef_id": 102,
     "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "fa49bbe6-fd0a-4312-b59d-3efb2145fde1",
+    "timestamp": "2025-04-29T19:35:46.207914Z",
+    "type": "Observation",
+    "details": "Aucune information trouvée concernant la participation de Jean Dupont à Top Chef France. Il pourrait ne pas être un candidat de l'émission.",
+    "related_season": null,
+    "related_chef_id": 1,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "06027e0c-1204-426a-9d98-0b9348f1eb1c",
+    "timestamp": "2025-04-29T19:44:40.401329Z",
+    "type": "Insight",
+    "details": "L'ajout d'une colonne à la base de données nécessite un redémarrage de l'ORM.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "987b8eb9-1795-49cd-98d2-484341911f97",
+    "timestamp": "2025-04-29T20:14:32.085950Z",
+    "type": "Observation",
+    "details": "Seasons 4-16 are missing from the database. Chefs Jean Dupont, Marie Dubois and Pierre Martin do not have season numbers.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "ada09a1b-3c84-4f76-923a-628aa5c5bc1a",
+    "timestamp": "2025-04-29T20:15:50.555436Z",
+    "type": "Action",
+    "details": "Plan to add missing seasons (4-16) and update season numbers for Jean Dupont, Marie Dubois, and Pierre Martin.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "250374ce-3407-4ac5-8840-13c9022cab19",
+    "timestamp": "2025-04-29T20:16:10.501440Z",
+    "type": "Action",
+    "details": "Plan to restart the ORM to allow the addition of the 'season_number' column and subsequent updates for missing seasons (4-16) and season numbers for Jean Dupont, Marie Dubois, and Pierre Martin.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "3ed352f3-209d-48fd-9ece-499e2f10f625",
+    "timestamp": "2025-04-29T20:45:29.484994Z",
+    "type": "Observation",
+    "details": "Aucune des adresses des chefs fictifs n'a pu être géocodée : Chef ID 4, 18, 32, 13, 27.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "352ef957-4725-4733-a5e7-faa6d9b5e982",
+    "timestamp": "2025-04-29T20:45:29.522405Z",
+    "type": "Insight",
+    "details": "Les adresses 'Restaurant Fictif' semblent être des entrées non valides pour le géocodage. Peut-être envisager de les remplacer par des adresses réelles pour de futures vérifications.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "9cd51f6d-e987-4826-92f1-51ac6dbe3d40",
+    "timestamp": "2025-04-29T21:05:47.562300Z",
+    "type": "Observation",
+    "details": "Aucune information trouvée pour les bios et images des chefs fictifs de la Saison 2. Les adresses fournies pour le géocodage étaient introuvables.",
+    "related_season": 2,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "0856ddb4-6f9a-4c3e-af42-9b224335a27c",
+    "timestamp": "2025-04-29T21:14:48.971670Z",
+    "type": "Observation",
+    "details": "Les saisons 4 à 16 sont manquantes dans la base de données. Les saisons 1, 2 et 3 contiennent 14 candidats chacune, mais sans données pour les autres saisons.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "6e6e012e-b4c3-4b83-86c9-2e03e9cdfb96",
+    "timestamp": "2025-04-29T21:31:34.527699Z",
+    "type": "Observation",
+    "details": "Vérification de routine : seulement 4 saisons présentes avec un nombre insuffisant de candidats. Saison 4 a 5 candidats, les autres saisons sont vides.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "73b36e83-c834-4267-a758-9f25bc1b28f0",
+    "timestamp": "2025-04-29T21:31:58.258888Z",
+    "type": "Observation",
+    "details": "Saison 4 : Tous les chefs ont des bios et des adresses, mais manquent d'images.",
+    "related_season": 4,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "fe3bc41b-a755-4f3e-93e0-e6a983bb02e3",
+    "timestamp": "2025-04-29T21:56:01.624923Z",
+    "type": "Action",
+    "details": "Planification du redémarrage de l'ORM pour permettre l'ajout de nouvelles colonnes et la mise à jour des informations des chefs.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "c1e48a6f-7de4-430b-b16e-2c536c1140d8",
+    "timestamp": "2025-04-29T21:57:31.747352Z",
+    "type": "Observation",
+    "details": "La saison 4 n'a que 5 candidats, et il manque des données pour Florent Ladeyn (image et statut).",
+    "related_season": 4,
+    "related_chef_id": 47,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "6045bffa-f927-44d7-8ec4-6592f8462e48",
+    "timestamp": "2025-04-29T21:57:31.787248Z",
+    "type": "Observation",
+    "details": "Les saisons 5 à 16 sont absentes de la base de données.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "61abbfc5-56d5-4c2a-8f78-2e1ceeae3fec",
+    "timestamp": "2025-04-29T22:08:00.889158Z",
+    "type": "Observation",
+    "details": "Saisons manquantes : 12 (5 à 16). Saison 4 a 4 chefs avec des informations manquantes (bios et images).",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "dfc17c70-5455-4b09-8a20-935e068d61db",
+    "timestamp": "2025-04-29T22:14:19.021931Z",
+    "type": "Observation",
+    "details": "Saisons 5 à 16 manquantes, saison 4 avec seulement 4 candidats. Tous les candidats de la saison 4 manquent d'images et de coordonnées.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "9cfe5bd5-909b-451c-95d3-cf16b6d8f717",
+    "timestamp": "2025-04-29T22:50:00.953925Z",
+    "type": "Observation",
+    "details": "Saisons manquantes : 5 à 16. Saison 4 a seulement 4 candidats.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "48d69857-1cbe-4ab0-9ed9-eead25393580",
+    "timestamp": "2025-04-30T08:22:09.003897Z",
+    "type": "Observation",
+    "details": "Saison 4 de Top Chef France a seulement 4 candidats dans la base de données, alors qu'il devrait y en avoir 16. Les candidats présents sont Naoëlle d'Hainaut, Florent Ladeyn, Jean-Philippe Watteyne et Yoni Saada. Les autres candidats manquent.",
+    "related_season": 4,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "5c15834f-6887-421e-805b-6ed08e1585f6",
+    "timestamp": "2025-04-30T08:27:18.241600Z",
+    "type": "Action",
+    "details": "Planification du redémarrage de l'ORM pour permettre l'ajout de nouvelles colonnes et la mise à jour des informations des chefs.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "135b1f79-5838-4118-8951-36bc6845d5ab",
+    "timestamp": "2025-04-30T08:27:27.361265Z",
+    "type": "Action",
+    "details": "Redémarrage de l'ORM pour permettre l'ajout de nouvelles colonnes et la mise à jour des informations des chefs.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "f8373125-2cb0-43e3-935b-78931925c5d2",
+    "timestamp": "2025-04-30T08:28:07.060581Z",
+    "type": "Observation",
+    "details": "Échecs d'ajout des candidats pour la saison 4. Problèmes techniques persistants dans la base de données.",
+    "related_season": 4,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "19c874fe-93d3-4632-b53b-0292991c4c76",
+    "timestamp": "2025-04-30T08:28:07.097777Z",
+    "type": "Observation",
+    "details": "Saisons 5 à 16 manquantes dans la base de données. Nécessite une intervention technique.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "10089d67-aaef-4c95-b446-1ffd2a70a6fb",
+    "timestamp": "2025-04-30T08:28:07.137197Z",
+    "type": "Observation",
+    "details": "La saison 4 a seulement 5 candidats enregistrés au lieu de 14. Candidats manquants : Adrien Demametz, Aurélien Coutaudier, Vincent Gomis, Étienne Geney, Fabien Morreale, Joris Bijendijk, Julien Hagnery.",
+    "related_season": 4,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "935a26bb-2527-451c-b44c-b3aa3ad72309",
+    "timestamp": "2025-04-30T08:37:25.297344Z",
+    "type": "Observation",
+    "details": "Saison 1 a 12 candidats (manque 2). Saison 3 a 10 candidats (manque 4). Saison 4 a 4 candidats (manque 10). Saisons 5 à 16 sont complètement vides.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "25d5936a-5b50-47ab-8e3f-d0e5dead703d",
+    "timestamp": "2025-04-30T08:37:25.340136Z",
+    "type": "Insight",
+    "details": "Les recherches pour les candidats des saisons 1, 3 et 4 n'ont pas donné de résultats concluants. Il est recommandé de consulter des archives officielles ou des publications culinaires pour ces informations.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
   }
 ]

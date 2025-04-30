@@ -15,8 +15,6 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-AGENT_NAME = os.getenv("AGENT_NAME", "StephAI Botenberg")
-
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv("FLASK_SECRET_KEY", "default_secret_key") # Needed for session management
 app.json.compact = False # Pretty print JSON responses

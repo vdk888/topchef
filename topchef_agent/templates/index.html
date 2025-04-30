@@ -771,15 +771,31 @@
 
     <!-- Embed JSON data safely -->
     <script id="chefs-data" type="application/json">
-        {{ chefs_json|safe }} {# chefs_json is already a JSON string from backend, |safe prevents HTML escaping #}
+        {{ all_chef_data|safe }} {# Use the correct variable 'all_chef_data' passed from Flask #}
+    </script>
+    <!-- Embed column names JSON safely -->
+    <script id="column-names-data" type="application/json">
+        {{ column_names|tojson|safe }}
     </script>
 
     <script>
         // --- Global Variables & Constants ---
-        window.AGENT_NAME = {{ AGENT_NAME|tojson }}; // Define Agent Name as a window property to avoid redeclaration issues
         window.BACKGROUND_LOG_KEY = 'topchef_background_logs'; // Restore definition
         window.INTERACTIVE_LOG_KEY = 'topchef_interactive_logs'; // Restore definition
         window.MAIN_LOG_KEY = 'topchef_main_logs'; // Key for StephAI's main messages
+        // const globalColumnNames = {{ column_names|tojson }}; // Removed direct assignment
+        let globalColumnNames = []; // Initialize as empty array
+        try {
+            const colNamesDataElement = document.getElementById('column-names-data');
+            if (colNamesDataElement) {
+                const rawColNamesJson = colNamesDataElement.textContent || colNamesDataElement.innerText;
+                globalColumnNames = JSON.parse(rawColNamesJson);
+            } else {
+                 console.error("Could not find column-names-data script tag.");
+            }
+        } catch (e) {
+            console.error("Error processing column names JSON data:", e);
+        }
         let backgroundLogArea = document.getElementById('background-log-area');
         let interactiveLogArea = document.getElementById('interactive-chat-log-area');
         let chatLogArea = document.getElementById('chat-log-area'); // Area for StephAI's main commentary
@@ -943,7 +959,7 @@
             let timestamp = log.timestamp ? new Date(log.timestamp * 1000).toLocaleTimeString() : new Date().toLocaleTimeString();
 
             // Determine class based on role
-            if (role === AGENT_NAME) { // Use the agent's name
+            if (role === "StephAI Botenberg") { // Use hardcoded agent name for comparison
                 logEntryElement.classList.add('log-entry-agent');
             } else if (role === 'user') {
                 logEntryElement.classList.add('user-msg');
@@ -960,7 +976,7 @@
                 messageContent = log.data;
             } else if (typeof log.data === 'object' && log.data !== null) {
                 // Special handling for agent messages with various field structures
-                if (log.role === AGENT_NAME) {
+                if (log.role === "StephAI Botenberg") {
                     // Handle different message formats from the agent
                     if (log.data.content) {
                         messageContent = log.data.content; // Use content field directly
@@ -1052,6 +1068,9 @@
         let backgroundLogs = loadLogsFromStorage(BACKGROUND_LOG_KEY);
         backgroundLogs.forEach(log => addLogEntry(log, backgroundLogArea, BACKGROUND_LOG_KEY, backgroundLogs));
 
+        let interactiveLogs = loadLogsFromStorage(INTERACTIVE_LOG_KEY); // Load interactive logs earlier
+        interactiveLogs.forEach(log => addLogEntry(log, interactiveLogArea, INTERACTIVE_LOG_KEY, interactiveLogs));
+
         let mainLogs = loadLogsFromStorage(MAIN_LOG_KEY); // Load main chat logs
         mainLogs.forEach(log => addLogEntry(log, chatLogArea, MAIN_LOG_KEY, mainLogs)); // Populate main chat area
 
@@ -1081,9 +1100,9 @@
                         addLogEntry({ role: 'system', data: `Stream Error: ${logData.data.error}`, timestamp: Date.now()/1000, type: 'error' }, backgroundLogArea, BACKGROUND_LOG_KEY, backgroundLogs);
                     } else if (logData.type) { // Basic check for a valid log structure
                         // Route based on role
-                        if (logData.role === AGENT_NAME) {
+                        if (logData.role === "StephAI Botenberg") {
                              // Send Agent's main messages to the main chat area
-                             console.log(`Routing log from ${AGENT_NAME} to main chat area.`);
+                             console.log(`Routing log from ${logData.role} to main chat area.`);
                              addLogEntry(logData, chatLogArea, MAIN_LOG_KEY, mainLogs);
                         } else {
                              // Send system/tool logs to the background area
@@ -1143,7 +1162,7 @@
             tableHead.innerHTML = '';
             tableBody.innerHTML = '';
 
-            if (!chefs || chefs.length === 0 || !columnNames || columnNames.length === 0) {
+            if (!chefs || chefs.length === 0 || !globalColumnNames || globalColumnNames.length === 0) {
                 // Ensure table container exists before modifying innerHTML
                 if (tableContainer) {
                     tableContainer.innerHTML = '<p>No chef data or column definition available.</p>';
@@ -1157,9 +1176,9 @@
 
             // --- Create Table Header dynamically ---
             const headerRow = document.createElement('tr');
-            columnNames.forEach(colName => {
+            globalColumnNames.forEach(colName => {
                 const th = document.createElement('th');
-                th.textContent = formatColumnName(colName);
+                th.textContent = formatColumnName(colName); // Now this function exists
                 headerRow.appendChild(th);
             });
             tableHead.appendChild(headerRow);
@@ -1167,7 +1186,7 @@
             // --- Populate Table Body dynamically ---
             chefs.forEach(chef => {
                 const row = document.createElement('tr');
-                columnNames.forEach(colName => {
+                globalColumnNames.forEach(colName => {
                     const td = document.createElement('td');
                     let value = chef[colName];
 
@@ -1196,6 +1215,14 @@
              // Ensure container is visible after loading
              if (tablePlaceholder) tablePlaceholder.style.display = 'none';
              if (tableContainer) tableContainer.style.display = 'table'; // Use 'table' display
+        }
+
+        // Function to format DB column names into readable labels
+        function formatColumnName(name) {
+            if (!name) return '';
+            // Replace underscores with spaces, capitalize first letter of each word
+            return name.replace(/_/g, ' ')
+                       .replace(/\b\w/g, char => char.toUpperCase());
         }
 
         // --- View Toggle Logic ---
@@ -1321,8 +1348,8 @@
 
                             // --- Build Popup Content dynamically ---
                             let popupContent = `<h3>${chef.name || 'Unknown Chef'}</h3><hr>`;
-                            if (columnNames && columnNames.length > 0) {
-                                columnNames.forEach(colName => {
+                            if (globalColumnNames && globalColumnNames.length > 0) {
+                                globalColumnNames.forEach(colName => {
                                     // Exclude fields not suitable for popup
                                     if (!['id', 'latitude', 'longitude', 'perplexity_data', 'image_url', 'last_updated'].includes(colName)) {
                                         popupContent = addDetail(popupContent, colName, chef[colName]);
@@ -1518,7 +1545,6 @@
         window.interactiveLogArea = interactiveLogArea;
         window.INTERACTIVE_LOG_KEY = INTERACTIVE_LOG_KEY;
         window.interactiveLogs = interactiveLogs; // Pass the initially loaded logs
-        window.AGENT_NAME = "{{ AGENT_NAME }}"; // Use the AGENT_NAME passed from Flask
     </script>
     <script src="{{ url_for('static', filename='interactive_chat.js') }}"></script>
 </body>
