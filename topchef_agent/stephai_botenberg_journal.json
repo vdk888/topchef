@@ -646,5 +646,14 @@
     "related_season": null,
     "related_chef_id": null,
     "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "58eac6b9-2f09-489f-afef-f6f02e889286",
+    "timestamp": "2025-04-30T08:53:56.913303Z",
+    "type": "Observation",
+    "details": "Saison 4 a seulement 4 chefs, et les saisons 5 à 16 sont absentes.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
   }
 ]

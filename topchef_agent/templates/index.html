@@ -329,22 +329,24 @@
 
         .db-table th, .db-table td {
             border: 1px solid #ddd; /* Lighter border for table */
-            padding: 8px 12px; /* Adjusted padding */
+            padding: 10px 12px; /* Increased padding slightly */
             text-align: left;
-            vertical-align: top;
-            white-space: normal;
-            word-break: break-word;
+            vertical-align: top; /* Align content to top */
         }
 
         .db-table th {
-            background-color: #f0f0f0; /* Light grey header */
-            color: var(--m6-text-dark); /* Dark text */
-            font-family: Arial, Helvetica, sans-serif; /* Standard font */
+            white-space: nowrap; /* Keep headers from wrapping */
+            position: sticky; /* Make header sticky */
+            top: 0; /* Stick to the top of the container */
+            z-index: 10; /* Ensure header is above content */
+            background-color: var(--m6-bg-secondary); /* Ensure background */
+            color: var(--m6-text-primary);
             font-weight: bold;
-            position: sticky;
-            top: 0;
-            z-index: 1;
-            border-bottom: 2px solid #ccc; /* Darker grey bottom border */
+        }
+
+        .db-table td {
+            white-space: normal; /* Allow content wrapping by default */
+            word-break: break-word; /* Help break long words if needed */
         }
 
         .db-table tr:nth-child(even) {
@@ -356,11 +358,39 @@
         }
 
         .db-table .col-bio {
-            max-width: 300px; /* Adjusted width */
-            overflow: hidden;
-            text-overflow: ellipsis;
+            min-width: 150px; /* Give bio some minimum space */
         }
 
+        .db-table td.col-id,
+        .db-table td.col-season_number,
+        .db-table td.col-current_restaurant {
+            white-space: nowrap; /* Prevent wrapping for short IDs/numbers */
+            text-align: center;
+        }
+
+        .db-table td.col-image_url {
+             width: 70px; /* Fixed width for image column */
+             text-align: center;
+        }
+        .db-table td.col-image_url img {
+             max-width: 50px; /* Consistent image size */
+             max-height: 50px;
+             display: block;
+             margin: auto; /* Center image */
+        }
+
+        .db-table td.col-perplexity_data pre {
+            max-width: 300px; /* Limit width */
+            overflow-x: auto; /* Allow horizontal scroll if needed */
+            white-space: pre-wrap; /* Wrap but preserve formatting */
+            word-break: break-all; /* Break long strings */
+            background: #f0f0f0;
+            padding: 5px;
+            border-radius: 3px;
+            font-size: 0.85em;
+            color: #333; /* Dark text on light background */
+            margin: 0; /* Remove default margin */
+        }
 
         #interactive-chat-input-row {
             display: flex;
@@ -535,6 +565,44 @@
             background: var(--m6-bg-secondary); /* Match popup bg */
         }
 
+        /* Map Popup Styling */
+        .leaflet-popup-content-wrapper {
+            border-radius: 5px; /* Slightly rounder corners */
+        }
+        .leaflet-popup-content {
+            margin: 10px 15px; /* Adjust popup padding */
+            font-family: Arial, sans-serif;
+            font-size: 0.95em;
+            line-height: 1.5;
+        }
+        .popup-container h3 {
+            margin: 0 0 8px 0;
+            font-size: 1.2em;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+        .popup-image {
+            max-width: 100%; /* Allow image to fill width if needed */
+            max-height: 120px; /* Limit height */
+            display: block; /* Center image */
+            margin: 5px auto 10px auto; /* Spacing around image */
+            border-radius: 3px;
+            object-fit: cover; /* Cover area nicely */
+        }
+        .popup-field {
+            margin: 0 0 5px 0; /* Spacing between fields */
+        }
+        .popup-field strong {
+             color: #333;
+        }
+        .popup-map-link a {
+            color: var(--tcf-yellow);
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .popup-map-link a:hover {
+            text-decoration: underline;
+        }
 
         /* --- Responsive Design --- */
         @media (max-width: 768px) {
@@ -601,15 +669,78 @@
                  overflow-x: auto;
              }
              #database-table-container {
-                 padding: 15px; /* Adjust padding */
+                 padding: 10px; /* Adjust padding for card view */
              }
-             .db-table th, .db-table td {
-                 padding: 6px 10px; /* Smaller padding */
-                 white-space: nowrap; /* Prevent wrapping in table cells initially */
+
+             /* Card View for Table on Mobile */
+             .db-table thead {
+                 display: none; /* Hide table header */
              }
-             .db-table .col-bio {
-                 white-space: normal; /* Allow bio to wrap */
+             .db-table tr {
+                 display: block;
+                 margin-bottom: 15px;
+                 border: 1px solid var(--m6-border);
+                 border-radius: 3px;
+                 box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                 background-color: var(--m6-white);
+                 padding: 10px;
              }
+            .db-table td {
+                display: block;
+                text-align: right; /* Align value to the right */
+                padding: 6px 0; /* Vertical padding only */
+                border: none; /* Remove cell borders */
+                border-bottom: 1px dashed #eee; /* Subtle separator */
+                white-space: normal; /* Allow all cells to wrap */
+                position: relative;
+                padding-left: 50%; /* Create space for the label */
+                min-height: 1.5em; /* Ensure space even if value is short */
+            }
+            .db-table td:last-child {
+                border-bottom: none;
+            }
+            .db-table td::before {
+                content: attr(data-label); /* Use data-label for the label */
+                position: absolute;
+                left: 5px; /* Position label on the left */
+                width: calc(50% - 10px); /* Calculate label width */
+                padding-right: 10px;
+                font-weight: bold;
+                text-align: left;
+                white-space: normal;
+                color: var(--m6-text-dark); /* Use dark text for labels */
+            }
+            /* Adjust specific cells like images or preformatted text */
+            .db-table td img {
+                 max-width: 40px !important; /* Smaller images in card view */
+                 max-height: 40px !important;
+                 float: right; /* Float image right */
+            }
+            .db-table td pre {
+                 text-align: left; /* Align pre content left */
+                 padding-left: 0; /* Remove extra padding */
+                 white-space: pre-wrap;
+                 word-break: break-all;
+                 max-height: 100px; /* Limit height */
+                 overflow-y: auto; /* Add scroll if needed */
+            }
+
+             /* .db-table .col-bio { } -- Remove this empty rule */
+
+             .db-table td img {
+                 max-width: 40px !important; /* Smaller images in card view */
+                 max-height: 40px !important;
+                 float: right; /* Float image right */
+            }
+            .db-table td pre {
+                 text-align: left; /* Align pre content left */
+                 padding-left: 0; /* Remove extra padding */
+                 white-space: pre-wrap;
+                 word-break: break-all;
+                 max-height: 100px; /* Limit height */
+                 overflow-y: auto; /* Add scroll if needed */
+            }
+
         }
 
         /* --- Animations & Transitions --- */
@@ -684,7 +815,25 @@
              font-weight: bold;
         }
 
-
+        /* Map Fullscreen Button */
+        #fullscreen-map-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000; /* Ensure it's above map tiles */
+            background-color: rgba(255, 255, 255, 0.8);
+            color: #333;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 5px 8px;
+            cursor: pointer;
+            font-size: 1.2em;
+            line-height: 1;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        #fullscreen-map-button:hover {
+            background-color: white;
+        }
     </style>
 </head>
 <body>
@@ -710,6 +859,7 @@
         <!-- Primary View Container (Map or Table) -->
         <div class="primary-view-container">
             <div id="map"></div>
+            <button id="fullscreen-map-button" title="Toggle Fullscreen">&#x2922;</button> <!-- Fullscreen symbol -->
             <!-- Database Table Section (initially hidden) -->
             <div id="database-table-container">
                 <h2>Chef Database</h2> <!-- Simplified Title -->
@@ -817,16 +967,11 @@
         markerLayer = L.layerGroup().addTo(map);
 
         // Function to add details to popup safely
-        function addDetail(label, value) {
-            // Use textContent for safety in popups too, unless HTML is needed
-            const tempDiv = document.createElement('div');
-            tempDiv.textContent = value !== null && value !== undefined ? String(value) : '';
-            const escapedValue = tempDiv.innerHTML; // Let browser handle basic escaping
-
-            if (value !== null && value !== undefined && String(value).trim() !== "") {
-                return `<p><strong>${label}:</strong> ${escapedValue}</p>`;
+        function addDetail(popupContent, label, value) {
+            if (value !== null && value !== undefined && String(value).trim() !== '') {
+                popupContent += `<p><strong>${formatColumnName(label)}:</strong> ${String(value)}</p>`;
             }
-            return `<p><strong>${label}:</strong> <span class="missing-data">Missing</span></p>`;
+            return popupContent;
         }
 
         // --- Chef Data Processing ---
@@ -859,22 +1004,46 @@
                 const lon = parseFloat(chef.longitude);
 
                 if (!isNaN(lat) && !isNaN(lon)) {
-                    const marker = L.marker([lat, lon]).addTo(map);
-                    let popupContent = `<h3>${chef.name || 'Unknown Chef'}</h3>`;
-                    // Use the global addDetail function defined earlier
+                    const marker = L.marker([lat, lon]); // Don't add to map directly, add to layer group later
 
-                    popupContent += addDetail('Status', chef.status);
-                    popupContent += addDetail('Address', chef.restaurant_address);
-                    popupContent += addDetail('Bio', chef.bio);
+                    let popupContent = `<div class="popup-container">`; // Container div for styling
+                    popupContent += `<h3 class="popup-header">${chef.name || 'Unknown Chef'}</h3>`;
 
-                    if (chef.image_url) {
-                        if (String(chef.image_url).startsWith('http:') || String(chef.image_url).startsWith('https:')) {
-                            popupContent += `<img src="${chef.image_url}" alt="${chef.name || 'Chef image'}" class="popup-image">`;
-                        } else {
-                            console.warn(`Skipping potentially unsafe image URL: ${chef.image_url}`);
-                        }
+                    // 1. Add Image (if exists) - Centered below header
+                    if(chef.image_url) {
+                        popupContent += `<img src="${chef.image_url}" alt="Image of ${chef.name || 'chef'}" class="popup-image">`;
                     }
+
+                    // 2. Add Prioritized Fields
+                    const priorityFields = ['restaurant_address', 'status', 'season_number'];
+                    priorityFields.forEach(colName => {
+                        if (chef[colName] !== null && chef[colName] !== undefined && String(chef[colName]).trim() !== '') {
+                            popupContent += `<p class="popup-field"><strong>${formatColumnName(colName)}:</strong> ${String(chef[colName])}</p>`;
+                        }
+                    });
+
+                    // 2b. Add Google Maps Link
+                    const mapsUrl = `https://www.google.com/maps?q=${lat},${lon}`;
+                    popupContent += `<p class="popup-field popup-map-link"><a href="${mapsUrl}" target="_blank" title="View on Google Maps">View on Map</a></p>`;
+
+                    // 3. Add Remaining Relevant Fields
+                    if (globalColumnNames && globalColumnNames.length > 0) {
+                        const excludedFields = ['id', 'name', 'image_url', 'restaurant_address', 'status', 'season_number', 'latitude', 'longitude', 'perplexity_data', 'last_updated'];
+                        globalColumnNames.forEach(colName => { 
+                            if (!excludedFields.includes(colName)) {
+                                if (chef[colName] !== null && chef[colName] !== undefined && String(chef[colName]).trim() !== '') {
+                                    popupContent += `<p class="popup-field"><strong>${formatColumnName(colName)}:</strong> ${String(chef[colName])}</p>`;
+                                }
+                            }
+                        }); 
+                    } else {
+                        popupContent += '<p>Details unavailable.</p>'; // Fallback
+                    }
+
+                    popupContent += `</div>`; // Close container div
+
                     marker.bindPopup(popupContent);
+                    marker.addTo(markerLayer); // Add to layer group
                 }
             });
         } else {
@@ -1190,6 +1359,9 @@
                     const td = document.createElement('td');
                     let value = chef[colName];
 
+                    // Add data-label attribute for mobile view
+                    td.setAttribute('data-label', formatColumnName(colName));
+
                     // Handle specific formatting
                     if (colName === 'perplexity_data' && typeof value === 'object' && value !== null) {
                         const pre = document.createElement('pre');
@@ -1214,7 +1386,8 @@
 
              // Ensure container is visible after loading
              if (tablePlaceholder) tablePlaceholder.style.display = 'none';
-             if (tableContainer) tableContainer.style.display = 'table'; // Use 'table' display
+             // Ensure the container uses block display, not table display for consistency
+             if (tableContainer) tableContainer.style.display = 'block';
         }
 
         // Function to format DB column names into readable labels
@@ -1235,7 +1408,7 @@
             if (currentView === 'map') {
                 // Switch to Table View
                 mapContainer.style.display = 'none';
-                tableContainer.style.display = 'flex'; // Use flex now
+                tableContainer.style.display = 'block'; // Use block display
                 toggleButton.textContent = 'Show Map';
                 currentView = 'table';
                 // Load table data based on the *current* season filter
@@ -1271,7 +1444,7 @@
                 console.log("Received DB update signal:", updateSignal);
                 if (updateSignal.event === "update") {
                     // 1. Re-fetch all data to update the global 'allChefs' array
-                    allChefs = await fetchChefs();
+                    allChefs = await fetchChefs(); // Fetch all initially
                     console.log("Refetched all chef data after update signal.");
                     // 2. Get current filter
                     const selectedSeason = document.getElementById('season-filter').value;
@@ -1347,23 +1520,41 @@
                             const marker = L.marker([lat, lon]);
 
                             // --- Build Popup Content dynamically ---
-                            let popupContent = `<h3>${chef.name || 'Unknown Chef'}</h3><hr>`;
-                            if (globalColumnNames && globalColumnNames.length > 0) {
-                                globalColumnNames.forEach(colName => {
-                                    // Exclude fields not suitable for popup
-                                    if (!['id', 'latitude', 'longitude', 'perplexity_data', 'image_url', 'last_updated'].includes(colName)) {
-                                        popupContent = addDetail(popupContent, colName, chef[colName]);
-                                    }
-                                });
-                            } else {
-                                // Fallback if column names aren't available
-                                 // You could add some default fields here if needed
-                                popupContent += '<p>Details unavailable.</p>';
-                            }
-                            // Add image separately if URL exists
+                            let popupContent = `<div class="popup-container">`;
+                            popupContent += `<h3 class="popup-header">${chef.name || 'Unknown Chef'}</h3>`;
+
+                            // 1. Add Image (if exists) - Centered below header
                             if(chef.image_url) {
-                                 popupContent += `<img src="${chef.image_url}" alt="Image of ${chef.name || 'chef'}" style="max-width: 100px; max-height: 100px; margin-top: 5px;">`;
+                                popupContent += `<img src="${chef.image_url}" alt="Image of ${chef.name || 'chef'}" class="popup-image">`;
                             }
+
+                            // 2. Add Prioritized Fields
+                            const priorityFields = ['restaurant_address', 'status', 'season_number'];
+                            priorityFields.forEach(colName => {
+                                if (chef[colName] !== null && chef[colName] !== undefined && String(chef[colName]).trim() !== '') {
+                                    popupContent += `<p class="popup-field"><strong>${formatColumnName(colName)}:</strong> ${String(chef[colName])}</p>`;
+                                }
+                            });
+
+                            // 2b. Add Google Maps Link
+                            const mapsUrl = `https://www.google.com/maps?q=${lat},${lon}`;
+                            popupContent += `<p class="popup-field popup-map-link"><a href="${mapsUrl}" target="_blank" title="View on Google Maps">View on Map</a></p>`;
+
+                            // 3. Add Remaining Relevant Fields
+                            if (globalColumnNames && globalColumnNames.length > 0) {
+                                const excludedFields = ['id', 'name', 'image_url', 'restaurant_address', 'status', 'season_number', 'latitude', 'longitude', 'perplexity_data', 'last_updated'];
+                                globalColumnNames.forEach(colName => { 
+                                    if (!excludedFields.includes(colName)) {
+                                        if (chef[colName] !== null && chef[colName] !== undefined && String(chef[colName]).trim() !== '') {
+                                            popupContent += `<p class="popup-field"><strong>${formatColumnName(colName)}:</strong> ${String(chef[colName])}</p>`;
+                                        }
+                                    }
+                                }); 
+                            } else {
+                                popupContent += '<p>Details unavailable.</p>'; // Fallback
+                            }
+
+                            popupContent += `</div>`; // Close container div
 
                             marker.bindPopup(popupContent);
                             marker.addTo(map);
@@ -1537,6 +1728,35 @@
                 }
             });
         })();
+        
+        // --- Map Fullscreen Logic ---
+        const mapElement = document.getElementById('map');
+        const fullscreenButton = document.getElementById('fullscreen-map-button');
+
+        if (fullscreenButton && mapElement) {
+            fullscreenButton.addEventListener('click', () => {
+                if (!document.fullscreenElement) {
+                    // Enter fullscreen
+                    mapElement.requestFullscreen().catch(err => {
+                        console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+                        alert(`Error attempting to enable full-screen mode: ${err.message}`);
+                    });
+                } else {
+                    // Exit fullscreen
+                    document.exitFullscreen();
+                }
+            });
+        }
+        // Optional: Listen for fullscreen change events to update button icon/state if needed
+        document.addEventListener('fullscreenchange', () => {
+             if (document.fullscreenElement === mapElement) {
+                 fullscreenButton.innerHTML = '&#x2923;'; // Change icon to exit fullscreen symbol
+                 fullscreenButton.title = 'Exit Fullscreen';
+             } else {
+                 fullscreenButton.innerHTML = '&#x2922;'; // Change back to enter fullscreen symbol
+                 fullscreenButton.title = 'Toggle Fullscreen';
+             }
+        });
     </script>
     <!-- Load the interactive chat JavaScript -->
     <script>
