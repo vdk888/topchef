@@ -727,5 +727,77 @@
     "related_season": 4,
     "related_chef_id": null,
     "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "d9fefc62-ad1e-49e4-8286-75ccbcd64bc4",
+    "timestamp": "2025-04-30T09:49:57.321997Z",
+    "type": "Observation",
+    "details": "Aucune information trouvée pour les chefs fictifs de la saison 1 (Chef Fictif 1, 10, 11, 12, 13) dans les recherches. Les données sur les saisons 5 à 16 sont également absentes.",
+    "related_season": 1,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "91676d6e-a0e4-4eed-bd94-7cb4263d3256",
+    "timestamp": "2025-04-30T09:49:57.360937Z",
+    "type": "Observation",
+    "details": "Saison 1 a 12 candidats, Saison 2 a 14, Saison 3 a 10, Saison 4 a 4, et les saisons 5 à 16 n'ont aucun candidat.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "28bae842-fdc5-46a1-92b7-162cada1d78c",
+    "timestamp": "2025-04-30T09:53:08.154140Z",
+    "type": "Observation",
+    "details": "Saison 4 a seulement 5 candidats, et les Saisons 5 à 16 sont vides.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "27fde5b6-fdea-4afa-8a98-5d96c943ff53",
+    "timestamp": "2025-04-30T09:53:22.097217Z",
+    "type": "Observation",
+    "details": "Tous les chefs de la Saison 4 manquent d'images.",
+    "related_season": 4,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "a2c320a6-8e29-4839-bf7d-b23c2c19750a",
+    "timestamp": "2025-04-30T10:06:22.651392Z",
+    "type": "Observation",
+    "details": "Saisons 5 à 16 absentes. Saison 4 seulement 5 candidats.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "02f5f34f-665c-431d-86f0-32ca76287fae",
+    "timestamp": "2025-04-30T10:07:10.323350Z",
+    "type": "Observation",
+    "details": "Saisons 5 à 16 totalement absentes. Nécessite une investigation.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "f2bb77c3-a5f7-4b66-aa0f-15a84ae61042",
+    "timestamp": "2025-04-30T10:09:38.529389Z",
+    "type": "Action",
+    "details": "Planification du redémarrage de l'ORM pour permettre l'ajout de nouvelles colonnes et la mise à jour des informations des chefs.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "79dd5f40-8542-4de7-9c57-fb63707360d7",
+    "timestamp": "2025-04-30T10:09:47.169759Z",
+    "type": "Action",
+    "details": "Redémarrage de l'ORM pour permettre l'ajout de nouvelles colonnes et la mise à jour des informations des chefs.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
   }
 ]
