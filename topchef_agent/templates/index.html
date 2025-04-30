@@ -1060,50 +1060,111 @@
                     const mapContainer = document.getElementById('map');
                     const primaryContainer = document.querySelector('.primary-view-container');
                     
-                    if (!document.fullscreenElement) {
-                        // Enter fullscreen
-                        if (mapContainer.requestFullscreen) {
-                            mapContainer.requestFullscreen();
-                        } else if (mapContainer.webkitRequestFullscreen) { /* Safari */
-                            mapContainer.webkitRequestFullscreen();
-                        } else if (mapContainer.msRequestFullscreen) { /* IE11 */
-                            mapContainer.msRequestFullscreen();
-                        }
-                        
-                        // Add class for styling
-                        mapContainer.classList.add('fullscreen-map');
-                        if (primaryContainer) primaryContainer.classList.add('fullscreen-container');
-                        
-                        // Update button title
-                        button.title = 'Exit Fullscreen';
-                        
-                        // Invalidate map size after a short delay
-                        setTimeout(function() {
+                    // Check if we're in fullscreen mode
+                    const isFullscreen = document.fullscreenElement || 
+                                        document.webkitFullscreenElement || 
+                                        document.mozFullScreenElement || 
+                                        document.msFullscreenElement;
+                    
+                    if (!isFullscreen) {
+                        // Enter fullscreen - try all possible methods
+                        try {
+                            if (mapContainer.requestFullscreen) {
+                                mapContainer.requestFullscreen();
+                            } else if (mapContainer.webkitRequestFullscreen) { /* Safari */
+                                mapContainer.webkitRequestFullscreen();
+                            } else if (mapContainer.mozRequestFullScreen) { /* Firefox */
+                                mapContainer.mozRequestFullScreen();
+                            } else if (mapContainer.msRequestFullscreen) { /* IE/Edge */
+                                mapContainer.msRequestFullscreen();
+                            } else {
+                                // Fallback for mobile browsers that don't support fullscreen API
+                                mapContainer.classList.add('fullscreen-map');
+                                if (primaryContainer) primaryContainer.classList.add('fullscreen-container');
+                            }
+                            
+                            // Add class for styling
+                            mapContainer.classList.add('fullscreen-map');
+                            if (primaryContainer) primaryContainer.classList.add('fullscreen-container');
+                            
+                            // Update button title
+                            button.title = 'Exit Fullscreen';
+                            
+                            // Invalidate map size after a short delay
+                            setTimeout(function() {
+                                map.invalidateSize();
+                            }, 200);
+                            
+                            console.log('Entered fullscreen mode');
+                        } catch (err) {
+                            console.error('Fullscreen error:', err);
+                            // Fallback for browsers where fullscreen request failed
+                            mapContainer.classList.add('fullscreen-map');
+                            if (primaryContainer) primaryContainer.classList.add('fullscreen-container');
                             map.invalidateSize();
-                        }, 200);
-                    } else {
-                        // Exit fullscreen
-                        if (document.exitFullscreen) {
-                            document.exitFullscreen();
-                        } else if (document.webkitExitFullscreen) { /* Safari */
-                            document.webkitExitFullscreen();
-                        } else if (document.msExitFullscreen) { /* IE11 */
-                            document.msExitFullscreen();
                         }
-                        
-                        // Remove class
+                    } else {
+                        // Exit fullscreen - try all possible methods
+                        try {
+                            if (document.exitFullscreen) {
+                                document.exitFullscreen();
+                            } else if (document.webkitExitFullscreen) { /* Safari */
+                                document.webkitExitFullscreen();
+                            } else if (document.mozCancelFullScreen) { /* Firefox */
+                                document.mozCancelFullScreen();
+                            } else if (document.msExitFullscreen) { /* IE/Edge */
+                                document.msExitFullscreen();
+                            } else {
+                                // Fallback for mobile browsers that don't support fullscreen API
+                                mapContainer.classList.remove('fullscreen-map');
+                                if (primaryContainer) primaryContainer.classList.remove('fullscreen-container');
+                            }
+                            
+                            // Remove class
+                            mapContainer.classList.remove('fullscreen-map');
+                            if (primaryContainer) primaryContainer.classList.remove('fullscreen-container');
+                            
+                            // Update button title
+                            button.title = 'View Fullscreen';
+                            
+                            // Invalidate map size after a short delay
+                            setTimeout(function() {
+                                map.invalidateSize();
+                            }, 200);
+                            
+                            console.log('Exited fullscreen mode');
+                        } catch (err) {
+                            console.error('Exit fullscreen error:', err);
+                            // Fallback for browsers where fullscreen exit failed
+                            mapContainer.classList.remove('fullscreen-map');
+                            if (primaryContainer) primaryContainer.classList.remove('fullscreen-container');
+                            map.invalidateSize();
+                        }
+                    }
+                    
+                });
+                
+                // Add event listener for fullscreenchange events
+                document.addEventListener('fullscreenchange', handleFullscreenChange);
+                document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+                document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+                document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+                
+                function handleFullscreenChange() {
+                    const mapContainer = document.getElementById('map');
+                    const primaryContainer = document.querySelector('.primary-view-container');
+                    
+                    if (!document.fullscreenElement && 
+                        !document.webkitFullscreenElement && 
+                        !document.mozFullScreenElement && 
+                        !document.msFullscreenElement) {
+                        // We've exited fullscreen mode
                         mapContainer.classList.remove('fullscreen-map');
                         if (primaryContainer) primaryContainer.classList.remove('fullscreen-container');
-                        
-                        // Update button title
-                        button.title = 'View Fullscreen';
-                        
-                        // Invalidate map size after a short delay
-                        setTimeout(function() {
-                            map.invalidateSize();
-                        }, 200);
+                        if (button) button.title = 'View Fullscreen';
+                        map.invalidateSize();
                     }
-                });
+                }
                 
                 return container;
             }
