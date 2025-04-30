@@ -16,10 +16,10 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
             integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
             crossorigin=""></script>
-            
-    <!-- Leaflet Fullscreen Plugin -->
-    <link href="https://cdn.jsdelivr.net/npm/leaflet.fullscreen@2.4.0/Control.FullScreen.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/leaflet.fullscreen@2.4.0/Control.FullScreen.js"></script>
+    
+    <!-- Leaflet Locate Control for current location -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.locatecontrol@0.79.0/dist/L.Control.Locate.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/leaflet.locatecontrol@0.79.0/dist/L.Control.Locate.min.js"></script>
 
     <style>
         :root {
@@ -616,23 +616,36 @@
             background-size: 16px 16px;
             border-radius: 4px;
             box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
         /* Ensure fullscreen works properly on mobile */
         .leaflet-touch .leaflet-control-fullscreen a {
-            width: 30px;
-            height: 30px;
-            line-height: 30px;
+            width: 44px;
+            height: 44px;
         }
         
         /* Ensure map takes full screen when in fullscreen mode */
-        .leaflet-pseudo-fullscreen {
+        .fullscreen-map {
             position: fixed !important;
             width: 100% !important;
             height: 100% !important;
             top: 0 !important;
             left: 0 !important;
             z-index: 99999 !important;
+            background-color: white;
+        }
+        
+        /* Style for locate control */
+        .leaflet-control-locate a {
+            font-size: 1.4em;
+        }
+        
+        .leaflet-touch .leaflet-control-locate a {
+            width: 44px;
+            height: 44px;
         }
         
         @media (max-width: 768px) {
@@ -640,12 +653,26 @@
                 font-size: 13px; /* Slightly smaller base font for mobile */
             }
             
-            /* Make fullscreen button more visible on mobile */
-            .leaflet-control-fullscreen a {
-                width: 36px !important;
-                height: 36px !important;
-                line-height: 36px !important;
-                background-size: 20px 20px !important;
+            /* Make map controls more visible and touchable on mobile */
+            .leaflet-control-fullscreen a,
+            .leaflet-control-locate a {
+                width: 44px !important;
+                height: 44px !important;
+                font-size: 1.5em !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+            }
+            
+            /* Ensure SVG icons are properly sized */
+            .leaflet-control-fullscreen a svg {
+                width: 24px !important;
+                height: 24px !important;
+            }
+            
+            /* Add some space between controls */
+            .leaflet-control-container .leaflet-top .leaflet-control {
+                margin-top: 10px !important;
             }
             .header {
                 padding: 10px 15px; /* Reduced header padding */
@@ -992,17 +1019,98 @@
 
         // --- Map Initialization ---
         // Center roughly on France
-        const map = L.map('map', {
-            fullscreenControl: true,
-            // Fullscreen control options
-            fullscreenControlOptions: {
-                position: 'topleft',
-                title: 'Show map in fullscreen',
-                titleCancel: 'Exit fullscreen mode',
-                content: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M1.5 1a.5.5 0 0 0-.5.5v4a.5.5 0 0 1-1 0v-4A1.5 1.5 0 0 1 1.5 0h4a.5.5 0 0 1 0 1h-4zM10 .5a.5.5 0 0 1 .5-.5h4A1.5 1.5 0 0 1 16 1.5v4a.5.5 0 0 1-1 0v-4a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 1-.5-.5zM.5 10a.5.5 0 0 1 .5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 1 0 1h-4A1.5 1.5 0 0 1 0 14.5v-4a.5.5 0 0 1 .5-.5zm15 0a.5.5 0 0 1 .5.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a.5.5 0 0 1 0-1h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 1 .5-.5z"/></svg>',
-                forceSeparateButton: true
+        const map = L.map('map').setView([46.603354, 1.888334], 6);
+        
+        // Add locate control for current location
+        const locateControl = L.control.locate({
+            position: 'topleft',
+            strings: {
+                title: "Show my location"
+            },
+            locateOptions: {
+                enableHighAccuracy: true,
+                maxZoom: 15
             }
-        }).setView([46.603354, 1.888334], 6);
+        }).addTo(map);
+        
+        // Add custom fullscreen control
+        const fullscreenControl = L.Control.extend({
+            options: {
+                position: 'topleft'
+            },
+            
+            onAdd: function (map) {
+                const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-custom');
+                const button = L.DomUtil.create('a', 'leaflet-control-fullscreen', container);
+                button.href = '#';
+                button.title = 'View Fullscreen';
+                button.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M1.5 1a.5.5 0 0 0-.5.5v4a.5.5 0 0 1-1 0v-4A1.5 1.5 0 0 1 1.5 0h4a.5.5 0 0 1 0 1h-4zM10 .5a.5.5 0 0 1 .5-.5h4A1.5 1.5 0 0 1 16 1.5v4a.5.5 0 0 1-1 0v-4a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 1-.5-.5zM.5 10a.5.5 0 0 1 .5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 1 0 1h-4A1.5 1.5 0 0 1 0 14.5v-4a.5.5 0 0 1 .5-.5zm15 0a.5.5 0 0 1 .5.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a.5.5 0 0 1 0-1h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 1 .5-.5z"/></svg>';
+                button.style.width = '30px';
+                button.style.height = '30px';
+                button.style.backgroundColor = 'white';
+                button.style.display = 'flex';
+                button.style.alignItems = 'center';
+                button.style.justifyContent = 'center';
+                
+                // Handle fullscreen toggle
+                L.DomEvent.on(button, 'click', function(e) {
+                    L.DomEvent.stopPropagation(e);
+                    L.DomEvent.preventDefault(e);
+                    
+                    const mapContainer = document.getElementById('map');
+                    const primaryContainer = document.querySelector('.primary-view-container');
+                    
+                    if (!document.fullscreenElement) {
+                        // Enter fullscreen
+                        if (mapContainer.requestFullscreen) {
+                            mapContainer.requestFullscreen();
+                        } else if (mapContainer.webkitRequestFullscreen) { /* Safari */
+                            mapContainer.webkitRequestFullscreen();
+                        } else if (mapContainer.msRequestFullscreen) { /* IE11 */
+                            mapContainer.msRequestFullscreen();
+                        }
+                        
+                        // Add class for styling
+                        mapContainer.classList.add('fullscreen-map');
+                        if (primaryContainer) primaryContainer.classList.add('fullscreen-container');
+                        
+                        // Update button title
+                        button.title = 'Exit Fullscreen';
+                        
+                        // Invalidate map size after a short delay
+                        setTimeout(function() {
+                            map.invalidateSize();
+                        }, 200);
+                    } else {
+                        // Exit fullscreen
+                        if (document.exitFullscreen) {
+                            document.exitFullscreen();
+                        } else if (document.webkitExitFullscreen) { /* Safari */
+                            document.webkitExitFullscreen();
+                        } else if (document.msExitFullscreen) { /* IE11 */
+                            document.msExitFullscreen();
+                        }
+                        
+                        // Remove class
+                        mapContainer.classList.remove('fullscreen-map');
+                        if (primaryContainer) primaryContainer.classList.remove('fullscreen-container');
+                        
+                        // Update button title
+                        button.title = 'View Fullscreen';
+                        
+                        // Invalidate map size after a short delay
+                        setTimeout(function() {
+                            map.invalidateSize();
+                        }, 200);
+                    }
+                });
+                
+                return container;
+            }
+        });
+        
+        // Add the custom fullscreen control to the map
+        map.addControl(new fullscreenControl());
         let markerLayer; // Declare markerLayer here
 
         // Add Tile Layer (OpenStreetMap)
