@@ -1866,39 +1866,83 @@
                 const thinkingElement = addLogEntry(thinkingLog, logArea, storageKey, logs, true); // Add temporarily
 
                 try {
-                    const response = await fetch('/interactive_chat', { // Corrected URL
+                    // Initial request to start processing
+                    const response = await fetch('/interactive_chat', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                         },
-                        body: JSON.stringify({ message: message }), // Corrected payload key
+                        body: JSON.stringify({ message: message }),
                     });
-
-                    // Remove thinking indicator
-                    if (thinkingElement) {
-                        logArea.removeChild(thinkingElement);
-                        // Also remove from the logs array if it was added temporarily
-                        logs.pop(); 
-                        // Note: This assumes thinking log was the last one added temporarily. 
-                        // A more robust approach might involve IDs if needed.
-                    }
 
                     if (!response.ok) {
                         const errorData = await response.json().catch(() => ({ error: 'Failed to parse error response.' }));
                         throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
                     }
 
-                    const data = await response.json();
+                    let data = await response.json();
+                    
+                    // If the response is still processing, start polling
+                    if (data.status === 'processing') {
+                        // Keep the thinking indicator while polling
+                        let attempts = 0;
+                        const maxAttempts = 30; // Maximum number of polling attempts (30 * 1s = 30s timeout)
+                        
+                        // Define the polling function
+                        const pollForResponse = async () => {
+                            if (attempts >= maxAttempts) {
+                                throw new Error('Response timeout: The agent is taking too long to respond.');
+                            }
+                            
+                            attempts++;
+                            console.log(`Polling for response... attempt ${attempts}`);
+                            
+                            // Make a new request to check for a response
+                            const pollResponse = await fetch('/interactive_chat', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({ message: message }),
+                            });
+                            
+                            if (!pollResponse.ok) {
+                                const errorData = await pollResponse.json().catch(() => ({ error: 'Failed to parse error response.' }));
+                                throw new Error(errorData.error || `HTTP error! status: ${pollResponse.status}`);
+                            }
+                            
+                            const pollData = await pollResponse.json();
+                            
+                            if (pollData.status === 'processing') {
+                                // Still processing, wait and try again
+                                await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second between polls
+                                return pollForResponse(); // Recursively poll again
+                            } else {
+                                // Got a response
+                                return pollData;
+                            }
+                        };
+                        
+                        // Start polling
+                        data = await pollForResponse();
+                    }
+
+                    // Remove thinking indicator
+                    if (thinkingElement) {
+                        logArea.removeChild(thinkingElement);
+                        // Also remove from the logs array if it was added temporarily
+                        logs.pop(); 
+                    }
 
                     // Add agent response to log
                     const agentLog = { message: data.response, source: 'agent', timestamp: new Date().toISOString() };
                     addLogEntry(agentLog, logArea, storageKey, logs);
 
                 } catch (error) {
-                     // Remove thinking indicator even if there's an error
+                    // Remove thinking indicator even if there's an error
                     if (thinkingElement && thinkingElement.parentNode === logArea) {
                         logArea.removeChild(thinkingElement);
-                         logs.pop(); // Remove from array as well
+                        logs.pop(); // Remove from array as well
                     }
                     console.error('Error sending message:', error);
                     const errorLog = { message: `Error: ${error.message}`, source: 'system', type: 'error', timestamp: new Date().toISOString() };

@@ -655,5 +655,77 @@
     "related_season": null,
     "related_chef_id": null,
     "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "81fa16c5-5197-4fc6-9a7b-89799e542bb1",
+    "timestamp": "2025-04-30T09:33:40.429230Z",
+    "type": "Observation",
+    "details": "Saison 4 a seulement 5 candidats au lieu de 14.",
+    "related_season": 4,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "5db15cf9-6033-4796-96a5-681df6793e70",
+    "timestamp": "2025-04-30T09:33:40.473333Z",
+    "type": "Observation",
+    "details": "Saison 2 : Tous les candidats manquent de bios, d'images et de coordonnées.",
+    "related_season": 2,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "272e857a-22d5-492a-bf1c-f68971353ee3",
+    "timestamp": "2025-04-30T09:34:49.052051Z",
+    "type": "Observation",
+    "details": "Aucune information trouvée pour tous les candidats de la saison 2.",
+    "related_season": 2,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "e8f13b2f-0be5-45c5-9cd2-926e17778398",
+    "timestamp": "2025-04-30T09:34:49.097093Z",
+    "type": "Observation",
+    "details": "Saison 4 a besoin de candidats supplémentaires.",
+    "related_season": 4,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "c56a98d3-0cbe-4a4d-86a8-f825f9cb443d",
+    "timestamp": "2025-04-30T09:43:42.351803Z",
+    "type": "Observation",
+    "details": "Saison 4 a seulement 5 candidats. Les saisons 5 à 16 n'ont aucun candidat enregistré.",
+    "related_season": 4,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "300dcb24-d5f8-4db5-8fd3-32445a36708c",
+    "timestamp": "2025-04-30T09:43:42.402715Z",
+    "type": "Observation",
+    "details": "Saisons 1 à 4 présentes, mais les saisons 5 à 16 sont vides.",
+    "related_season": null,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "e8c96f7f-cdbd-492b-89a7-9222dd8cade9",
+    "timestamp": "2025-04-30T09:44:02.745912Z",
+    "type": "Observation",
+    "details": "Saison 4 : Manque d'images pour tous les candidats. Bios manquantes pour certains.",
+    "related_season": 4,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "4a48d901-62e8-45da-974f-80e2dc80fc60",
+    "timestamp": "2025-04-30T09:44:02.879375Z",
+    "type": "Observation",
+    "details": "Les adresses des candidats de la saison 4 sont présentes mais nécessitent une vérification.",
+    "related_season": 4,
+    "related_chef_id": null,
+    "correction_target_entry_id": null
   }
 ]
