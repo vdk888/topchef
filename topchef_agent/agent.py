@@ -7,9 +7,8 @@ import uuid # Needed for unique journal entry IDs
 from datetime import datetime # Needed for timestamps
 from openai import OpenAI, APIError
 # Import all necessary functions from database
-# Added add_column and remove_column imports
 # Removed get_distinct_seasons, get_chefs_by_season from this import as they are deprecated
-from topchef_agent.database import load_database, update_chef, add_column, remove_column, get_chefs_by_season, add_chef # Ensure only valid functions are imported
+from topchef_agent.database import load_database, update_chef, get_chefs_by_season, add_chef # Ensure only valid functions are imported
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
 from topchef_agent.config import OPENROUTER_API_KEY, PERPLEXITY_API_KEY, YOUR_SITE_URL, YOUR_SITE_NAME, LLM_MODELS_TO_TRY
@@ -207,142 +206,6 @@ def execute_update_chef_record(chef_id: int, field_name: str, new_value: any):
         log_to_ui("tool_error", {"name": "update_chef_record", "input": tool_input_data, "error": str(e)})
         return error_msg
 
-# --- NEW TOOL EXECUTION FUNCTION for adding column ---
-def execute_add_db_column(table_name: str, column_name: str, column_type: str):
-    """Adds a new column to a specified database table."""
-    tool_input_data = {"table_name": table_name, "column_name": column_name, "column_type": column_type}
-    log_to_ui("tool_start", {"name": "add_db_column", "input": tool_input_data})
-    print(f"--- Tool: Executing Add DB Column ---", flush=True)
-    print(f"  Table: {table_name}, Column: {column_name}, Type: {column_type}", flush=True)
-
-    # Basic validation before calling database function
-    if not isinstance(table_name, str) or not table_name:
-        error_msg = json.dumps({"error": "Invalid or empty table_name provided."})
-        log_to_ui("tool_error", {"name": "add_db_column", "input": tool_input_data, "error": "Invalid table_name."})
-        return error_msg
-    if not isinstance(column_name, str) or not column_name:
-        error_msg = json.dumps({"error": "Invalid or empty column_name provided."})
-        log_to_ui("tool_error", {"name": "add_db_column", "input": tool_input_data, "error": "Invalid column_name."})
-        return error_msg
-    if not isinstance(column_type, str) or not column_type:
-        error_msg = json.dumps({"error": "Invalid or empty column_type provided."})
-        log_to_ui("tool_error", {"name": "add_db_column", "input": tool_input_data, "error": "Invalid column_type."})
-        return error_msg
-    # Add check for potentially dangerous characters like semicolon in type
-    if ';' in column_type:
-        error_msg = json.dumps({"error": f"Invalid characters detected in column_type: {column_type}"})
-        log_to_ui("tool_error", {"name": "add_db_column", "input": tool_input_data, "error": "Invalid characters in column_type."})
-        return error_msg
-
-    try:
-        success = add_column(table_name, column_name, column_type)
-        if success:
-            result_msg = json.dumps({"status": "OK", "message": f"Successfully added column '{column_name}' to table '{table_name}' (or it already existed)." })
-            print("  Database column addition successful (or column already existed).", flush=True)
-            log_to_ui("tool_result", {"name": "add_db_column", "input": tool_input_data, "result": "OK"})
-            # IMPORTANT: Need to update the SQLAlchemy model (Chef class) if using ORM features with the new column.
-            # This is complex to do dynamically. For now, the tool works at the SQL level.
-            # Consider adding a note about restarting the app or dynamically updating the model if needed.
-            result_msg = json.dumps({"status": "OK", "message": f"Successfully added column '{column_name}' to table '{table_name}' (or it already existed). NOTE: App restart might be needed for ORM features to see the new column." })
-            signal_database_update() # Signal the UI about the change
-            return result_msg
-        else:
-            error_msg = json.dumps({"status": "Failed", "error": f"Failed to add column '{column_name}' to table '{table_name}'. Check logs or database state."})
-            print("  Database column addition failed (returned false).", flush=True)
-            log_to_ui("tool_error", {"name": "add_db_column", "input": tool_input_data, "error": "Add column operation returned false."})
-            return error_msg
-    except Exception as e:
-        error_msg = json.dumps({"status": "Error", "error": f"Exception during database column addition: {e}"})
-        print(f"  Error during database add column call: {e}", flush=True)
-        log_to_ui("tool_error", {"name": "add_db_column", "input": tool_input_data, "error": str(e)})
-        return error_msg
-
-# --- NEW TOOL EXECUTION FUNCTION for removing column ---
-def execute_remove_db_column(table_name: str, column_name: str):
-    """Removes a column from a specified database table."""
-    tool_input_data = {"table_name": table_name, "column_name": column_name}
-    log_to_ui("tool_start", {"name": "remove_db_column", "input": tool_input_data})
-    print(f"--- Tool: Executing Remove DB Column ---", flush=True)
-    print(f"  Table: {table_name}, Column: {column_name}", flush=True)
-
-    # Basic validation
-    if not isinstance(table_name, str) or not table_name:
-        error_msg = json.dumps({"error": "Invalid or empty table_name provided."})
-        log_to_ui("tool_error", {"name": "remove_db_column", "input": tool_input_data, "error": "Invalid table_name."})
-        return error_msg
-    if not isinstance(column_name, str) or not column_name:
-        error_msg = json.dumps({"error": "Invalid or empty column_name provided."})
-        log_to_ui("tool_error", {"name": "remove_db_column", "input": tool_input_data, "error": "Invalid column_name."})
-        return error_msg
-
-    try:
-        success = remove_column(table_name, column_name)
-        if success:
-            result_msg = json.dumps({"status": "OK", "message": f"Successfully removed column '{column_name}' from table '{table_name}' (or it didn't exist)." })
-            print("  Database column removal successful (or column did not exist).", flush=True)
-            log_to_ui("tool_result", {"name": "remove_db_column", "input": tool_input_data, "result": "OK"})
-            # NOTE: Similar to adding, ORM might need app restart to fully reflect the change.
-            # This is complex to do dynamically. For now, the tool works at the SQL level.
-            # Consider adding a note about restarting the app or dynamically updating the model if needed.
-            result_msg = json.dumps({"status": "OK", "message": f"Successfully removed column '{column_name}' from table '{table_name}' (or it didn't exist). NOTE: App restart might be needed for ORM features to reflect this change." })
-            signal_database_update() # Signal the UI about the change
-            return result_msg
-        else:
-            error_msg = json.dumps({"status": "Failed", "error": f"Failed to remove column '{column_name}' from table '{table_name}'. It might be protected or another issue occurred."})
-            print("  Database column removal failed (returned false).", flush=True)
-            log_to_ui("tool_error", {"name": "remove_db_column", "input": tool_input_data, "error": "Remove column operation returned false (e.g., protected column)."})
-            return error_msg
-    except Exception as e:
-        error_msg = json.dumps({"status": "Error", "error": f"Exception during database column removal: {e}"})
-        print(f"  Error during database remove column call: {e}", flush=True)
-        log_to_ui("tool_error", {"name": "remove_db_column", "input": tool_input_data, "error": str(e)})
-        return error_msg
-
-# --- NEW Geocoding Tool Function ---
-def execute_geocode_address(address: str):
-    """Geocodes a given street address to latitude and longitude using Nominatim."""
-    tool_input_data = {"address": address}
-    log_to_ui("tool_start", {"name": "geocode_address", "input": tool_input_data})
-    print(f"--- Tool: Executing Geocode Address ---", flush=True)
-    print(f"  Address: {address}", flush=True)
-
-    if not isinstance(address, str) or not address:
-        error_msg = json.dumps({"error": "Invalid or empty address provided."})
-        log_to_ui("tool_error", {"name": "geocode_address", "input": tool_input_data, "error": "Invalid address."})
-        return error_msg
-
-    # Initialize geocoder (consider adding a user_agent)
-    geolocator = Nominatim(user_agent="topchef_agent_app/1.0") # Good practice to set user_agent
-    try:
-        # Add country bias for better results if applicable (e.g., country_bias='FR' for France)
-        location = geolocator.geocode(address, timeout=10, country_codes='FR') # 10 second timeout, bias to France
-        if location:
-            coordinates = {"latitude": location.latitude, "longitude": location.longitude}
-            result_msg = json.dumps(coordinates)
-            print(f"  Geocoding successful: Lat={location.latitude}, Lon={location.longitude}", flush=True)
-            log_to_ui("tool_result", {"name": "geocode_address", "input": tool_input_data, "result": coordinates})
-            return result_msg
-        else:
-            error_msg = json.dumps({"error": f"Address not found or could not be geocoded: {address}"})
-            print(f"  Geocoding failed: Address not found.", flush=True)
-            log_to_ui("tool_error", {"name": "geocode_address", "input": tool_input_data, "error": "Address not found."})
-            return error_msg
-    except GeocoderTimedOut:
-        error_msg = json.dumps({"error": "Geocoding service timed out."})
-        print(f"  Geocoding error: Timeout.", flush=True)
-        log_to_ui("tool_error", {"name": "geocode_address", "input": tool_input_data, "error": "GeocoderTimedOut."})
-        return error_msg
-    except GeocoderServiceError as e:
-        error_msg = json.dumps({"error": f"Geocoding service error: {e}"})
-        print(f"  Geocoding error: Service error {e}.", flush=True)
-        log_to_ui("tool_error", {"name": "geocode_address", "input": tool_input_data, "error": f"GeocoderServiceError: {e}"})
-        return error_msg
-    except Exception as e:
-        error_msg = json.dumps({"error": f"Unexpected error during geocoding: {e}"})
-        print(f"  Geocoding error: Unexpected {e}.", flush=True)
-        log_to_ui("tool_error", {"name": "geocode_address", "input": tool_input_data, "error": str(e)})
-        return error_msg
-
 # --- NEW TOOL EXECUTION FUNCTION for geocoding and updating ---
 def execute_geocode_address_and_update(chef_id: int, address: str):
     """
@@ -400,6 +263,114 @@ def execute_geocode_address_and_update(chef_id: int, address: str):
         error_msg = json.dumps({"error": f"Unexpected error during geocoding: {e}"})
         print(f"  Geocoding error: Unexpected {e}.", flush=True)
         log_to_ui("tool_error", {"name": "geocode_address_and_update", "input": tool_input_data, "error": str(e)})
+        return error_msg
+
+# --- NEW Geocoding Tool Function ---
+def execute_geocode_address(address: str):
+    """Geocodes a given street address to latitude and longitude using Nominatim."""
+    tool_input_data = {"address": address}
+    log_to_ui("tool_start", {"name": "geocode_address", "input": tool_input_data})
+    print(f"--- Tool: Executing Geocode Address ---", flush=True)
+    print(f"  Address: {address}", flush=True)
+
+    if not isinstance(address, str) or not address:
+        error_msg = json.dumps({"error": "Invalid or empty address provided."})
+        log_to_ui("tool_error", {"name": "geocode_address", "input": tool_input_data, "error": "Invalid address."})
+        return error_msg
+
+    # Initialize geocoder (consider adding a user_agent)
+    geolocator = Nominatim(user_agent="topchef_agent_app/1.0") # Good practice to set user_agent
+    try:
+        # Add country bias for better results if applicable (e.g., country_bias='FR' for France)
+        location = geolocator.geocode(address, timeout=10, country_codes='FR') # 10 second timeout, bias to France
+        if location:
+            coordinates = {"latitude": location.latitude, "longitude": location.longitude}
+            result_msg = json.dumps(coordinates)
+            print(f"  Geocoding successful: Lat={location.latitude}, Lon={location.longitude}", flush=True)
+            log_to_ui("tool_result", {"name": "geocode_address", "input": tool_input_data, "result": coordinates})
+            return result_msg
+        else:
+            error_msg = json.dumps({"error": f"Address not found or could not be geocoded: {address}"})
+            print(f"  Geocoding failed: Address not found.", flush=True)
+            log_to_ui("tool_error", {"name": "geocode_address", "input": tool_input_data, "error": "Address not found."})
+            return error_msg
+    except GeocoderTimedOut:
+        error_msg = json.dumps({"error": "Geocoding service timed out."})
+        print(f"  Geocoding error: Timeout.", flush=True)
+        log_to_ui("tool_error", {"name": "geocode_address", "input": tool_input_data, "error": "GeocoderTimedOut."})
+        return error_msg
+    except GeocoderServiceError as e:
+        error_msg = json.dumps({"error": f"Geocoding service error: {e}"})
+        print(f"  Geocoding error: Service error {e}.", flush=True)
+        log_to_ui("tool_error", {"name": "geocode_address", "input": tool_input_data, "error": f"GeocoderServiceError: {e}"})
+        return error_msg
+    except Exception as e:
+        error_msg = json.dumps({"error": f"Unexpected error during geocoding: {e}"})
+        print(f"  Geocoding error: Unexpected {e}.", flush=True)
+        log_to_ui("tool_error", {"name": "geocode_address", "input": tool_input_data, "error": str(e)})
+        return error_msg
+
+# --- NEW TOOL EXECUTION FUNCTION for adding a chef ---
+def execute_add_chef(name: str, season: int, bio: str = None, image_url: str = None, status: str = None, restaurant_address: str = None):
+    """Adds a new chef to the database.
+
+    Requires the chef's name and season. Other fields like bio, image_url, status, and restaurant_address are optional.
+    Geocoding (latitude/longitude) should be handled separately AFTER the chef is added using their address.
+    """
+    tool_input_data = {
+        "name": name,
+        "season": season,
+        "bio": bio,
+        "image_url": image_url,
+        "status": status,
+        "restaurant_address": restaurant_address
+    }
+    log_to_ui("tool_start", {"name": "add_chef", "input": tool_input_data})
+    print(f"--- Tool: Executing Add Chef --- ", flush=True)
+    print(f"  Attempting to add Chef: {name}, Season: {season}", flush=True)
+
+    # Basic validation
+    if not name or not isinstance(name, str):
+        error_msg = json.dumps({"error": "Invalid or missing 'name' for add_chef."})
+        log_to_ui("tool_error", {"name": "add_chef", "input": tool_input_data, "error": "Invalid name"})
+        print(f"  Error: Invalid name provided.", flush=True)
+        return error_msg
+    if not isinstance(season, int):
+        error_msg = json.dumps({"error": "Invalid or missing 'season' (must be an integer) for add_chef."})
+        log_to_ui("tool_error", {"name": "add_chef", "input": tool_input_data, "error": "Invalid season type"})
+        print(f"  Error: Invalid season provided (must be integer).", flush=True)
+        return error_msg
+
+    try:
+        # Call the database function (latitude/longitude are not added here, needs geocoding tool)
+        new_chef_id = add_chef(
+            name=name,
+            season=season,
+            bio=bio,
+            image_url=image_url,
+            status=status,
+            restaurant_address=restaurant_address,
+            # Note: Lat/Lon/Perplexity data are omitted here, handled by other tools/updates
+        )
+
+        if new_chef_id is not None:
+            result_msg = json.dumps({"status": "OK", "message": f"Successfully added chef '{name}' (Season {season}) with new ID {new_chef_id}.", "chef_id": new_chef_id})
+            print(f"  Successfully added chef '{name}' with ID {new_chef_id}.", flush=True)
+            log_to_ui("tool_result", {"name": "add_chef", "input": tool_input_data, "result": f"OK, new ID: {new_chef_id}"})
+            signal_database_update() # Signal UI about the change
+            return result_msg
+        else:
+            error_msg = json.dumps({"status": "Failed", "error": f"Failed to add chef '{name}' to the database. Check logs for details.", "name": name, "season": season})
+            print(f"  Database function failed to add chef '{name}'.", flush=True)
+            log_to_ui("tool_error", {"name": "add_chef", "input": tool_input_data, "error": "Database add function returned None"})
+            return error_msg
+    except Exception as e:
+        error_msg = json.dumps({"status": "Error", "error": f"An unexpected error occurred while adding chef '{name}': {e}", "name": name, "season": season})
+        print(f"  Exception during add_chef execution: {e}", flush=True)
+        # Optional: Log traceback
+        # import traceback
+        # traceback.print_exc()
+        log_to_ui("tool_error", {"name": "add_chef", "input": tool_input_data, "error": str(e)})
         return error_msg
 
 # --- Journaling Tool Functions ---
@@ -496,70 +467,6 @@ def execute_append_journal_entry(entry_type: str, details: str, related_season: 
         error_msg = json.dumps({"error": "Failed to write updated journal file."})
         log_to_ui("tool_error", {"name": "append_journal_entry", "error": "Failed writing updated journal."})
         print(f"  Error writing journal after append.", flush=True)
-        return error_msg
-
-
-# --- NEW TOOL EXECUTION FUNCTION for adding a chef ---
-def execute_add_chef(name: str, season: int, bio: str = None, image_url: str = None, status: str = None, restaurant_address: str = None):
-    """Adds a new chef to the database.
-
-    Requires the chef's name and season. Other fields like bio, image_url, status, and restaurant_address are optional.
-    Geocoding (latitude/longitude) should be handled separately AFTER the chef is added using their address.
-    """
-    tool_input_data = {
-        "name": name,
-        "season": season,
-        "bio": bio,
-        "image_url": image_url,
-        "status": status,
-        "restaurant_address": restaurant_address
-    }
-    log_to_ui("tool_start", {"name": "add_chef", "input": tool_input_data})
-    print(f"--- Tool: Executing Add Chef --- ", flush=True)
-    print(f"  Attempting to add Chef: {name}, Season: {season}", flush=True)
-
-    # Basic validation
-    if not name or not isinstance(name, str):
-        error_msg = json.dumps({"error": "Invalid or missing 'name' for add_chef."})
-        log_to_ui("tool_error", {"name": "add_chef", "input": tool_input_data, "error": "Invalid name"})
-        print(f"  Error: Invalid name provided.", flush=True)
-        return error_msg
-    if not isinstance(season, int):
-        error_msg = json.dumps({"error": "Invalid or missing 'season' (must be an integer) for add_chef."})
-        log_to_ui("tool_error", {"name": "add_chef", "input": tool_input_data, "error": "Invalid season type"})
-        print(f"  Error: Invalid season provided (must be integer).", flush=True)
-        return error_msg
-
-    try:
-        # Call the database function (latitude/longitude are not added here, needs geocoding tool)
-        new_chef_id = add_chef(
-            name=name,
-            season=season,
-            bio=bio,
-            image_url=image_url,
-            status=status,
-            restaurant_address=restaurant_address,
-            # Note: Lat/Lon/Perplexity data are omitted here, handled by other tools/updates
-        )
-
-        if new_chef_id is not None:
-            result_msg = json.dumps({"status": "OK", "message": f"Successfully added chef '{name}' (Season {season}) with new ID {new_chef_id}.", "chef_id": new_chef_id})
-            print(f"  Successfully added chef '{name}' with ID {new_chef_id}.", flush=True)
-            log_to_ui("tool_result", {"name": "add_chef", "input": tool_input_data, "result": f"OK, new ID: {new_chef_id}"})
-            signal_database_update() # Signal UI about the change
-            return result_msg
-        else:
-            error_msg = json.dumps({"status": "Failed", "error": f"Failed to add chef '{name}' to the database. Check logs for details.", "name": name, "season": season})
-            print(f"  Database function failed to add chef '{name}'.", flush=True)
-            log_to_ui("tool_error", {"name": "add_chef", "input": tool_input_data, "error": "Database add function returned None"})
-            return error_msg
-    except Exception as e:
-        error_msg = json.dumps({"status": "Error", "error": f"An unexpected error occurred while adding chef '{name}': {e}", "name": name, "season": season})
-        print(f"  Exception during add_chef execution: {e}", flush=True)
-        # Optional: Log traceback
-        # import traceback
-        # traceback.print_exc()
-        log_to_ui("tool_error", {"name": "add_chef", "input": tool_input_data, "error": str(e)})
         return error_msg
 
 # --- TOOL DEFINITIONS for LLM ---
@@ -683,54 +590,6 @@ tools_list = [
             }
         }
     },
-    # --- NEW TOOL DEFINITION for adding column ---
-    {
-        "type": "function",
-        "function": {
-            "name": "add_db_column",
-            "description": "Adds a new column to a specified table in the database (currently only 'chefs' table is expected). Use with caution, as this modifies the database schema. Ensure column type is a valid SQL type (e.g., TEXT, INTEGER, BOOLEAN, VARCHAR(255)). NOTE: App restart might be needed for ORM features to see the new column.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "table_name": {
-                        "type": "string",
-                        "description": "The name of the database table to modify (should typically be 'chefs')."
-                    },
-                    "column_name": {
-                        "type": "string",
-                        "description": "The name for the new column (use snake_case)."
-                    },
-                    "column_type": {
-                        "type": "string",
-                        "description": "The SQL data type for the new column (e.g., 'TEXT', 'INTEGER', 'BOOLEAN', 'VARCHAR(255)', 'JSON')."
-                    }
-                },
-                "required": ["table_name", "column_name", "column_type"]
-            }
-        }
-    },
-    # --- NEW TOOL DEFINITION for removing column ---
-    {
-        "type": "function",
-        "function": {
-            "name": "remove_db_column",
-            "description": "Removes a column from a specified table in the database (currently only 'chefs' table is expected). Use with extreme caution, data will be lost. Cannot remove essential columns like 'id' or 'name'.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "table_name": {
-                        "type": "string",
-                        "description": "The name of the database table to modify (should typically be 'chefs')."
-                    },
-                    "column_name": {
-                        "type": "string",
-                        "description": "The name of the column to remove."
-                    }
-                },
-                "required": ["table_name", "column_name"]
-            }
-        }
-    },
     # --- NEW Geocoding Tool Definition ---
     {
         "type": "function",
@@ -836,8 +695,6 @@ available_functions = {
     "add_chef": execute_add_chef, # NEW TOOL
     "update_chef_record": execute_update_chef_record,
     "search_web_perplexity": execute_search_web_perplexity,
-    "add_db_column": execute_add_db_column,
-    "remove_db_column": execute_remove_db_column,
     "geocode_address": execute_geocode_address,
     "geocode_address_and_update": execute_geocode_address_and_update, # New combined tool
     "read_journal": execute_read_journal,
@@ -892,8 +749,6 @@ def run_llm_driven_agent_cycle(task_prompt: str, max_iterations=15):
     - `geocode_address` : Obtenir latitude/longitude à partir d'une adresse (à utiliser si l'adresse existe mais pas les coordonnées). Biaisé vers la France.
     - `read_journal` : Lire tout votre journal persistant pour se souvenir des événements passés.
     - `append_journal_entry` : Ajouter une entrée à votre journal persistant. Types : "Observation", "Action", "Erreur", "Insight", "Correction".
-    - `add_db_column` : Ajouter une colonne à la table 'chefs'. Utilisez le snake_case pour les noms. Types SQL standard : TEXT, INTEGER, BOOLEAN, JSON.
-    - `remove_db_column` : Supprimer une colonne de la table 'chefs'. À utiliser avec précaution, ne pas supprimer 'id' ou 'name'.
     - `geocode_address_and_update` : Géocoder une adresse et mettre à jour atomiquement latitude et longitude pour un chef.
 
     **Votre Workflow & Journalisation :**
@@ -921,7 +776,7 @@ def run_llm_driven_agent_cycle(task_prompt: str, max_iterations=15):
     8. **Annoncez le Résultat & le Plan (Routine Check) :** Rapportez les constats pour le sous-ensemble vérifié (ex : "Incroyable ! Chef Pierre n'a pas ses coordonnées !"). Priorisez les actions (Adresse > Coordonnées > Autre). Annoncez clairement l'outil prévu.
     9. **Exécutez l'Action (Routine Check/Brainstorming) :**
         - **Consignez l'Action prévue** : Utilisez `append_journal_entry` (type "Action") avant l'exécution (ex : "Tentative de géocodage pour Chef Pierre", "Recherche web pour l'adresse de Chef Marie").
-        - Exécutez l'outil prévu (`search_web_perplexity`, `geocode_address`, `update_chef_record`, `add_db_column`, `remove_db_column`, `geocode_address_and_update`).
+        - Exécutez l'outil prévu (`search_web_perplexity`, `geocode_address`, `update_chef_record`, `geocode_address_and_update`).
     10. **Traitez le Résultat de l'Outil (Routine Check/Brainstorming) :**
         - Annoncez le résultat (ex : "Et voilà ! Géocodage réussi !", "Zut ! La recherche n'a rien donné.").
         - **Consignez Résultat/Erreur** : Utilisez `append_journal_entry`. Les recherches/géocodages réussis sont des "Observation" (avec la donnée trouvée). Les mises à jour ou changements de schéma réussis sont des "Action" (confirmation du plan). Les échecs sont des "Erreur".

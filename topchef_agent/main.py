@@ -11,6 +11,7 @@ import datetime
 from topchef_agent.interactive_agent import get_interactive_agent
 from topchef_agent.agent import read_journal_file, execute_read_journal # For retrieving agent activity
 from dotenv import load_dotenv
+import uuid # Import uuid for session IDs
 
 # Load environment variables
 load_dotenv()
@@ -26,6 +27,10 @@ log_queue = queue.Queue()
 
 # --- Database Update Queue Setup ---
 db_update_queue = queue.Queue()
+
+# --- Active SSE Client Queues (Example using simple dict, consider scalability) ---
+# This approach is basic. For production, Redis Pub/Sub or Flask-SocketIO might be better.
+# However, let's try filtering within the generator first based on log_queue directly.
 
 # --- Flask Routes ---
 
@@ -94,35 +99,54 @@ def receive_log():
 
 def generate_log_stream():
     """Generator function for the SSE stream."""
-    print("SSE client connected.")
+    # Generate a unique session ID for this client connection
+    session_id = str(uuid.uuid4())
+    print(f"SSE client connected. Assigning session ID: {session_id}")
+    
+    # Send the session ID to the client immediately
+    session_init_data = {"type": "session_init", "session_id": session_id}
+    yield f"data: {json.dumps(session_init_data)}\n\n"
+
     try:
         while True:
-            # Wait for a message from the queue
-            # Use a timeout to periodically check if the client is still connected
-            # (Flask/Werkzeug might handle broken pipes, but this adds robustness)
+            # Wait for a message from the central log queue
             try:
                 log_entry = log_queue.get(timeout=60) # Wait up to 60 seconds
-                # Format as SSE message: data: <json_string>\n\n
-                sse_data = f"data: {json.dumps(log_entry)}\n\n"
-                yield sse_data
-                log_queue.task_done() # Mark task as done after yielding
+                
+                # Check if the message is targeted or general
+                is_interactive_response = log_entry.get('type') == 'interactive_response'
+                target_session_id = log_entry.get('session_id')
+
+                # Yield the message if:
+                # 1. It's not an interactive response (general log)
+                # 2. It IS an interactive response AND its session_id matches this client's session_id
+                if not is_interactive_response or (is_interactive_response and target_session_id == session_id):
+                    print(f"[SSE {session_id}] Yielding log type: {log_entry.get('type')}") # Debug
+                    sse_data = f"data: {json.dumps(log_entry)}\n\n"
+                    yield sse_data
+                else:
+                    # Log is for a different session, put it back for others (potential issue if many clients)
+                    # A better approach would be dedicated client queues or pub/sub.
+                    # For now, just skip yielding.
+                    print(f"[SSE {session_id}] Skipping log type {log_entry.get('type')} for session {target_session_id}") # Debug
+                
+                log_queue.task_done() # Mark task as done after processing
             except queue.Empty:
                 # No message received in timeout period, send a comment to keep connection alive
                 yield ": keepalive\n\n"
             except SystemExit:
-                print("SystemExit caught in SSE generator loop, likely server shutdown. Breaking loop.")
+                print("[SSE {session_id}] SystemExit caught. Breaking loop.".format(session_id=session_id))
                 break # Exit the loop gracefully on shutdown signal
             except Exception as e:
-                print(f"Error in SSE generator loop: {e}")
-                # Optionally yield an error message to the client
-                error_data = {"type": "stream_error", "data": {"error": str(e)}}
+                print(f"[SSE {session_id}] Error in generator loop: {e}".format(session_id=session_id))
+                error_data = {"type": "stream_error", "data": {"error": str(e)}, "session_id": session_id} # Include session ID in error?
                 yield f"data: {json.dumps(error_data)}\n\n"
                 time.sleep(5) # Avoid tight loop on persistent error
 
     except GeneratorExit:
-        print("SSE client disconnected.")
+        print(f"SSE client disconnected: {session_id}")
     finally:
-         print("SSE stream generator finished.")
+         print(f"SSE stream generator finished for session: {session_id}")
 
 
 @app.route('/stream_logs')
@@ -190,21 +214,45 @@ def interactive_chat():
     """Endpoint for user to interact with StephAI Botenberg (interactive chat)."""
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({"status": "error", "error": "Request must be JSON"}), 400
+            
         user_message = data.get('message')
-        session_id = request.cookies.get('session_id') or request.remote_addr or str(time.time())
-        agent = get_interactive_agent(session_id)
+        # Get session_id from the request body sent by the frontend
+        session_id = data.get('session_id') 
+
+        if not user_message:
+             return jsonify({"status": "error", "error": "'message' field is required"}), 400
+        if not session_id:
+             # If session_id is missing, maybe deny request or log error
+             print(f"Error: interactive_chat request missing session_id. Data: {data}")
+             return jsonify({"status": "error", "error": "'session_id' field is required"}), 400
+
+        # Pass log_queue and db_update_queue to the agent factory/getter
+        agent = get_interactive_agent(session_id, log_queue, db_update_queue)
+        
         if agent.is_busy():
+            # Return busy status without starting a new request
             return jsonify({"status": "busy", "message": "StephAI Botenberg is busy. Please wait."}), 429
-        agent.ask(user_message)
-        # Poll for response (short wait, frontend can poll if needed)
-        for _ in range(20):
-            response = agent.get_response(timeout=0.25)
-            if response:
-                return jsonify(response)
-            time.sleep(0.05)
-        return jsonify({"status": "processing"})
+        
+        # Call ask, passing the message and session_id implicitly via agent instance
+        # The agent instance is retrieved using session_id, so ask just needs the message.
+        # We need to ensure agent.ask stores the session_id if needed later in _run_agent
+        agent.ask(user_message) 
+        
+        # REMOVED Polling loop
+        # The response will be sent via the SSE stream associated with the session_id
+        
+        # Return immediately indicating processing has started
+        return jsonify({"status": "processing", "message": "Request received, processing started."}), 202
+
     except Exception as e:
-        return jsonify({"status": "error", "error": str(e)}), 500
+        print(f"Error in /interactive_chat: {e}", flush=True)
+        # Optionally log the exception traceback
+        import traceback
+        traceback.print_exc()
+        return jsonify({"status": "error", "error": f"An internal server error occurred: {e}"}), 500
+
 
 # --- NEW API Endpoint for Agent Journal ---
 @app.route('/api/agent/journal')

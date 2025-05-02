@@ -95,6 +95,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Display user message immediately and save
         const userLog = { role: 'user', content: message, timestamp: Date.now() / 1000 };
+        // Ensure window.userSessionId exists, otherwise use a placeholder or handle error
+        const sessionId = window.userSessionId || null; 
+        if (!sessionId) {
+            console.error("User Session ID not found!");
+             const errorLog = { role: 'system', error: `Erreur: ID de session utilisateur introuvable. Impossible d'envoyer le message.`, timestamp: Date.now() / 1000 };
+             window.addLogEntry(errorLog, logArea, logStorageKey, chatLogs);
+            return; // Stop if no session ID
+        }
+
         window.addLogEntry(userLog, logArea, logStorageKey, chatLogs);
 
         inputBox.value = '';
@@ -111,11 +120,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ message: message }),
+                body: JSON.stringify({ message: message, session_id: sessionId }), // Include session_id
             });
 
-            // Remove thinking indicator (optional, or let the response replace it)
-            // Find and remove the 'thinking' message if needed - complex, maybe skip
+            // Remove thinking indicator (consider moving this to SSE handler when response arrives)
+            // Find and remove the 'thinking' message if needed - complex, maybe skip for now
 
             if (!response.ok) {
                 let errorMsg = `Erreur ${response.status}`; // Default error
@@ -128,10 +137,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const data = await response.json();
 
-            if (data.status === 'done') {
-                const agentLog = { role: 'StephAI Botenberg', response: data.response, timestamp: Date.now() / 1000 };
-                window.addLogEntry(agentLog, logArea, logStorageKey, chatLogs);
-            } else if (data.status === 'error') {
+            // REMOVED: Handling of data.status === 'done' here.
+            // The final response will arrive via the SSE stream.
+
+            if (data.status === 'error') {
                  const errorLog = { role: 'system', error: data.error, timestamp: Date.now() / 1000 };
                  window.addLogEntry(errorLog, logArea, logStorageKey, chatLogs);
             } else if (data.status === 'busy') {
@@ -139,12 +148,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.addLogEntry(busyLog, logArea, logStorageKey, chatLogs);
                  // Maybe re-enable input slightly later?
                  setTimeout(() => {
+                    // Check if still busy before re-enabling?
                     sendButton.disabled = false;
                     inputBox.disabled = false;
                  }, 2000);
+            } else if (data.status === 'processing') {
+                // This is the expected successful status now. Do nothing here, wait for SSE.
+                console.log("Message sent, processing started.");
             } else {
                  // Handle other statuses or unexpected responses if necessary
-                 const unknownLog = { role: 'system', content: `Réponse inattendue: ${JSON.stringify(data)}`, timestamp: Date.now() / 1000 };
+                 const unknownLog = { role: 'system', content: `Réponse initiale inattendue: ${JSON.stringify(data)}`, timestamp: Date.now() / 1000 };
                  window.addLogEntry(unknownLog, logArea, logStorageKey, chatLogs);
             }
 
@@ -153,6 +166,8 @@ document.addEventListener('DOMContentLoaded', () => {
              const errorLog = { role: 'system', error: `Erreur de communication: ${error.message}`, timestamp: Date.now() / 1000 };
              window.addLogEntry(errorLog, logArea, logStorageKey, chatLogs);
         } finally {
+             // Re-enable input ONLY IF NOT BUSY? Maybe move enabling to SSE handler?
+             // For now, keep enabling, but could be improved.
             sendButton.disabled = false;
             inputBox.disabled = false;
             inputBox.focus();

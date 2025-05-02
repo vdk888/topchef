@@ -1,7 +1,7 @@
 import os
 import time # Import time for sleep
 import datetime # Import datetime
-from sqlalchemy import create_engine, Column, Integer, String, Text, JSON, Float, text # Added Float, text
+from sqlalchemy import create_engine, Column, Integer, String, Text, Float, text # Removed JSON
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.exc import SQLAlchemyError, OperationalError # Import OperationalError for retry
 from contextlib import contextmanager
@@ -31,7 +31,6 @@ class Chef(Base):
     image_url = Column(Text, nullable=True)
     status = Column(Text, nullable=True)
     last_updated = Column('last_updated', Text, nullable=True)
-    perplexity_data = Column('perplexity_data', JSON, nullable=True)
     restaurant_address = Column(Text, nullable=False) # Changed to nullable=False
     latitude = Column(Float, nullable=True) # NEW coordinate field
     longitude = Column(Float, nullable=True) # NEW coordinate field
@@ -133,8 +132,8 @@ def create_table_if_not_exists(drop_first=False):
             if db.query(Chef).count() == 0:
                 print("Table is empty. Adding initial sample data...")
                 sample_data = [
-                    Chef(name="Marie Dubois", bio="Winner of Top Chef Season 2", image_url="", status="Winner", perplexity_data={}, restaurant_address="1 Rue de Rivoli, 75001 Paris, France", latitude=48.8566, longitude=2.3522, season=2, current_restaurant="Le Rivoli", season_number=2, signature_dish="Duck L'Orange"), # Example coords, season
-                    Chef(name="Pierre Martin", bio="Known for modern techniques", image_url="", status="Finalist", perplexity_data={}, restaurant_address="10 Avenue des Champs-Élysées, 75008 Paris, France", latitude=48.8698, longitude=2.3070, season=1, current_restaurant="Le Champs", season_number=1, signature_dish="Foie Gras Torchon") # Example coords, season
+                    Chef(name="Marie Dubois", bio="Winner of Top Chef Season 2", image_url="", status="Winner", restaurant_address="1 Rue de Rivoli, 75001 Paris, France", latitude=48.8566, longitude=2.3522, season=2, current_restaurant="Le Rivoli", season_number=2, signature_dish="Duck L'Orange"), # Example coords, season
+                    Chef(name="Pierre Martin", bio="Known for modern techniques", image_url="", status="Finalist", restaurant_address="10 Avenue des Champs-Élysées, 75008 Paris, France", latitude=48.8698, longitude=2.3070, season=1, current_restaurant="Le Champs", season_number=1, signature_dish="Foie Gras Torchon") # Example coords, season
                 ]
                 db.add_all(sample_data)
                 db.commit()
@@ -281,7 +280,7 @@ def remove_column(table_name: str, column_name: str):
         return False
 
 # --- NEW FUNCTION TO ADD CHEF ---
-def add_chef(name: str, season: int, bio: str = None, image_url: str = None, status: str = None, restaurant_address: str = None, latitude: float = None, longitude: float = None, perplexity_data: dict = None, max_retries=2, delay=1):
+def add_chef(name: str, season: int, bio: str = None, image_url: str = None, status: str = None, restaurant_address: str = None, latitude: float = None, longitude: float = None, max_retries=2, delay=1):
     """Adds a new chef record to the database with retry logic for connection errors.
 
     Args:
@@ -291,11 +290,10 @@ def add_chef(name: str, season: int, bio: str = None, image_url: str = None, sta
         image_url (str, optional): URL to the chef's image. Defaults to None.
         status (str, optional): Status (e.g., Winner, Finalist). Defaults to None.
         restaurant_address (str, optional): Address of the chef's restaurant. Defaults to None.
-        latitude (float, optional): Latitude of the restaurant. Defaults to None.
-        longitude (float, optional): Longitude of the restaurant. Defaults to None.
-        perplexity_data (dict, optional): Additional data from Perplexity. Defaults to None.
-        max_retries (int): Maximum number of retry attempts for connection errors.
-        delay (int): Delay between retries in seconds.
+        latitude (float, optional): Latitude coordinate. Defaults to None.
+        longitude (float, optional): Longitude coordinate. Defaults to None.
+        max_retries (int): Maximum number of retries for connection errors. Defaults to 2.
+        delay (int): Delay in seconds between retries. Defaults to 1.
 
     Returns:
         int or None: The ID of the newly created chef, or None if creation failed.
@@ -315,8 +313,7 @@ def add_chef(name: str, season: int, bio: str = None, image_url: str = None, sta
                     restaurant_address=restaurant_address,
                     latitude=latitude,
                     longitude=longitude,
-                    perplexity_data=perplexity_data,
-                    last_updated=datetime.datetime.now(datetime.timezone.utc).isoformat()
+                    last_updated=datetime.datetime.now(datetime.timezone.utc).isoformat() # Use UTC time
                 )
                 db.add(new_chef)
                 db.commit()

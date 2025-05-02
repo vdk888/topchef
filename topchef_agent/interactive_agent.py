@@ -19,10 +19,11 @@ RATE_LIMIT_COUNT = 10
 RATE_LIMIT_WINDOW = 3600 # 1 hour in seconds
 
 class InteractiveStephAI:
-    def __init__(self, session_id: str):
+    def __init__(self, session_id: str, log_queue: queue.Queue = None, db_update_queue: queue.Queue = None):
         self.session_id = session_id
+        self.log_queue = log_queue  # Main queue for SSE
+        self.db_update_queue = db_update_queue # Keep this if agent needs to signal DB updates
         self.context = self._get_context()
-        self.response_queue = queue.Queue()
         self.thread = None
         self.busy = False
 
@@ -59,9 +60,7 @@ class InteractiveStephAI:
             if len(valid_timestamps) >= RATE_LIMIT_COUNT:
                 log_to_ui("rate_limit_exceeded", {"session_id": self.session_id, "count": len(valid_timestamps)}, role="system")
                 rate_limit_message = f"Limite de {RATE_LIMIT_COUNT} messages par heure atteinte. Veuillez réessayer dans environ une heure."
-                # Return the error in a format consistent with other checks
-                self.response_queue.put({"status": "error", "error": rate_limit_message})
-                # Need to return something immediately for the ask() caller
+                # Return the error immediately for the ask() caller
                 return {"status": "error", "message": rate_limit_message}
             # Add current timestamp and update the stored list
             valid_timestamps.append(current_time)
@@ -81,9 +80,32 @@ class InteractiveStephAI:
             # Use the same LLM logic as the background agent, but in a separate thread/context
             response = self._call_llm(prompt)
             self.append_to_context("assistant", response)
-            self.response_queue.put({"status": "done", "response": response, "context": self.get_context()})
+            # Put the final response onto the main log_queue for SSE stream
+            if self.log_queue:
+                response_data = {
+                    "type": "interactive_response", 
+                    "session_id": self.session_id, 
+                    "data": {"response": response, "context": self.get_context()}
+                }
+                self.log_queue.put(response_data)
+            else:
+                print(f"Warning: log_queue not available for session {self.session_id} to send final response.")
+
         except Exception as e:
-            self.response_queue.put({"status": "error", "error": str(e)})
+            print(f"Error during interactive agent run for session {self.session_id}: {e}", flush=True)
+            import traceback
+            traceback.print_exc()
+            # Put error onto the main log_queue
+            if self.log_queue:
+                error_data = {
+                    "type": "interactive_error", # Use a specific error type
+                    "session_id": self.session_id,
+                    "data": {"error": str(e)}
+                }
+                self.log_queue.put(error_data)
+            else:
+                print(f"Warning: log_queue not available for session {self.session_id} to send error message.")
+
         finally:
             self.busy = False
 
@@ -226,18 +248,24 @@ class InteractiveStephAI:
         # If we exit loop without a return, something went wrong
         return "[StephAI Botenberg]: Je n'ai pas compris la demande ou trop d'appels d'outils."
 
-    def get_response(self, timeout=0.1):
-        try:
-            return self.response_queue.get(timeout=timeout)
-        except queue.Empty:
-            return None
 
 # Session management for interactive agents
 _interactive_agents = {}
 _agent_lock = threading.Lock()
 
-def get_interactive_agent(session_id: str) -> InteractiveStephAI:
+def get_interactive_agent(session_id: str, log_queue: queue.Queue = None, db_update_queue: queue.Queue = None) -> InteractiveStephAI:
+    """Retrieves or creates an interactive agent instance for a given session ID."""
     with _agent_lock:
         if session_id not in _interactive_agents:
-            _interactive_agents[session_id] = InteractiveStephAI(session_id)
+            print(f"Creating new interactive agent for session: {session_id}")
+            # Pass the queues to the constructor
+            _interactive_agents[session_id] = InteractiveStephAI(session_id, log_queue, db_update_queue)
+        else:
+             # Ensure existing agent has queues if they were not passed initially (e.g. server restart)
+             agent = _interactive_agents[session_id]
+             if not agent.log_queue and log_queue:
+                 agent.log_queue = log_queue
+             if not agent.db_update_queue and db_update_queue:
+                 agent.db_update_queue = db_update_queue
+
         return _interactive_agents[session_id]

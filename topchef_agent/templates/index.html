@@ -128,8 +128,8 @@
         label[for="season-filter"] {
             color: var(--m6-text-secondary); /* Use secondary text color */
             margin-right: 8px;
-            font-family: Arial, Helvetica, sans-serif; /* Standard font */
             font-size: 0.9em; /* Adjusted size */
+            font-family: Arial, Helvetica, sans-serif; /* Standard font */
         }
 
 
@@ -1008,8 +1008,8 @@
                 </div>
                 <div id="interactive-chat-log-area"></div>
                 <div id="interactive-chat-input-row">
-                    <input type="text" id="interactive-chat-input" placeholder="Ask about chefs, seasons, locations..." autocomplete="off" />
-                    <button id="interactive-chat-send">Send</button>
+                    <input type="text" id="interactive-chat-input" placeholder="Ask about chefs, seasons, locations..." autocomplete="off" disabled>
+                    <button id="interactive-chat-send" disabled>Send</button>
                 </div>
             </div>
         </div>
@@ -1451,11 +1451,67 @@
             if (potentialJson.startsWith('{') || potentialJson.startsWith('[')) {
                 try {
                     const logData = JSON.parse(potentialJson);
-                    if (logData.type === 'stream_error') {
+                    const currentSessionId = window.userSessionId || null;
+
+                    // Handle Session Initialization
+                    if (logData.type === 'session_init' && logData.session_id) {
+                        if (!window.userSessionId) { // Only set if not already set
+                            window.userSessionId = logData.session_id;
+                            console.log(`SSE Session Initialized. Client Session ID: ${window.userSessionId}`);
+                            // Enable chat input now that we have a session ID
+                            const sendButton = document.getElementById('interactive-chat-send');
+                            const inputBox = document.getElementById('interactive-chat-input');
+                            if (sendButton) {
+                                sendButton.disabled = false;
+                                console.log('Interactive send button enabled.');
+                            }
+                            if (inputBox) {
+                                inputBox.disabled = false;
+                                console.log('Interactive input enabled.');
+                                // Optional: Focus input after enabling
+                                // inputBox.focus(); 
+                            }
+                        } else {
+                             console.warn(`Received session_init again or session ID already set. Current: ${window.userSessionId}, Received: ${logData.session_id}`);
+                        }
+
+                    // Check for specific interactive response type
+                    } else if (logData.type === 'interactive_response' && logData.session_id && logData.session_id === currentSessionId) {
+                        console.log(`Received interactive response for session ${logData.session_id}`);
+                        
+                        // Remove the 'Thinking...' message
+                        const interactiveLogNodes = window.interactiveLogArea.childNodes;
+                        for (let i = interactiveLogNodes.length - 1; i >= 0; i--) {
+                            const node = interactiveLogNodes[i];
+                            if (node.textContent && node.textContent.includes('StephAI réfléchit...')) {
+                                window.interactiveLogArea.removeChild(node);
+                                // Optional: Also remove from the JS array if needed
+                                break; // Assume only one thinking message
+                            }
+                        }
+
+                        // Add the actual response
+                        const agentLog = { 
+                            role: 'StephAI Botenberg', // Or use logData.role if provided
+                            response: logData.data.response, // Assuming response is nested in data
+                            timestamp: logData.timestamp || Date.now() / 1000 
+                        };
+                        window.addLogEntry(agentLog, window.interactiveLogArea, window.INTERACTIVE_LOG_KEY, window.interactiveLogs);
+
+                        // Re-enable input
+                        const sendButton = document.getElementById('interactive-chat-send');
+                        const inputBox = document.getElementById('interactive-chat-input');
+                        if (sendButton) sendButton.disabled = false;
+                        if (inputBox) {
+                            inputBox.disabled = false;
+                            inputBox.focus();
+                        }
+
+                    } else if (logData.type === 'stream_error') {
                         console.error('SSE Stream Error:', logData.data.error);
                         addLogEntry({ role: 'system', data: `Stream Error: ${logData.data.error}`, timestamp: Date.now()/1000, type: 'error' }, backgroundLogArea, BACKGROUND_LOG_KEY, backgroundLogs);
-                    } else if (logData.type) { // Basic check for a valid log structure
-                        // Route based on role
+                    } else if (logData.type && logData.type !== 'interactive_response') { // Process other log types, excluding interactive ones handled above
+                        // Route based on role for non-interactive messages
                         if (logData.role === "StephAI Botenberg") {
                              // Send Agent's main messages to the main chat area
                              console.log(`Routing log from ${logData.role} to main chat area.`);
@@ -1465,8 +1521,10 @@
                              console.log(`Routing log from ${logData.role || 'unknown'} to background area.`);
                              addLogEntry(logData, backgroundLogArea, BACKGROUND_LOG_KEY, backgroundLogs);
                         }
-                    } else {
-                         console.warn("SSE: Received JSON data without 'type' field: ", logData);
+                    } else if (!logData.type) {
+                         console.warn("SSE: Received JSON data without known 'type' field: ", logData);
+                         // Decide how to handle unknown types - maybe log to background?
+                         addLogEntry({ role: 'system', data: `Unknown log type: ${JSON.stringify(logData)}`, timestamp: Date.now()/1000 }, backgroundLogArea, BACKGROUND_LOG_KEY, backgroundLogs);
                     }
                 } catch (e) {
                     console.error("Error parsing seemingly valid JSON from SSE:", event.data, e);
@@ -1707,7 +1765,7 @@
                             const marker = L.marker([lat, lon]);
 
                             // --- Build Popup Content dynamically ---
-                            let popupContent = `<div class="popup-container">`;
+                            let popupContent = `<div class="popup-container">`; // Container div for styling
                             popupContent += `<h3 class="popup-header">${chef.name || 'Unknown Chef'}</h3>`;
 
                             // 1. Add Image (if exists) - Centered below header

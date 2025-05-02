@@ -799,5 +799,14 @@
     "related_season": null,
     "related_chef_id": null,
     "correction_target_entry_id": null
+  },
+  {
+    "entry_id": "03fac194-bebd-4d0c-93c1-2a0b0d5048be",
+    "timestamp": "2025-04-30T10:21:07.557070Z",
+    "type": "Observation",
+    "details": "Vérification de routine terminée : 16 saisons présentes, chaque saison a au moins 14 candidats. Saison 4 vérifiée, Yoni Saada a son image mise à jour avec son compte Instagram.",
+    "related_season": 4,
+    "related_chef_id": 49,
+    "correction_target_entry_id": null
   }
 ]
