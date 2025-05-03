@@ -20,7 +20,7 @@ job_counter = 0
 
 # --- Configuration ---
 # How often to run the check (in seconds) - default is 30 minutes
-CHECK_INTERVAL_SECONDS = int(os.environ.get("AGENT_CHECK_INTERVAL", 1800))
+CHECK_INTERVAL_SECONDS = int(os.environ.get("AGENT_CHECK_INTERVAL", 7200))
 
 def job():
     """The job to be scheduled: run the LLM-driven agent cycle with the initial thought prompt."""
