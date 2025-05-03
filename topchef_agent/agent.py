@@ -159,7 +159,7 @@ def execute_update_chef_record(chef_id: int, field_name: str, new_value: any):
 
     # --- Field Name Validation ---
     # Define allowed fields (including new ones)
-    allowed_fields = ["bio", "image_url", "status", "perplexity_data", "restaurant_address", "latitude", "longitude"]
+    allowed_fields = ["bio", "image_url", "status", "restaurant_address", "latitude", "longitude", "current_restaurant", "season_number", "signature_dish"]
     # Allow custom fields if needed, but validate known ones strictly
     if field_name not in allowed_fields and not field_name.startswith("custom_"): # Example prefix
         error_msg = json.dumps({"error": f"Invalid or disallowed field name '{field_name}' provided for update. Allowed: {allowed_fields} or custom_*"})
@@ -312,11 +312,7 @@ def execute_geocode_address(address: str):
 
 # --- NEW TOOL EXECUTION FUNCTION for adding a chef ---
 def execute_add_chef(name: str, season: int, bio: str = None, image_url: str = None, status: str = None, restaurant_address: str = None):
-    """Adds a new chef to the database.
-
-    Requires the chef's name and season. Other fields like bio, image_url, status, and restaurant_address are optional.
-    Geocoding (latitude/longitude) should be handled separately AFTER the chef is added using their address.
-    """
+    """Adds a new chef to the database. Requires name and season. Other fields like bio, image_url, status, and restaurant_address are optional."""
     tool_input_data = {
         "name": name,
         "season": season,
@@ -509,7 +505,7 @@ tools_list = [
         "type": "function",
         "function": {
             "name": "update_chef_record",
-            "description": "Updates **one specific field** for a specific chef in the PostgreSQL database. Use this ONLY after obtaining verified information (e.g., from search_web_perplexity or geocoding). Call this tool multiple times if you need to update multiple fields. Allowed fields are 'bio', 'image_url', 'status', 'perplexity_data', 'restaurant_address', 'latitude', 'longitude', or potentially custom fields.",
+            "description": "Updates **one specific field** for a specific chef in the PostgreSQL database. Use this ONLY after obtaining verified information (e.g., from search_web_perplexity or geocoding). Call this tool multiple times if you need to update multiple fields. Allowed fields are 'bio', 'image_url', 'status', 'restaurant_address', 'latitude', 'longitude', 'current_restaurant', 'season_number', 'signature_dish', or potentially custom fields.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -519,7 +515,7 @@ tools_list = [
                     },
                     "field_name": {
                         "type": "string",
-                        "description": "The exact name of the database field to update (e.g., 'bio', 'image_url', 'status', 'perplexity_data', 'restaurant_address', 'latitude', 'longitude', or a custom added field)."
+                        "description": "The exact name of the database field to update (e.g., 'bio', 'status', 'restaurant_address', 'latitude', 'longitude', 'current_restaurant', 'season_number', 'signature_dish')."
                     },
                     "new_value": {
                         "type": ["string", "number", "null"], # Allow numbers for lat/lon, null might be needed
@@ -745,7 +741,7 @@ def run_llm_driven_agent_cycle(task_prompt: str, max_iterations=15):
     **Outils Disponibles (Votre Équipement de Cuisine) :**
     - `get_all_chefs` : Obtenir tous les enregistrements de chefs depuis la base. (Remplace les anciens outils par saison).
     - `search_web_perplexity` : Rechercher des infos spécifiques sur un chef sur le web.
-    - `update_chef_record` : Mettre à jour un enregistrement chef. Champs autorisés : 'bio', 'image_url', 'status', 'perplexity_data', 'restaurant_address', 'latitude', 'longitude', champs personnalisés. **À utiliser UNIQUEMENT après vérification/géocodage.**
+    - `update_chef_record` : Mettre à jour un enregistrement chef. Champs autorisés : 'bio', 'image_url', 'status', 'restaurant_address', 'latitude', 'longitude', 'current_restaurant', 'season_number', 'signature_dish'. **À utiliser UNIQUEMENT après vérification/géocodage.**
     - `geocode_address` : Obtenir latitude/longitude à partir d'une adresse (à utiliser si l'adresse existe mais pas les coordonnées). Biaisé vers la France.
     - `read_journal` : Lire tout votre journal persistant pour se souvenir des événements passés.
     - `append_journal_entry` : Ajouter une entrée à votre journal persistant. Types : "Observation", "Action", "Erreur", "Insight", "Correction".

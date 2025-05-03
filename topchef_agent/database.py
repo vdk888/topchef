@@ -34,10 +34,11 @@ class Chef(Base):
     restaurant_address = Column(Text, nullable=False) # Changed to nullable=False
     latitude = Column(Float, nullable=True) # NEW coordinate field
     longitude = Column(Float, nullable=True) # NEW coordinate field
-    season = Column(Integer, nullable=True)  # NEW season column
+    season = Column(Integer, nullable=True)  # Ensure season column exists
     current_restaurant = Column(Text, nullable=True) # NEW column
     season_number = Column(Integer, nullable=True) # NEW column
     signature_dish = Column(Text, nullable=True) # NEW column
+    cool_anecdote = Column(Text, nullable=True) # NEW column
 
     def to_dict(self):
         """Converts the Chef object to a dictionary, handling potential missing columns."""
@@ -103,7 +104,8 @@ def create_table_if_not_exists(drop_first=False):
             ("season", "INTEGER"),  # Ensure season column exists
             ("current_restaurant", "TEXT"),  # NEW column
             ("season_number", "INTEGER"),  # NEW column
-            ("signature_dish", "TEXT")  # NEW column
+            ("signature_dish", "TEXT"),  # NEW column
+            ("cool_anecdote", "TEXT")  # NEW column
         ]
         with engine.connect() as connection:
             for col_name, col_type in columns_to_ensure:
